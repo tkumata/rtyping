@@ -36,6 +36,7 @@ fn main() {
 
     loop {
         // count 30 sec on background
+        // todo 正解して戻ってきたら初期化する
         let _handle = thread::spawn(|| {
             for _sec in 1..30 {
                 // todo: through the variable from thread to the any function
