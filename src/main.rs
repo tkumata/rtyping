@@ -45,7 +45,7 @@ fn main() {
             }
 
             println!(
-                "==> {color_red}Time up{reset} (30 sec)",
+                "==> 🔴{color_red}Time up{reset} (30 sec)",
                 color_red = color::Fg(color::Red),
                 reset = style::Reset
             );
