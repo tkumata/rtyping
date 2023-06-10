@@ -3,25 +3,34 @@
 //
 use std::fs;
 use std::io;
-use std::io::Write;
+use std::io::{Write};
 use rand::Rng;
 use std::thread;
 use std::time::Duration;
 use std::process;
 use termion;
 use termion::{color, style};
+use std::sync::mpsc::{self, TryRecvError};
 
 fn main() {
     let pickup_words : usize = 4;
 
     println!(
-        "{}==> {lightgreen}{bold}{italic}Typing Game{reset}",
+        "{}{}==> {lightgreen}{bold}{italic}Typing Game{reset}",
         termion::clear::All,
+        termion::cursor::Goto(1, 2),
         lightgreen = color::Fg(color::LightGreen),
         bold = style::Bold,
         italic = style::Italic,
         reset = style::Reset
     );
+
+    print!("==> Press return/enter key to start");
+    io::stdout().flush().unwrap();
+    let mut start = String::new();
+        io::stdin()
+            .read_line(&mut start)
+            .expect("Failed to read line.");
 
     // init vector which save words
     let mut words = Vec::new();
@@ -37,31 +46,43 @@ fn main() {
     let len = words.len();
 
     loop {
-        // count 30 sec on background
-        // todo 正解して戻ってきたら初期化する
-        let _handle = thread::spawn(|| {
-            for _sec in 0..30 {
-                print!("{}", termion::cursor::Save);
-                print!(
-                    "{}Time: {} sec",
-                    termion::cursor::Goto(1, 1),
-                    _sec
-                );
-                print!("{}", termion::cursor::Restore);
-                io::stdout().flush().unwrap();
+        // thread sender and receiver
+        let (tx, rx) = mpsc::channel();
+        let mut timer = 0;
 
-                // thread.sleep
-                thread::sleep(Duration::from_secs(1));
+        // count 30 sec on background
+        let _handle = thread::spawn(move || loop {
+            print!("{}", termion::cursor::Save);
+            print!(
+                "{}Time: {}sec",
+                termion::cursor::Goto(1, 1),
+                timer
+            );
+            print!("{}", termion::cursor::Restore);
+            io::stdout().flush().unwrap();
+
+            match rx.try_recv() {
+                Ok(_) | Err(TryRecvError::Disconnected) => {
+                    // println!("Terminating.");
+                    break;
+                }
+                Err(TryRecvError::Empty) => {}
             }
 
-            println!(
-                "==> 🔴{red}Time up{reset} (30 sec)",
-                red = color::Fg(color::Red),
-                reset = style::Reset
-            );
-            println!("==> Quit process");
+            if timer == 30 {
+                println!(
+                    "==> 🔴{red}Time up{reset} (30 sec)",
+                    red = color::Fg(color::Red),
+                    reset = style::Reset
+                );
+                println!("==> Quit process");
+                process::exit(0);
+            }
 
-            process::exit(0);
+            // thread.sleep
+            thread::sleep(Duration::from_millis(1000));
+
+            timer += 1;
         });
 
         let mut rnd = rand::thread_rng();
@@ -83,6 +104,7 @@ fn main() {
 
         // check string
         if input.trim() == sample_string.trim() {
+            let _ = tx.send(());
             println!(
                 "==> 🟢{green}OK{reset}💮",
                 green = color::Fg(color::Green),
