@@ -4,6 +4,8 @@ Rust の学習目的で何か作りたかったので立ててみたみたいな
 
     cargo run
 
+![sample](./ScreenShot.png)
+
 #### やったこと
 
   - 入力時の制限時間の実装 (thread::spawn)
