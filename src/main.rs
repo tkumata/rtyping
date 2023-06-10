@@ -1,18 +1,17 @@
 //
 // Typing game
 //
-extern crate termion;
-
 use std::io;
 use std::fs;
 use rand::Rng;
 use std::thread;
 use std::time::Duration;
 use std::process;
+use termion;
 use termion::{color, style};
 
 fn main() {
-    let pickup_words : usize = 3;
+    let pickup_words : usize = 5;
 
     println!("==> Typing game");
 
