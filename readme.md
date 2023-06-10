@@ -18,7 +18,13 @@ Rust の学習目的で何か作りたかったので立ててみたみたいな
   - [ ] wpm の集計
   - [ ] 文字装飾
 
-#### とにかくメモ
+### とにかくメモ
 ユーザ入力をトリガに typo チェックするか、裏で typo チェッカをぐるぐる走らせるか？色をつけるとなるとユーザ入力をトリガにしたほうが良いかも？
 
 カウントした制限時間を表示専用の関数に渡す。
+
+#### クロスコンパイル
+例えば Intel Mac で Apple Silicon のバイナリを生成する場合。
+
+    rustup target add aarch64-apple-darwin
+    cargo build --target=aarch64-apple-darwin
