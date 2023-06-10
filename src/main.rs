@@ -11,9 +11,15 @@ use termion;
 use termion::{color, style};
 
 fn main() {
-    let pickup_words : usize = 5;
+    let pickup_words : usize = 4;
 
-    println!("==> Typing game");
+    println!(
+        "==> {lightgreen}{bold}{italic}Typing Game{reset}",
+        lightgreen = color::Fg(color::LightGreen),
+        bold = style::Bold,
+        italic = style::Italic,
+        reset = style::Reset
+    );
 
     // init vector which save words
     let mut words = Vec::new();
@@ -54,8 +60,8 @@ fn main() {
         let sample_string:String = words[i..=j].join(" ");
 
         println!(
-            "==> {color_red}Type following words.{reset}",
-            color_red = color::Fg(color::Red),
+            "==> {red}Type following words.{reset}",
+            red = color::Fg(color::Red),
             reset = style::Reset
         );
         println!("{}", sample_string);
@@ -68,15 +74,15 @@ fn main() {
         // check string
         if input.trim() == sample_string.trim() {
             println!(
-                "==> 🟢{color_green}OK{reset}💮",
-                color_green = color::Fg(color::Green),
+                "==> 🟢{green}OK{reset}💮",
+                green = color::Fg(color::Green),
                 reset = style::Reset
             );
             println!("==> Try next words");
         } else {
             println!(
-                "==> ❌{color_red}NG{reset}",
-                color_red = color::Fg(color::Red),
+                "==> ❌{red}NG{reset}",
+                red = color::Fg(color::Red),
                 reset = style::Reset
             );
             println!("==> Quit process");
