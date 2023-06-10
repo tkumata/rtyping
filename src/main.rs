@@ -25,6 +25,13 @@ fn main() {
         reset = style::Reset
     );
 
+    print!("==> Press return/enter key to start");
+    io::stdout().flush().unwrap();
+    let mut start = String::new();
+        io::stdin()
+            .read_line(&mut start)
+            .expect("Failed to read line.");
+
     // init vector which save words
     let mut words = Vec::new();
 
@@ -47,15 +54,12 @@ fn main() {
         let _handle = thread::spawn(move || loop {
             print!("{}", termion::cursor::Save);
             print!(
-                "{}Time: {} ms",
+                "{}Time: {}sec",
                 termion::cursor::Goto(1, 1),
                 timer
             );
             print!("{}", termion::cursor::Restore);
             io::stdout().flush().unwrap();
-
-            // thread.sleep
-            thread::sleep(Duration::from_millis(1000));
 
             match rx.try_recv() {
                 Ok(_) | Err(TryRecvError::Disconnected) => {
@@ -74,6 +78,9 @@ fn main() {
                 println!("==> Quit process");
                 process::exit(0);
             }
+
+            // thread.sleep
+            thread::sleep(Duration::from_millis(1000));
 
             timer += 1;
         });
