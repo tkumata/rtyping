@@ -1,8 +1,9 @@
 //
 // Typing game
 //
-use std::io;
 use std::fs;
+use std::io;
+use std::io::Write;
 use rand::Rng;
 use std::thread;
 use std::time::Duration;
@@ -14,7 +15,8 @@ fn main() {
     let pickup_words : usize = 4;
 
     println!(
-        "==> {lightgreen}{bold}{italic}Typing Game{reset}",
+        "{}==> {lightgreen}{bold}{italic}Typing Game{reset}",
+        termion::clear::All,
         lightgreen = color::Fg(color::LightGreen),
         bold = style::Bold,
         italic = style::Italic,
@@ -38,16 +40,23 @@ fn main() {
         // count 30 sec on background
         // todo 正解して戻ってきたら初期化する
         let _handle = thread::spawn(|| {
-            for _sec in 1..30 {
-                // todo: through the variable from thread to the any function
+            for _sec in 0..30 {
+                print!("{}", termion::cursor::Save);
+                print!(
+                    "{}Time: {} sec",
+                    termion::cursor::Goto(1, 1),
+                    _sec
+                );
+                print!("{}", termion::cursor::Restore);
+                io::stdout().flush().unwrap();
 
                 // thread.sleep
-                thread::sleep(Duration::from_millis(1000));
+                thread::sleep(Duration::from_secs(1));
             }
 
             println!(
-                "==> 🔴{color_red}Time up{reset} (30 sec)",
-                color_red = color::Fg(color::Red),
+                "==> 🔴{red}Time up{reset} (30 sec)",
+                red = color::Fg(color::Red),
                 reset = style::Reset
             );
             println!("==> Quit process");
