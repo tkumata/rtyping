@@ -3,7 +3,7 @@
 //
 use std::fs;
 use std::io;
-use std::io::{BufRead, Write};
+use std::io::{Write};
 use rand::Rng;
 use std::thread;
 use std::time::Duration;
