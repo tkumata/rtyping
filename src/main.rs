@@ -1,19 +1,19 @@
 //
 // Typing game
 //
+use rand::Rng;
 use std::fs;
 use std::io;
-use std::io::{Write};
-use rand::Rng;
+use std::io::Write;
+use std::process;
+use std::sync::mpsc::{self, TryRecvError};
 use std::thread;
 use std::time::Duration;
-use std::process;
 use termion;
 use termion::{color, style};
-use std::sync::mpsc::{self, TryRecvError};
 
 fn main() {
-    let pickup_words : usize = 4;
+    let pickup_words: usize = 4;
 
     println!(
         "{}{}==> {lightgreen}{bold}{italic}Typing Game{reset}",
@@ -27,37 +27,33 @@ fn main() {
 
     print!("==> Press return/enter key to start");
     io::stdout().flush().unwrap();
-    let mut start = String::new();
-        io::stdin()
-            .read_line(&mut start)
-            .expect("Failed to read line.");
+    let mut start: String = String::new();
+    io::stdin()
+        .read_line(&mut start)
+        .expect("Failed to read line.");
 
     // init vector which save words
-    let mut words = Vec::new();
+    let mut words: Vec<String> = Vec::new();
 
     // push words as string to the vector
     for entry in fs::read_dir("/usr/bin").unwrap() {
-        words.push(
-            String::from(entry.unwrap().path().file_name().unwrap().to_str().unwrap())
-        );
+        words.push(String::from(
+            entry.unwrap().path().file_name().unwrap().to_str().unwrap(),
+        ));
     }
 
     // vector length
-    let len = words.len();
+    let len: usize = words.len();
 
     loop {
         // thread sender and receiver
         let (tx, rx) = mpsc::channel();
-        let mut timer = 0;
+        let mut timer: i32 = 0;
 
         // count 30 sec on background
-        let _handle = thread::spawn(move || loop {
+        let _handle: thread::JoinHandle<()> = thread::spawn(move || loop {
             print!("{}", termion::cursor::Save);
-            print!(
-                "{}Time: {}sec",
-                termion::cursor::Goto(1, 1),
-                timer
-            );
+            print!("{}Time: {}sec", termion::cursor::Goto(1, 1), timer);
             print!("{}", termion::cursor::Restore);
             io::stdout().flush().unwrap();
 
@@ -85,10 +81,10 @@ fn main() {
             timer += 1;
         });
 
-        let mut rnd = rand::thread_rng();
-        let i = rnd.gen_range(0..len - pickup_words);
-        let j = i + pickup_words;
-        let sample_string:String = words[i..=j].join(" ");
+        let mut rnd: rand::rngs::ThreadRng = rand::thread_rng();
+        let i: usize = rnd.gen_range(0..len - pickup_words);
+        let j: usize = i + pickup_words;
+        let sample_string: String = words[i..=j].join(" ");
 
         println!(
             "==> {red}Type following words.{reset}",
@@ -97,7 +93,7 @@ fn main() {
         );
         println!("{}", sample_string);
 
-        let mut input = String::new();
+        let mut input: String = String::new();
         io::stdin()
             .read_line(&mut input)
             .expect("Failed to read line.");
