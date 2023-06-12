@@ -16,9 +16,11 @@ fn main() {
     let pickup_words: usize = 4;
 
     println!(
-        "{}{}==> {lightgreen}{bold}{italic}Typing Game{reset}",
-        termion::clear::All,
-        termion::cursor::Goto(1, 2),
+        "{}{}{}{goto}==> {lightgreen}{bold}{italic}Typing Game{reset}",
+        termion::clear::CurrentLine,
+        termion::clear::AfterCursor,
+        termion::clear::BeforeCursor,
+        goto = termion::cursor::Goto(1, 2),
         lightgreen = color::Fg(color::LightGreen),
         bold = style::Bold,
         italic = style::Italic,
@@ -52,18 +54,20 @@ fn main() {
 
         // count 30 sec on background
         let _handle: thread::JoinHandle<()> = thread::spawn(move || loop {
-            print!("{}", termion::cursor::Save);
-            print!("{}Time: {}sec", termion::cursor::Goto(1, 1), timer);
-            print!("{}", termion::cursor::Restore);
-            io::stdout().flush().unwrap();
+            // print!("{}", termion::cursor::Save);
+            // print!("{}Time: {}sec", termion::cursor::Goto(1, 1), timer);
+            // print!("{}", termion::cursor::Restore);
+            // io::stdout().flush().unwrap();
 
             match rx.try_recv() {
                 Ok(_) | Err(TryRecvError::Disconnected) => {
-                    // println!("Terminating.");
                     break;
                 }
                 Err(TryRecvError::Empty) => {}
             }
+
+            thread::sleep(Duration::from_millis(1000));
+            timer += 1;
 
             if timer == 30 {
                 println!(
@@ -74,11 +78,6 @@ fn main() {
                 println!("==> Quit process");
                 process::exit(0);
             }
-
-            // thread.sleep
-            thread::sleep(Duration::from_millis(1000));
-
-            timer += 1;
         });
 
         let mut rnd: rand::rngs::ThreadRng = rand::thread_rng();
@@ -93,6 +92,7 @@ fn main() {
         );
         println!("{}", sample_string);
 
+        // todo: change stdin input method
         let mut input: String = String::new();
         io::stdin()
             .read_line(&mut input)
