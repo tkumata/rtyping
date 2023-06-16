@@ -5,7 +5,6 @@ use rand::Rng;
 use std::fs;
 use std::io;
 use std::io::{stdin, stdout, Write};
-// use std::process;
 use std::sync::mpsc::{self, TryRecvError};
 use std::thread;
 use std::time::Duration;
