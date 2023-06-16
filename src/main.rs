@@ -17,7 +17,7 @@ use termion::{color, style};
 
 fn main() {
     let pickup_words: usize = 1;
-    const TIMEOUT: i32 = 5;
+    const TIMEOUT: i32 = 60;
 
     println!(
         "{}{}{}{goto}==> {lightgreen}{bold}{italic}Typing Game{reset}",
