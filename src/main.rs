@@ -15,7 +15,7 @@ use termion::raw::IntoRawMode;
 use termion::{color, style};
 
 fn main() {
-    let pickup_words: usize = 1;
+    let pickup_words: usize = 4;
     const TIMEOUT: i32 = 60;
 
     println!(
