@@ -13,12 +13,12 @@ Rust の学習目的で何か作りたかったので立ててみたみたいな
   - [x] 出題文字列の取得 (fs::read_dir)
   - [x] 乱数の基礎 (rand::thread_rng)
   - [x] 一部文字装飾
-  - [x] 制限時間カウンタ表示 (termion::cursor)
+  - [ ] 制限時間カウンタ表示 (termion::cursor)※ gtypist でも制限時間の動的表示はしてないので無理と判断
   - [ ] typo チェック
   - [ ] wpm の集計
   - [ ] 文字装飾
-  - [ ] termion::Restore 後 io::stdin で Backspace が  "^R\\n" 扱いになってしまうを修正する。
-  - [x] Warp で temion::clear::All の挙動がおかしいので対応する。
+  - [x] termion::Restore 後 io::stdin で Backspace が  "^R\\n" 扱いになってしまうを修正する。
+  - [x] Warp で temion::clear::All 前後の挙動がおかしいので対応する。
 
 ### とにかくメモ
 ユーザ入力をトリガに typo チェックするか、裏で typo チェッカをぐるぐる走らせるか？色をつけるとなるとユーザ入力をトリガにしたほうが良いかも？
