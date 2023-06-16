@@ -1,39 +1,51 @@
-Rust の学習目的で何か作りたかったので立ててみたみたいな。
-
-#### 実行
-
-    cargo run
+# 概要
+Rust の学習目的で何か作りたかったので立ててみたみたいな。ひとまずリーダブルは捨てて作ってみたい typing アプリに挑戦。
 
 ![sample](./ScreenShot.png)
 
-#### やる事リスト
+## コマンド
+とりあえず実行
 
-  - [x] 入力時の制限時間の実装 (thread::spawn)
-  - [x] ユーザの入力 (io::stdin)
-  - [x] 出題文字列の取得 (fs::read_dir)
-  - [x] 乱数の基礎 (rand::thread_rng)
-  - [x] 一部文字装飾
-  - [x] 制限時間カウンタ表示 (termion::cursor)
-  - [ ] typo チェック
-  - [ ] wpm の集計
-  - [ ] 文字装飾
-  - [x] termion::Restore 後 io::stdin で Backspace が  "^R\\n" 扱いになってしまうを修正する。
-  - [x] Warp で temion::clear::All 前後の挙動がおかしいので対応する。
+```shell
+cargo new typing_game
+cargo run
+```
 
-### とにかくメモ
-ユーザ入力をトリガに typo チェックするか、裏で typo チェッカをぐるぐる走らせるか？色をつけるとなるとユーザ入力をトリガにしたほうが良いかも？
+`~/.cargo/bin/` 配下にインストール
 
-カウントした制限時間を表示専用の関数に渡す。
+```shell
+cargo check
+cargo build --release --locked
+cargo install --path .
+```
 
-print!() は改行コードなしなので flush() しないといけなくて、そのせいで \\r が入ってその後 flush() して　\\r が実行されると。で入力としての \\r が文字で残る。termion のせいというより実装方法の問題かもしれない。→ bingo!
+## やる事リスト
 
-cursor_pos() はクロージャーの中じゃないといけない。
+- [x] 入力時の制限時間の実装
+- [x] ユーザの入力
+- [x] 出題文字列の取得
+- [x] 乱数の基礎
+- [x] 一部文字装飾
+- [x] 制限時間カウンタ表示 (入力待ちしつつ別の場所に時間のカウンターを置くことが一番苦労した)
+- [x] termion::Restore 後 io::stdin で Backspace が "^R\\n" 扱いになってしまうを修正する。(Canonicl mode をやめて Raw mode に移行することで解決)
+- [x] Warp で `temion::clear::All` 前後の挙動がおかしいので対応する。(clear::All じゃなくて前後を clear する事で解決)
+- [x] typo チェック
+- [ ] wpm の集計
+- [x] 文字装飾
+- [ ] BGM 追加
+- [ ] SE 追加
 
-stdin 中はカーソルを移動させないようにしたい → stdin じゃなくて別の入力ロジックを実装する必要がある。
 
+# 付録
+## クロスコンパイル
+例えば Intel Mac で Apple Silicon Mac のバイナリを生成する場合。
 
-#### クロスコンパイル
-例えば Intel Mac で Apple Silicon のバイナリを生成する場合。
+### 準備
+```shell
+rustup target add aarch64-apple-darwin
+```
 
-    rustup target add aarch64-apple-darwin
-    cargo build --target=aarch64-apple-darwin
+### ビルド
+```shell
+cargo build --release --target=aarch64-apple-darwin
+```

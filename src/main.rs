@@ -15,28 +15,26 @@ use termion::raw::IntoRawMode;
 use termion::{color, style};
 
 fn main() {
-    let pickup_words: usize = 4;
+    const PICKUP: usize = 4;
     const TIMEOUT: i32 = 60;
 
     println!(
-        "{}{}{}{goto}==> {lightgreen}{bold}{italic}Typing Game{reset}",
+        "{}{}{}{goto}==> {lightblue}{bold}{italic}Typing Game{reset}",
         termion::clear::CurrentLine,
         termion::clear::AfterCursor,
         termion::clear::BeforeCursor,
         goto = termion::cursor::Goto(1, 2),
-        lightgreen = color::Fg(color::LightGreen),
+        lightblue = color::Fg(color::LightBlue),
         bold = style::Bold,
         italic = style::Italic,
         reset = style::Reset
     );
 
-    println!("==> Press return/enter key to start");
+    println!("==> Press enter key to start");
     let mut start: String = String::new();
     io::stdin()
         .read_line(&mut start)
         .expect("Failed to read line.");
-
-    let mut stdout = stdout().into_raw_mode().unwrap();
 
     // init vector which save words
     let mut words: Vec<String> = Vec::new();
@@ -47,15 +45,19 @@ fn main() {
             entry.unwrap().path().file_name().unwrap().to_str().unwrap(),
         ));
     }
-
     // vector length
     let len: usize = words.len();
+
+    // raw mode
+    let mut stdout = stdout().into_raw_mode().unwrap();
 
     loop {
         let stdin: io::Stdin = stdin();
 
         // thread sender and receiver
         let (tx, rx) = mpsc::channel();
+
+        // init time
         let mut timer: i32 = 0;
 
         // count 30 sec on background
@@ -87,16 +89,18 @@ fn main() {
         });
 
         let mut rnd: rand::rngs::ThreadRng = rand::thread_rng();
-        let i: usize = rnd.gen_range(0..len - pickup_words);
-        let j: usize = i + pickup_words;
+        let i: usize = rnd.gen_range(0..len - PICKUP);
+        let j: usize = i + PICKUP;
         let sample_string: String = words[i..=j].join(" ");
+        let sample_str: &str = &sample_string;
 
+        println!("==> Type following words.\r");
         println!(
-            "==> {red}Type following words.{reset}\r",
-            red = color::Fg(color::Red),
+            "{color}{}{reset}\r",
+            sample_string,
+            color = color::Fg(color::LightCyan),
             reset = style::Reset
         );
-        println!("{}\r", sample_string);
 
         let mut inputs: Vec<String> = Vec::new();
         for evt in stdin.events() {
@@ -115,7 +119,19 @@ fn main() {
                     inputs.pop();
                 }
                 Event::Key(Key::Char(c)) => {
-                    write!(stdout, "{}", c).unwrap();
+                    let l = inputs.len();
+                    if sample_str.chars().nth(l) == Some(c) {
+                        write!(
+                            stdout,
+                            "{}{}{}",
+                            color::Fg(color::LightCyan),
+                            c,
+                            style::Reset
+                        )
+                        .unwrap();
+                    } else {
+                        write!(stdout, "{}{}{}", color::Fg(color::Red), c, style::Reset).unwrap();
+                    }
                     inputs.push(String::from(c.to_string()));
                 }
                 _ => {}
