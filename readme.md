@@ -1,13 +1,19 @@
 # 概要
-Rust の学習目的で何か作りたかったので立ててみたみたいな。
+Rust の学習目的で何か作りたかったので立ててみたみたいな。ひとまずリーダブルは捨てて作ってみたい typing アプリに挑戦。
 
 ![sample](./ScreenShot.png)
 
-## 実行
+## コマンド
+とりあえず実行
 
 ```shell
 cargo new typing_game
 cargo run
+```
+
+`~/.cargo/bin/` 配下にインストール
+
+```shell
 cargo check
 cargo build --release --locked
 cargo install --path .
@@ -20,12 +26,14 @@ cargo install --path .
 - [x] 出題文字列の取得
 - [x] 乱数の基礎
 - [x] 一部文字装飾
-- [x] 制限時間カウンタ表示
-- [x] termion::Restore 後 io::stdin で Backspace が "^R\\n" 扱いになってしまうを修正する。
-- [x] Warp で `temion::clear::All` 前後の挙動がおかしいので対応する。
-- [ ] typo チェック
+- [x] 制限時間カウンタ表示 (入力待ちしつつ別の場所に時間のカウンターを置くことが一番苦労した)
+- [x] termion::Restore 後 io::stdin で Backspace が "^R\\n" 扱いになってしまうを修正する。(Canonicl mode をやめて Raw mode に移行することで解決)
+- [x] Warp で `temion::clear::All` 前後の挙動がおかしいので対応する。(clear::All じゃなくて前後を clear する事で解決)
+- [x] typo チェック
 - [ ] wpm の集計
-- [ ] 文字装飾
+- [x] 文字装飾
+- [ ] BGM 追加
+- [ ] SE 追加
 
 
 # 付録
