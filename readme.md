@@ -32,7 +32,7 @@ cargo install --path .
 - [x] typo チェック
 - [ ] wpm の集計
 - [x] 文字装飾
-- [ ] BGM 追加
+- [x] BGM 追加
 - [ ] SE 追加
 
 
