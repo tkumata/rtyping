@@ -38,15 +38,16 @@ fn main() {
     // String 型の可変変数定義。
     // String 型とリテラル型 (&str) は違うものなので注意。
     let mut start: String = String::new();
+
     // Canonical mode で標準入力させる。
     io::stdin()
         .read_line(&mut start)
         .expect("Failed to read line.");
 
-    // からベクターの定義
+    // 空ベクターの定義
     let mut words: Vec<String> = Vec::new();
 
-    // fs::read_bytes でディレクトリ内を巡回する。
+    // fs::read_dir でディレクトリ内を取得する。
     for entry in fs::read_dir("/usr/bin").unwrap() {
         // ベクターに String 型で push する。
         // DirEntry 型から直接 String 型にできないから一旦 to_str でリテラルにする。
@@ -120,7 +121,7 @@ fn main() {
             // 変数の中身を覆い隠す。
             timer += 1;
 
-            // 指定数値なら loop を抜ける。
+            // 指定数値なら loop を break する。
             if timer == TIMEOUT {
                 println!(
                     "==> {red}Time up{reset}\r",
