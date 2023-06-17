@@ -92,6 +92,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "rtyping"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "termion",
+]
+
+[[package]]
 name = "termion"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -101,14 +109,6 @@ dependencies = [
  "numtoa",
  "redox_syscall",
  "redox_termios",
-]
-
-[[package]]
-name = "typing_game"
-version = "0.1.0"
-dependencies = [
- "rand",
- "termion",
 ]
 
 [[package]]
