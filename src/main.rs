@@ -46,7 +46,7 @@ fn main() {
     // からベクターの定義
     let mut words: Vec<String> = Vec::new();
 
-    // DirEntry 型で保存する。
+    // fs::read_bytes でディレクトリ内を巡回する。
     for entry in fs::read_dir("/usr/bin").unwrap() {
         // ベクターに String 型で push する。
         // DirEntry 型から直接 String 型にできないから一旦 to_str でリテラルにする。
@@ -54,51 +54,59 @@ fn main() {
             entry.unwrap().path().file_name().unwrap().to_str().unwrap(),
         ));
     }
+
     // ベクター内の要素数を出す。
     let len: usize = words.len();
 
     // BGM
-    // ハンドラ生成
+    // stream handler 生成
     let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
+
     // build 時にソース以外のファイルを梱包するために include_bytes マクロを使う。
+    // include_bytes は byte データで File::open と違うので注意。
     let bytes = include_bytes!("../audio/BGM.mp3");
+
     // bytes データなので Cursor 型に変換する。
     let cursor = Cursor::new(bytes);
-    // 今回は mp3 なのでデコードする。
+
+    // 今回は mp3 なので Cursor データをデコードする。
     let source = Decoder::new(cursor).unwrap();
-    // ハンドラにデータソースを食わせる。その際、無限ループオプションを付加する。
+
+    // stream handler にデータソースを食わせる。その際、無限ループオプションを付加する。
     let _ = stream_handle.play_raw(source.repeat_infinite().convert_samples());
-    // スレッドで裏でスリープさせる。
+
+    // thread を用いて裏で sleep させる。
     thread::sleep(Duration::from_millis(1000));
 
-    // 画面操作を行うので raw mode にする。
+    // 画面操作を行うので tty を raw mode にする。
     let mut stdout = stdout().into_raw_mode().unwrap();
 
     loop {
         // ここに必要。なぜここに記述か失念。
         let stdin: io::Stdin = stdin();
 
-        // スレッド制御のため sender と receiver を生成する。
+        // thread 制御のため sender と receiver を生成する。
         let (tx, rx) = mpsc::channel();
 
-        // 可変変数定義。式で数値を入れるので mut キーワードは不要かもしれない。
-        // TODO: mut を外す
         let mut timer: i32 = 0;
 
-        // スレッド生成
+        // thread handler 生成。裏で時間をカウントする。
         // move で変数の受け渡す許可。loop で処理をループする。
         let _handle: thread::JoinHandle<()> = thread::spawn(move || loop {
-            // 時間を表示するのでカーソルを移動させる。
+            // 現在のカーソル位置を保存
             print!("{}", termion::cursor::Save);
+            // 表示したい場所にカーソルを移動
             print!("{}", termion::cursor::Goto(1, 1));
+            // 元の場所にカーソルを移動
             print!("{}", termion::clear::CurrentLine);
             print!("Time: {}sec", timer);
             print!("{}", termion::cursor::Restore);
+            // flush して反映させる。
             io::stdout().flush().unwrap();
 
             // スレッド制御の信号受信待受。
             match rx.try_recv() {
-                // 受信したらスレッドループを break する。
+                // 受信したら thread loop を break する。
                 // timer 変数が初期化することになる。
                 Ok(_) | Err(TryRecvError::Disconnected) => {
                     break;
@@ -106,7 +114,7 @@ fn main() {
                 Err(TryRecvError::Empty) => {}
             }
 
-            // 裏でスリープする。
+            // 裏で sleep する。
             thread::sleep(Duration::from_millis(1000));
 
             // 変数の中身を覆い隠す。
@@ -127,6 +135,7 @@ fn main() {
         // 乱数インスタンス生成
         let mut rnd: rand::rngs::ThreadRng = rand::thread_rng();
         // 乱数生成
+        // gen_range は usize 型の引数
         let i: usize = rnd.gen_range(0..len - PICKUP);
         let j: usize = i + PICKUP;
         // ベクターから乱数の添字の場所の文字列を取得する。
@@ -175,12 +184,12 @@ fn main() {
             }
             stdout.flush().unwrap();
         }
-        // ループを抜けたらベクターの中身を join して Stringa 型にする。
+        // loop を抜けたらベクターの中身を join して Stringa 型で保存する。
         let input = inputs.join("");
 
         // 出題文字列と入力文字列を比較する。
         if input.trim() == sample_string.trim() {
-            // 時間をカウントしてるスレッドに停止命令を出す。
+            // 時間をカウントしてる thread に停止命令を出す。
             let _ = tx.send(());
             // 標準出力
             println!(
