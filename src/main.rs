@@ -1,6 +1,4 @@
-//
-// Typing game
-//
+// クレートの呼び出し。
 use rand::Rng;
 use rodio::{source::Source, Decoder};
 use std::fs;
@@ -16,14 +14,18 @@ use termion::raw::IntoRawMode;
 use termion::{color, style};
 
 fn main() {
+    // 定数定義
+    // const は常に普遍。覆い隠しもできない。必ず型宣言すること。
     const PICKUP: usize = 5;
     const TIMEOUT: i32 = 60;
 
+    // 標準出力マクロ println!() は改行あり。すなわち flush() も付いてくる。
+    // print!() は改行なし。良きタイミングで flush() しないといけない。
     println!(
         "{}{}{}{goto}==> {lightblue}{bold}{italic}Typing Game{reset}",
-        termion::clear::CurrentLine,
-        termion::clear::AfterCursor,
-        termion::clear::BeforeCursor,
+        termion::clear::CurrentLine,  // Warp! だと clear:All の挙動が
+        termion::clear::AfterCursor,  // おかしいので現在行と前後行を
+        termion::clear::BeforeCursor, // clear するようにする
         goto = termion::cursor::Goto(1, 2),
         lightblue = color::Fg(color::LightBlue),
         bold = style::Bold,
@@ -32,45 +34,61 @@ fn main() {
     );
 
     println!("==> Press enter key to start");
+
+    // String 型の可変変数定義。
+    // String 型とリテラル型 (&str) は違うものなので注意。
     let mut start: String = String::new();
+    // Canonical mode で標準入力させる。
     io::stdin()
         .read_line(&mut start)
         .expect("Failed to read line.");
 
-    // init vector which save words
+    // からベクターの定義
     let mut words: Vec<String> = Vec::new();
 
-    // push words as string to the vector
+    // DirEntry 型で保存する。
     for entry in fs::read_dir("/usr/bin").unwrap() {
+        // ベクターに String 型で push する。
+        // DirEntry 型から直接 String 型にできないから一旦 to_str でリテラルにする。
         words.push(String::from(
             entry.unwrap().path().file_name().unwrap().to_str().unwrap(),
         ));
     }
-    // vector length
+    // ベクター内の要素数を出す。
     let len: usize = words.len();
 
     // BGM
+    // ハンドラ生成
     let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
+    // build 時にソース以外のファイルを梱包するために include_bytes マクロを使う。
     let bytes = include_bytes!("../audio/BGM.mp3");
+    // bytes データなので Cursor 型に変換する。
     let cursor = Cursor::new(bytes);
+    // 今回は mp3 なのでデコードする。
     let source = Decoder::new(cursor).unwrap();
+    // ハンドラにデータソースを食わせる。その際、無限ループオプションを付加する。
     let _ = stream_handle.play_raw(source.repeat_infinite().convert_samples());
+    // スレッドで裏でスリープさせる。
     thread::sleep(Duration::from_millis(1000));
 
-    // raw mode
+    // 画面操作を行うので raw mode にする。
     let mut stdout = stdout().into_raw_mode().unwrap();
 
     loop {
+        // ここに必要。なぜここに記述か失念。
         let stdin: io::Stdin = stdin();
 
-        // thread sender and receiver
+        // スレッド制御のため sender と receiver を生成する。
         let (tx, rx) = mpsc::channel();
 
-        // init time
+        // 可変変数定義。式で数値を入れるので mut キーワードは不要かもしれない。
+        // TODO: mut を外す
         let mut timer: i32 = 0;
 
-        // count 30 sec on background
+        // スレッド生成
+        // move で変数の受け渡す許可。loop で処理をループする。
         let _handle: thread::JoinHandle<()> = thread::spawn(move || loop {
+            // 時間を表示するのでカーソルを移動させる。
             print!("{}", termion::cursor::Save);
             print!("{}", termion::cursor::Goto(1, 1));
             print!("{}", termion::clear::CurrentLine);
@@ -78,16 +96,23 @@ fn main() {
             print!("{}", termion::cursor::Restore);
             io::stdout().flush().unwrap();
 
+            // スレッド制御の信号受信待受。
             match rx.try_recv() {
+                // 受信したらスレッドループを break する。
+                // timer 変数が初期化することになる。
                 Ok(_) | Err(TryRecvError::Disconnected) => {
                     break;
                 }
                 Err(TryRecvError::Empty) => {}
             }
 
+            // 裏でスリープする。
             thread::sleep(Duration::from_millis(1000));
+
+            // 変数の中身を覆い隠す。
             timer += 1;
 
+            // 指定数値なら loop を抜ける。
             if timer == TIMEOUT {
                 println!(
                     "==> {red}Time up{reset}\r",
@@ -99,12 +124,17 @@ fn main() {
             }
         });
 
+        // 乱数インスタンス生成
         let mut rnd: rand::rngs::ThreadRng = rand::thread_rng();
+        // 乱数生成
         let i: usize = rnd.gen_range(0..len - PICKUP);
         let j: usize = i + PICKUP;
+        // ベクターから乱数の添字の場所の文字列を取得する。
         let sample_string: String = words[i..=j].join(" ");
+        // String 型からリテラルへ変換 (後で使うから)
         let sample_str: &str = &sample_string;
 
+        // 標準出力。raw mode だから \r で終わらせる。
         println!("==> Type following words.\r");
         println!(
             "{color}{}{reset}\r",
@@ -113,7 +143,10 @@ fn main() {
             reset = style::Reset
         );
 
+        // キー入力待受
+        // 入力された char を貯めるベクター生成。
         let mut inputs: Vec<String> = Vec::new();
+        // キー入力待受ループ。
         for evt in stdin.events() {
             match evt.unwrap() {
                 Event::Key(Key::Ctrl('c')) => {
@@ -142,11 +175,14 @@ fn main() {
             }
             stdout.flush().unwrap();
         }
+        // ループを抜けたらベクターの中身を join して Stringa 型にする。
         let input = inputs.join("");
 
-        // check string
+        // 出題文字列と入力文字列を比較する。
         if input.trim() == sample_string.trim() {
+            // 時間をカウントしてるスレッドに停止命令を出す。
             let _ = tx.send(());
+            // 標準出力
             println!(
                 "==> {green}OK{reset}\r",
                 green = color::Fg(color::Green),
