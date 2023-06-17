@@ -34,6 +34,7 @@ cargo install --path .
 - [x] 文字装飾
 - [x] BGM 追加
 - [ ] SE 追加
+- [x] build 時に外部ファイルもバイナリに含める
 
 
 # 付録
