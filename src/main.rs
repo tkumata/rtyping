@@ -63,7 +63,9 @@ fn main() {
         // count 30 sec on background
         let _handle: thread::JoinHandle<()> = thread::spawn(move || loop {
             print!("{}", termion::cursor::Save);
-            print!("{}Time: {}sec", termion::cursor::Goto(1, 1), timer);
+            print!("{}", termion::cursor::Goto(1, 1));
+            print!("{}", termion::clear::CurrentLine);
+            print!("Time: {}sec", timer);
             print!("{}", termion::cursor::Restore);
             io::stdout().flush().unwrap();
 
@@ -109,28 +111,21 @@ fn main() {
                     return;
                 }
                 Event::Key(Key::Char('\n')) => {
-                    write!(stdout, "\r\n").unwrap();
+                    print!("\r\n");
                     break;
                 }
                 Event::Key(Key::Backspace) => {
-                    write!(stdout, "{}", termion::cursor::Left(1)).unwrap();
-                    write!(stdout, " ").unwrap();
-                    write!(stdout, "{}", termion::cursor::Left(1)).unwrap();
+                    print!("{}", termion::cursor::Left(1));
+                    print!(" ");
+                    print!("{}", termion::cursor::Left(1));
                     inputs.pop();
                 }
                 Event::Key(Key::Char(c)) => {
                     let l = inputs.len();
                     if sample_str.chars().nth(l) == Some(c) {
-                        write!(
-                            stdout,
-                            "{}{}{}",
-                            color::Fg(color::LightCyan),
-                            c,
-                            style::Reset
-                        )
-                        .unwrap();
+                        print!("{}{}{}", color::Fg(color::LightCyan), c, style::Reset);
                     } else {
-                        write!(stdout, "{}{}{}", color::Fg(color::Red), c, style::Reset).unwrap();
+                        print!("{}{}{}", color::Fg(color::Red), c, style::Reset);
                     }
                     inputs.push(String::from(c.to_string()));
                 }

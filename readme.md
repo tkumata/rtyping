@@ -8,7 +8,6 @@ Rust の学習目的で何か作りたかったので立ててみたみたいな
 とりあえず実行
 
 ```shell
-cargo new typing_game
 cargo run
 ```
 
@@ -38,6 +37,11 @@ cargo install --path .
 
 
 # 付録
+## プロジェクト作成
+```shell
+cargo new rtyping
+```
+
 ## クロスコンパイル
 例えば Intel Mac で Apple Silicon Mac のバイナリを生成する場合。
 

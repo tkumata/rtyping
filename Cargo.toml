@@ -1,5 +1,5 @@
 [package]
-name = "typing_game"
+name = "rtyping"
 version = "0.1.0"
 edition = "2021"
 
@@ -16,5 +16,5 @@ rand = "*"
 termion = "*"
 
 [[bin]]
-name = "typing_game"
+name = "rtyping"
 path = "src/main.rs"
