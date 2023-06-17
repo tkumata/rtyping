@@ -2,7 +2,9 @@
 // Typing game
 //
 use rand::Rng;
+use rodio::{source::Source, Decoder};
 use std::fs;
+use std::fs::File;
 use std::io;
 use std::io::{stdin, stdout, Write};
 use std::sync::mpsc::{self, TryRecvError};
@@ -15,7 +17,7 @@ use termion::raw::IntoRawMode;
 use termion::{color, style};
 
 fn main() {
-    const PICKUP: usize = 4;
+    const PICKUP: usize = 5;
     const TIMEOUT: i32 = 60;
 
     println!(
@@ -47,6 +49,13 @@ fn main() {
     }
     // vector length
     let len: usize = words.len();
+
+    // BGM
+    let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
+    let file = File::open("audio/BGM.mp3").unwrap();
+    let source = Decoder::new(file).unwrap();
+    let _ = stream_handle.play_raw(source.repeat_infinite().convert_samples());
+    thread::sleep(Duration::from_millis(1000));
 
     // raw mode
     let mut stdout = stdout().into_raw_mode().unwrap();
