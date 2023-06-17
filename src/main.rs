@@ -4,9 +4,8 @@
 use rand::Rng;
 use rodio::{source::Source, Decoder};
 use std::fs;
-use std::fs::File;
 use std::io;
-use std::io::{stdin, stdout, Write};
+use std::io::{stdin, stdout, Cursor, Write};
 use std::sync::mpsc::{self, TryRecvError};
 use std::thread;
 use std::time::Duration;
@@ -52,8 +51,9 @@ fn main() {
 
     // BGM
     let (_stream, stream_handle) = rodio::OutputStream::try_default().unwrap();
-    let file = File::open("audio/BGM.mp3").unwrap();
-    let source = Decoder::new(file).unwrap();
+    let bytes = include_bytes!("../audio/BGM.mp3");
+    let cursor = Cursor::new(bytes);
+    let source = Decoder::new(cursor).unwrap();
     let _ = stream_handle.play_raw(source.repeat_infinite().convert_samples());
     thread::sleep(Duration::from_millis(1000));
 
