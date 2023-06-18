@@ -33,7 +33,7 @@ fn main() {
         reset = style::Reset
     );
 
-    println!("==> Press enter key to start");
+    println!("==> Press enter key to start.");
 
     // String 型の可変変数定義。
     // String 型とリテラル型 (&str) は違うものなので注意。
@@ -42,7 +42,7 @@ fn main() {
     // Canonical mode で標準入力させる。
     io::stdin()
         .read_line(&mut start)
-        .expect("Failed to read line.");
+        .expect("==> Failed to read line.");
 
     // 空ベクターの定義
     let mut words: Vec<String> = Vec::new();
@@ -108,7 +108,7 @@ fn main() {
             // スレッド制御の信号受信待受。
             match rx.try_recv() {
                 // 受信したら thread loop を break する。
-                // timer 変数が初期化することになる。
+                // 結果的に timer 変数が初期化することになる。
                 Ok(_) | Err(TryRecvError::Disconnected) => {
                     break;
                 }
@@ -128,7 +128,7 @@ fn main() {
                     red = color::Fg(color::Red),
                     reset = style::Reset
                 );
-                println!("==> Quit process\r");
+                println!("==> Quit process.\r");
                 break;
             }
         });
@@ -153,7 +153,6 @@ fn main() {
             reset = style::Reset
         );
 
-        // キー入力待受
         // 入力された char を貯めるベクター生成。
         let mut inputs: Vec<String> = Vec::new();
         // キー入力待受ループ。
@@ -167,16 +166,20 @@ fn main() {
                     break;
                 }
                 Event::Key(Key::Backspace) => {
+                    // backspace の実装
                     print!("{}", termion::cursor::Left(1));
                     print!(" ");
                     print!("{}", termion::cursor::Left(1));
+                    // ベクターから一文字削除
                     inputs.pop();
                 }
                 Event::Key(Key::Char(c)) => {
                     let l = inputs.len();
                     if sample_str.chars().nth(l) == Some(c) {
+                        // あってれば LightCyan 文字にする。
                         print!("{}{}{}", color::Fg(color::LightCyan), c, style::Reset);
                     } else {
+                        // typo してたら赤文字にする。
                         print!("{}{}{}", color::Fg(color::Red), c, style::Reset);
                     }
                     inputs.push(String::from(c.to_string()));
@@ -198,14 +201,14 @@ fn main() {
                 green = color::Fg(color::Green),
                 reset = style::Reset
             );
-            println!("==> Try next words\r");
+            println!("==> Try next words.\r");
         } else {
             println!(
                 "==> {red}NG{reset}\r",
                 red = color::Fg(color::Red),
                 reset = style::Reset
             );
-            println!("==> Quit process\r");
+            println!("==> Quit process.\r");
             return;
         }
     }
