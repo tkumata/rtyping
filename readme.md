@@ -9,6 +9,8 @@ Rust の学習目的で何か作りたかったので立ててみたみたいな
 
 ```shell
 cargo run
+or
+cargo run -- --timeout 30
 ```
 
 `~/.cargo/bin/` 配下にインストール
@@ -17,6 +19,7 @@ cargo run
 cargo check
 cargo build --release --locked
 cargo install --path .
+rtyping --timeout 30
 ```
 
 ## やる事リスト

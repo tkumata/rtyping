@@ -1,4 +1,5 @@
 // クレートの呼び出し。
+use clap::{arg, Command};
 use rand::Rng;
 use rodio::{source::Source, Decoder};
 use std::fs;
@@ -14,16 +15,42 @@ use termion::raw::IntoRawMode;
 use termion::{color, style};
 
 fn main() {
+    // 引数オプションの定義
+    let matches = Command::new("rtyping")
+        .author("Tomokatsu Kumata")
+        .version("v1.0.0")
+        .about("typing app")
+        .arg(
+            arg!(-t --timeout <TIMEOUT>)
+                .required(false)
+                .default_value("60")
+                .value_parser(clap::value_parser!(i32)),
+        )
+        .arg(
+            arg!(-l --level <LEVEL>)
+                .required(false)
+                .default_value("4")
+                .value_parser(clap::value_parser!(usize)),
+        )
+        .get_matches();
+
+    // 引数から timeout を抜き出す。ここまでは借用状態なので &i32 型。
+    let to: &i32 = matches.get_one::<i32>("timeout").expect("msg");
+    let lv: &usize = matches.get_one::<usize>("level").expect("msg");
+
+    // 借用中なので clone で値そのものを複製する。
+    let timeout: i32 = to.clone();
+    let level: usize = lv.clone();
+
     // 定数定義
-    // const は常に普遍。覆い隠しもできない。必ず型宣言すること。
-    const PICKUP: usize = 5;
-    const TIMEOUT: i32 = 60;
+    // const は常に普遍。覆い隠しもできない。必ず型宣言すること。必ず大文字で。
+    // const PICKUP: usize = 5;
 
     // 標準出力マクロ println!() は改行あり。すなわち flush() も付いてくる。
     // print!() は改行なし。良きタイミングで flush() しないといけない。
     println!(
         "{}{}{}{goto}==> {lightblue}{bold}{italic}Typing Game{reset}",
-        termion::clear::CurrentLine,  // Warp! だと clear:All の挙動が
+        termion::clear::CurrentLine,  // Warp だと clear:All の挙動が
         termion::clear::AfterCursor,  // おかしいので現在行と前後行を
         termion::clear::BeforeCursor, // clear するようにする
         goto = termion::cursor::Goto(1, 2),
@@ -98,9 +125,11 @@ fn main() {
             print!("{}", termion::cursor::Save);
             // 表示したい場所にカーソルを移動
             print!("{}", termion::cursor::Goto(1, 1));
-            // 元の場所にカーソルを移動
+            // 桁が増えた時ゴミが残るので現在行をクリアする
             print!("{}", termion::clear::CurrentLine);
+            // 時間表示
             print!("Time: {}sec", timer);
+            // 元の場所にカーソルを移動
             print!("{}", termion::cursor::Restore);
             // flush して反映させる。
             io::stdout().flush().unwrap();
@@ -122,7 +151,7 @@ fn main() {
             timer += 1;
 
             // 指定数値なら loop を break する。
-            if timer == TIMEOUT {
+            if timer == timeout {
                 println!(
                     "==> {red}Time up{reset}\r",
                     red = color::Fg(color::Red),
@@ -137,8 +166,8 @@ fn main() {
         let mut rnd: rand::rngs::ThreadRng = rand::thread_rng();
         // 乱数生成
         // gen_range は usize 型の引数
-        let i: usize = rnd.gen_range(0..len - PICKUP);
-        let j: usize = i + PICKUP;
+        let i: usize = rnd.gen_range(0..len - level);
+        let j: usize = i + level;
         // ベクターから乱数の添字の場所の文字列を取得する。
         let sample_string: String = words[i..=j].join(" ");
         // String 型からリテラルへ変換 (後で使うから)
