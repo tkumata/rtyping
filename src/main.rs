@@ -68,7 +68,7 @@ fn main() {
 
     if sound {
         println!("==> Turn sound on");
-        let _handle: thread::JoinHandle<()> = thread::spawn(|| {
+        let _handle: thread::JoinHandle<()> = thread::spawn(|| loop {
             play_audio();
         });
     }
@@ -189,5 +189,6 @@ fn play_audio() {
     // thread::sleep(Duration::from_millis(1000));
 
     sink.append(rodio::Decoder::new(BufReader::new(cursor)).unwrap());
+    sink.set_volume(0.4);
     sink.sleep_until_end();
 }
