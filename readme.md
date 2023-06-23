@@ -10,7 +10,9 @@ Rust の学習目的で何か作りたかったので立ててみたみたいな
 ```shell
 cargo run
 or
-cargo run -- --timeout 30
+cargo run -- --timeout 30 --level 20 --sound
+or
+cargo run -- --help
 ```
 
 `~/.cargo/bin/` 配下にインストール
@@ -19,7 +21,7 @@ cargo run -- --timeout 30
 cargo check
 cargo build --release --locked
 cargo install --path .
-rtyping --timeout 30
+rtyping --timeout 30 --level 22 --sound
 ```
 
 ## やる事リスト
@@ -38,6 +40,9 @@ rtyping --timeout 30
 - [x] BGM 追加
 - [ ] SE 追加
 - [x] build 時に外部ファイルもバイナリに含める
+- [x] option 導入
+- [x] option で挙動を変更する
+- [ ] raw mode で exit した時ターミナルが壊れるを修正
 
 
 # 付録

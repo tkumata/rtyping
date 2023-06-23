@@ -16,6 +16,7 @@ rand = "*"
 rodio = "0.17.1"
 termion = "*"
 clap = "4"
+futures = "0.3.28"
 
 [[bin]]
 name = "rtyping"
