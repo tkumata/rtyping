@@ -1,7 +1,5 @@
 use clap::{arg, Command};
 use rand::Rng;
-// use rodio::Source;
-// use rodio::{source::Source, Decoder, Sink};
 use std::fs;
 use std::io;
 use std::io::{stdin, stdout, BufReader, Cursor, Write};
@@ -67,7 +65,6 @@ fn main() {
     let len: usize = words.len();
 
     if sound {
-        println!("==> Turn sound on");
         let _handle: thread::JoinHandle<()> = thread::spawn(|| loop {
             play_audio();
         });
@@ -144,7 +141,7 @@ fn main() {
                 Event::Key(Key::Char(c)) => {
                     let l = inputs.len();
                     if sample_str.chars().nth(l) == Some(c) {
-                        print!("{}{}{}", color::Fg(color::LightCyan), c, style::Reset);
+                        print!("{}", c);
                     } else {
                         print!("{}{}{}", color::Fg(color::Red), c, style::Reset);
                     }
@@ -183,10 +180,6 @@ fn play_audio() {
 
     let bytes = include_bytes!("../audio/BGM.mp3");
     let cursor = Cursor::new(bytes);
-
-    // let decoded = rodio::Decoder::new(cursor).unwrap();
-    // let _bgm = handle.play_raw(decoded.repeat_infinite().convert_samples());
-    // thread::sleep(Duration::from_millis(1000));
 
     sink.append(rodio::Decoder::new(BufReader::new(cursor)).unwrap());
     sink.set_volume(0.4);
