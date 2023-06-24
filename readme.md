@@ -1,8 +1,7 @@
 # 概要
 Rust の学習目的で何か作りたかったので立ててみたみたいな。ひとまずリーダブルは捨てて作ってみたい typing アプリに挑戦。ツッコミ歓迎。
 
-![sample](./ScreenShot1.png)
-![sample](./ScreenShot2.png)
+![sample](./ScreenShot.png)
 
 ## コマンド
 とりあえず実行
