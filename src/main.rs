@@ -25,7 +25,7 @@ fn main() {
         .arg(
             arg!(-l --level <LEVEL> "Number of words")
                 .required(false)
-                .default_value("4")
+                .default_value("9")
                 .value_parser(clap::value_parser!(usize)),
         )
         .arg(arg!(-s --sound "Turn BGM on"))

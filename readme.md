@@ -40,24 +40,23 @@ Options:
 
 # Todo list
 
-  - [x] 入力時の制限時間の実装
-  - [x] ユーザの入力
-  - [x] 出題文字列の取得
-  - [x] 乱数の基礎
-  - [x] 一部文字装飾
-  - [x] 制限時間カウンタ表示 (入力待ちしつつ別の場所に時間のカウンターを置くことが一番苦労した)
-  - [x] termion::Restore 後 io::stdin で Backspace が "^R\\n" 扱いになってしまうを修正する。(Canonicl mode をやめて Raw mode に移行することで解決)
-  - [x] Warp で `temion::clear::All` 前後の挙動がおかしいので対応する。(clear::All じゃなくて前後を clear する事で解決)
-  - [x] typo チェック
-  - [ ] wpm の集計
-  - [x] 文字装飾
-  - [x] BGM 追加
-  - [ ] SE 追加
-  - [x] build 時に外部ファイルもバイナリに含める
-  - [ ] Fix that terminal tty is broken after executing `process::exit()` on raw mode.
+  - [x] Implements timeout while user input.
+  - [x] Implements user can input.
+  - [x] Print some words on screen.
+  - [x] Using basic of random function of the Rust.
+  - [x] Decorate strings which print on the screen.
+  - [x] Implements timeout counter on top left.
+  - [x] Fix that Backspace is behavior as "^R\\n" in `std::io` after `termion::Restore`. (I use Raw mode.)
+  - [x] `temion::clear::All` ihas buggy when I use the Warp. (I did not use `clear::All`.)
+  - [x] To check typo.
+  - [ ] To calculate the wpm (words per minutes?).
+  - [x] Play a BGM.
+  - [ ] Implements adding sound effect while typing.
+  - [x] Include external file, assets file etc, when building.
+  - [ ] Fix that terminal tty is broken after executing `process::exit()` with raw mode.
   - [x] Implements options.
   - [x] Change behavior depending on options.
-  - [ ] Validation options arguments.
+  - [ ] Implements Validating arguments of options.
 
 
 # Appendix
