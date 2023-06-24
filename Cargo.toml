@@ -12,11 +12,10 @@ opt-level = 0
 opt-level = 3
 
 [dependencies]
-rand = "*"
-rodio = "0.17.1"
-termion = "*"
+rand = "0"
+rodio = "0"
+termion = "2"
 clap = "4"
-futures = "0.3.28"
 
 [[bin]]
 name = "rtyping"
