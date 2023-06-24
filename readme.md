@@ -67,16 +67,22 @@ cargo new rtyping
 ```
 
 ## How to cross-compile
-For example, build to Apple silicon on Intel Mac.
-
 ### Prepairing
-
+#### Apple silicon
 ```shell
 rustup target add aarch64-apple-darwin
 ```
+#### Windows
+```
+rustup target add x86_64-pc-windows-gnu
+```
 
 ### How to build
-
+#### Apple silicon
 ```shell
 cargo build --release --target=aarch64-apple-darwin
+```
+#### Windows
+```
+cargo build --release --target=x86_64-pc-windows-gnu
 ```
