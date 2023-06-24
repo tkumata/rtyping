@@ -15,20 +15,20 @@ use termion::{color, style};
 fn main() {
     let matches = Command::new("rtyping")
         .author("Tomokatsu Kumata")
-        .about("typing app")
+        .about("This is typing practice app on terminal.")
         .arg(
-            arg!(-t --timeout <TIMEOUT>)
+            arg!(-t --timeout <TIMEOUT> "Seconds")
                 .required(false)
                 .default_value("60")
                 .value_parser(clap::value_parser!(i32)),
         )
         .arg(
-            arg!(-l --level <LEVEL>)
+            arg!(-l --level <LEVEL> "Number of words")
                 .required(false)
                 .default_value("4")
                 .value_parser(clap::value_parser!(usize)),
         )
-        .arg(arg!(-s --sound "turn sound on"))
+        .arg(arg!(-s --sound "Turn BGM on"))
         .get_matches();
 
     let timeout: i32 = *matches.get_one::<i32>("timeout").expect("expect number");
@@ -65,7 +65,7 @@ fn main() {
     let len: usize = words.len();
 
     if sound {
-        let _handle: thread::JoinHandle<()> = thread::spawn(|| loop {
+        let _handle = thread::spawn(|| loop {
             play_audio();
         });
     }
