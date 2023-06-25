@@ -3,7 +3,7 @@ I want to make something app for purpose of learning the Rust. For the time begi
 
 ![sample](./ScreenShot.png)
 
-# How to build
+# How to run
 
 ```shell
 cargo run
@@ -13,7 +13,7 @@ or
 cargo run -- --help
 ```
 
-# How to install
+# How to build and install
 How to install to under your `~/.cargo/bin/` directory.
 
 ```shell
@@ -21,6 +21,8 @@ cargo check
 cargo build --release --locked
 cargo install --path .
 rtyping
+or
+rtyping -s -t 100
 ```
 
 # Usage
