@@ -1,0 +1,11 @@
+{
+  "name": "Rust",
+  "image": "mcr.microsoft.com/devcontainers/base:jammy",
+  "features": {
+    "ghcr.io/devcontainers/features/rust:1": {
+      "version": "latest",
+      "profile": "default"
+    }
+  },
+  "postAttachCommand": "sudo apt update -y && sudo apt install g++ pkg-config libasound2-dev libudev-dev alsa alsa-utils -y"
+}

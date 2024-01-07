@@ -36,7 +36,7 @@ fn main() {
     let sound: bool = matches.get_flag("sound");
 
     println!(
-        "{}{}{}{goto}==> {lightblue}{bold}{italic}Typing Game{reset}",
+        "{}{}{}{goto}==> {lightblue}{bold}{italic}Typing test program{reset}",
         termion::clear::CurrentLine,
         termion::clear::AfterCursor,
         termion::clear::BeforeCursor,

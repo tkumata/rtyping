@@ -14,7 +14,7 @@ opt-level = 3
 [dependencies]
 rand = "0"
 rodio = "0"
-termion = "2"
+termion = "3"
 clap = "4"
 
 [[bin]]
