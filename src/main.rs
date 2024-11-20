@@ -15,7 +15,7 @@ use termion::{color, style};
 fn main() {
     let matches = Command::new("rtyping")
         .author("Tomokatsu Kumata")
-        .about("This is typing practice app on terminal.")
+        .about("Typing test program.")
         .arg(
             arg!(-t --timeout <TIMEOUT> "Seconds")
                 .required(false)
@@ -36,7 +36,7 @@ fn main() {
     let sound: bool = matches.get_flag("sound");
 
     println!(
-        "{}{}{}{goto}==> {lightblue}{bold}{italic}Typing Game{reset}",
+        "{}{}{}{goto}==> {lightblue}{bold}{italic}R-typing - Typing Test Program{reset}",
         termion::clear::CurrentLine,
         termion::clear::AfterCursor,
         termion::clear::BeforeCursor,
