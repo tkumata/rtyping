@@ -1,11 +1,17 @@
 {
-  "name": "Rust",
-  "image": "mcr.microsoft.com/devcontainers/base:noble",
-  "features": {
-    "ghcr.io/devcontainers/features/rust:1": {
-      "version": "latest",
-      "profile": "default"
+  "name": "Rust Typing Practice",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-docker",
+        "vadimcn.vscode-lldb",
+        "fill-labs.dependi",
+        "tamasfe.even-better-toml",
+        "rust-lang.rust-analyzer"
+      ]
     }
-  },
-  "postAttachCommand": "sudo apt update -y && sudo apt install g++ pkg-config libasound2-dev libudev-dev alsa alsa-utils -y"
+  }
 }
