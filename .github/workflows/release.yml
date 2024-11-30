@@ -6,38 +6,6 @@ on:
       - 'v*.*.*'
 
 jobs:
-  build-linux:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-
-      - name: Add target for ARM Linux
-        run: rustup target add aarch64-unknown-linux-gnu
-
-      - name: Install dependencies for cross-compilation
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu crossbuild-essential-arm64 pkg-config libasound2-dev librust-alsa-sys-dev
-
-      - name: Build for ARM Linux
-        run: |
-          cargo build --release --target aarch64-unknown-linux-gnu
-          mkdir -p dist
-          cp target/aarch64-unknown-linux-gnu/release/rtyping dist/rtyping-aarch64-unknown-linux-gnu
-
-      - name: Upload artifact for ARM Linux
-        uses: actions/upload-artifact@v3
-        with:
-          name: aarch64-linux-binary
-          path: dist/rtyping-aarch64-unknown-linux-gnu
-
   build-macos:
     runs-on: macos-latest
 
@@ -78,7 +46,6 @@ jobs:
 
   release:
     needs:
-      - build-linux
       - build-macos
     runs-on: ubuntu-latest
 
@@ -89,16 +56,12 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v3
         with:
-          name: aarch64-linux-binary
-      - uses: actions/download-artifact@v3
-        with:
           name: aarch64-macos-binary
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/rtyping-aarch64-unknown-linux-gnu
             dist/rtyping-aarch64-apple-darwin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
