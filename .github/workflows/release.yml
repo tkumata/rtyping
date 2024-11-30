@@ -45,15 +45,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Install Xcode
+        run: |
+          xcode-select --install
+
       - name: Install Rust
         run: |
-          rm -rf $HOME/.cargo $HOME/.rustup
+          rm -rf $HOME/.rustup $HOME/.cargo
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           source $HOME/.cargo/env
           rustup update
-
-      - name: Add target for ARM Mac
-        run: rustup target add aarch64-apple-darwin
+          rustup default stable
+          rustup target add aarch64-apple-darwin
 
       - name: Build for ARM Mac
         run: |
