@@ -59,9 +59,9 @@ jobs:
           name: aarch64-macos-binary
 
       - name: Upload to Release
-        uses: softprops/action-gh-release@v0.1.7
+        uses: softprops/action-gh-release@v1
         with:
           files: |
-            ${{github.workspace}}/dist/rtyping-aarch64-apple-darwin
+            *
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
