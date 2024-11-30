@@ -1,0 +1,63 @@
+name: Release CLI Tool
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # バージョンタグがプッシュされたときにトリガー
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        platform:
+          - aarch64-unknown-linux-gnu
+          - aarch64-apple-darwin
+
+    steps:
+      # リポジトリのチェックアウト
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Rust のセットアップ
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      # cross のインストール
+      - name: Install cross
+        run: cargo install cross --locked
+
+      # クロスコンパイル
+      - name: Build for ${{ matrix.platform }}
+        run: |
+          cross build --release --target ${{ matrix.platform }}
+          mkdir -p dist
+          cp target/${{ matrix.platform }}/release/rtyping dist/rtyping-${{ matrix.platform }}
+
+      # アーティファクトのアップロード
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.platform }}-binary
+          path: dist/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # バイナリをリリースに添付
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/rtyping-aarch64-unknown-linux-gnu
+            dist/rtyping-aarch64-apple-darwin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
