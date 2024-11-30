@@ -54,6 +54,15 @@ jobs:
           rustup default stable
           rustup target add aarch64-apple-darwin
 
+      - name: Check if target was added
+        run: rustup show
+
+      - name: Install clang (if missing)
+        run: |
+          if ! command -v clang &> /dev/null; then
+            brew install clang
+          fi
+
       - name: Build for ARM Mac
         run: |
           export CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER=/usr/bin/clang
