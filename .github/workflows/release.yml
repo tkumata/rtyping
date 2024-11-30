@@ -3,56 +3,86 @@ name: Release CLI Tool
 on:
   push:
     tags:
-      - 'v*.*.*'  # バージョンタグがプッシュされたときにトリガー
+      - 'v*.*.*'
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        platform:
-          - aarch64-unknown-linux-gnu
-          - aarch64-apple-darwin
-
     steps:
-      # リポジトリのチェックアウト
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Rust のセットアップ
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
 
-      # cross のインストール
-      - name: Install cross
-        run: cargo install cross --locked
+      - name: Add target for ARM Linux
+        run: rustup target add aarch64-unknown-linux-gnu
 
-      # クロスコンパイル
-      - name: Build for ${{ matrix.platform }}
+      - name: Install dependencies for cross-compilation
         run: |
-          cross build --release --target ${{ matrix.platform }}
-          mkdir -p dist
-          cp target/${{ matrix.platform }}/release/rtyping dist/rtyping-${{ matrix.platform }}
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
 
-      # アーティファクトのアップロード
-      - name: Upload artifact
+      - name: Build for ARM Linux
+        run: |
+          cargo build --release --target aarch64-unknown-linux-gnu
+          mkdir -p dist
+          cp target/aarch64-unknown-linux-gnu/release/rtyping dist/rtyping-aarch64-unknown-linux-gnu
+
+      - name: Upload artifact for ARM Linux
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.platform }}-binary
-          path: dist/
+          name: aarch64-linux-binary
+          path: dist/rtyping-aarch64-unknown-linux-gnu
+
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Add target for ARM Mac
+        run: rustup target add aarch64-apple-darwin
+
+      - name: Build for ARM Mac
+        run: |
+          cargo build --release --target aarch64-apple-darwin
+          mkdir -p dist
+          cp target/aarch64-apple-darwin/release/rtyping dist/rtyping-aarch64-apple-darwin
+
+      - name: Upload artifact for ARM Mac
+        uses: actions/upload-artifact@v3
+        with:
+          name: aarch64-macos-binary
+          path: dist/rtyping-aarch64-apple-darwin
 
   release:
-    needs: build
+    needs:
+      - build-linux
+      - build-macos
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # バイナリをリリースに添付
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: aarch64-linux-binary
+      - uses: actions/download-artifact@v3
+        with:
+          name: aarch64-macos-binary
+
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
         with:
