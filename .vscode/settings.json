@@ -1,5 +1,4 @@
 {
-    // "markdown.styles": ["Style.css"],
     "editor.fontSize": 16,
     "editor.fontFamily": "monospace",
     "editor.fontLigatures": false,
