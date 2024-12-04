@@ -15,7 +15,7 @@ opt-level = 3
 rand = "0.8.5"
 rodio = "0.20.1"
 termion = "4.0.3"
-clap = "4.5.21"
+clap = "4.5.22"
 
 [[bin]]
 name = "rtyping"

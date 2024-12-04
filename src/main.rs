@@ -3,7 +3,6 @@ use rand::Rng;
 use std::fs;
 use std::io;
 use std::io::{stdin, stdout, BufReader, Cursor, Write};
-use std::sync::mpsc::{self, TryRecvError};
 use std::thread;
 use std::time::Duration;
 use termion;
@@ -12,31 +11,115 @@ use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use termion::{color, style};
 
-fn main() {
+fn main() -> io::Result<()> {
     let matches = Command::new("rtyping")
         .author("Tomokatsu Kumata")
-        .about("Typing test program.")
+        .about("Typing Practis Program")
         .arg(
             arg!(-t --timeout <TIMEOUT> "Seconds")
-                .required(false)
+                // .required(false)
                 .default_value("60")
                 .value_parser(clap::value_parser!(i32)),
         )
         .arg(
             arg!(-l --level <LEVEL> "Number of words")
-                .required(false)
+                // .required(false)
                 .default_value("9")
                 .value_parser(clap::value_parser!(usize)),
         )
-        .arg(arg!(-s --sound "Turn BGM on"))
+        .arg(arg!(-s --sound "Enable BGM"))
         .get_matches();
 
     let timeout: i32 = *matches.get_one::<i32>("timeout").expect("expect number");
     let level: usize = *matches.get_one::<usize>("level").expect("expect number");
     let sound: bool = matches.get_flag("sound");
 
+    print_intro();
+
+    if sound {
+        let _handle = thread::spawn(|| loop {
+            play_audio();
+        });
+    }
+
+    let mut stdout = stdout().into_raw_mode().unwrap();
+    let stdin: io::Stdin = stdin();
+    let mut timer: i32 = 0;
+
+    // タイマーの表示とカウントを thread で実装。
+    let _handle = thread::spawn(move || loop {
+        while timer < timeout {
+            print_timer(timer);
+            thread::sleep(Duration::from_secs(1));
+            timer += 1;
+        }
+
+        println!("==> {}Time up{}\r", color::Fg(color::Red), style::Reset);
+        std::process::exit(0);
+    });
+
+    // String と str 型で打鍵すべき目的の単語を level に応じて抽出する。
+    let target_string = load_words(level);
+    let target_str = &target_string;
+
+    // 目的の単語を表示する。
+    println!("{}\r", target_string);
+
+    // ユーザの入力をためるための Vec を用意する。
+    let mut inputs: Vec<String> = Vec::new();
+
+    // ユーザ入力を監視する。
+    for evt in stdin.events() {
+        match evt.unwrap() {
+            Event::Key(Key::Ctrl('c') | Key::Esc | Key::Char('\n')) => {
+                break;
+            }
+            Event::Key(Key::Backspace) => {
+                print!("{}", termion::cursor::Left(1)); // カーソルを戻す。
+                print!(" "); // 空白を入力するとカーソルがまた進むので
+                print!("{}", termion::cursor::Left(1)); // 再度カーソルを戻す。
+                inputs.pop();
+            }
+            Event::Key(Key::Char(c)) => {
+                let l = inputs.len();
+                if target_str.chars().nth(l) == Some(c) {
+                    print!("{}{}{}", color::Fg(color::Green), c, style::Reset);
+                } else {
+                    print!("{}{}{}", color::Fg(color::Red), c, style::Reset);
+                }
+                inputs.push(String::from(c.to_string()));
+            }
+            _ => {}
+        }
+        stdout.flush().unwrap();
+    }
+
+    // let input = inputs.join("");
+    // if input.trim() == target_string.trim() {
+    //     let _ = tx.send(());
+    //     println!(
+    //         "==> {green}OK{reset}\r",
+    //         green = color::Fg(color::Green),
+    //         reset = style::Reset
+    //     );
+    //     println!("==> Try next words.\r");
+    // } else {
+    //     println!(
+    //         "==> {red}NG{reset}\r",
+    //         red = color::Fg(color::Red),
+    //         reset = style::Reset
+    //     );
+    //     println!("==> Quit process.\r");
+    //     return;
+    // }
+
+    println!("Exiting...");
+    return Ok(());
+}
+
+fn print_intro() {
     println!(
-        "{}{}{}{goto}==> {lightblue}{bold}{italic}R-typing - Typing Test Program{reset}",
+        "{}{}{}{goto}==> {lightblue}{bold}{italic}R-Typing - Rust Typing Practis Program{reset}",
         termion::clear::CurrentLine,
         termion::clear::AfterCursor,
         termion::clear::BeforeCursor,
@@ -46,14 +129,34 @@ fn main() {
         italic = style::Italic,
         reset = style::Reset
     );
-
     println!("==> Press enter key to start.");
     let mut start: String = String::new();
-
     io::stdin()
         .read_line(&mut start)
         .expect("==> Failed to read line.");
+}
 
+fn print_timer(timer: i32) {
+    print!("{}", termion::cursor::Save);
+    print!("{}", termion::cursor::Goto(1, 3));
+    print!("{}", termion::clear::CurrentLine);
+    print!("Time: {}sec", timer);
+    print!("{}", termion::cursor::Restore);
+    io::stdout().flush().unwrap();
+}
+
+fn play_audio() {
+    let (_stream, handle) = rodio::OutputStream::try_default().unwrap();
+    let sink = rodio::Sink::try_new(&handle).unwrap();
+    let bytes = include_bytes!("../audio/BGM.mp3");
+    let cursor = Cursor::new(bytes);
+
+    sink.append(rodio::Decoder::new(BufReader::new(cursor)).unwrap());
+    sink.set_volume(0.4);
+    sink.sleep_until_end();
+}
+
+fn load_words(level: usize) -> String {
     let mut words: Vec<String> = Vec::new();
 
     for entry in fs::read_dir("/usr/bin").unwrap() {
@@ -63,125 +166,9 @@ fn main() {
     }
 
     let len: usize = words.len();
+    let mut rnd: rand::rngs::ThreadRng = rand::thread_rng();
+    let i: usize = rnd.gen_range(0..len - level);
+    let j: usize = i + level;
 
-    if sound {
-        let _handle = thread::spawn(|| loop {
-            play_audio();
-        });
-    }
-
-    let mut stdout = stdout().into_raw_mode().unwrap();
-
-    loop {
-        let stdin: io::Stdin = stdin();
-        let (tx, rx) = mpsc::channel();
-        let mut timer: i32 = 0;
-
-        let _handle: thread::JoinHandle<()> = thread::spawn(move || loop {
-            print!("{}", termion::cursor::Save);
-            print!("{}", termion::cursor::Goto(1, 1));
-            print!("{}", termion::clear::CurrentLine);
-            print!("Time: {}sec", timer);
-            print!("{}", termion::cursor::Restore);
-            io::stdout().flush().unwrap();
-
-            match rx.try_recv() {
-                Ok(_) | Err(TryRecvError::Disconnected) => {
-                    break;
-                }
-                Err(TryRecvError::Empty) => {}
-            }
-
-            thread::sleep(Duration::from_millis(1000));
-
-            timer += 1;
-
-            if timer == timeout {
-                println!(
-                    "==> {red}Time up{reset}\r",
-                    red = color::Fg(color::Red),
-                    reset = style::Reset
-                );
-                println!("==> Quit process.\r");
-                std::process::exit(0);
-            }
-        });
-
-        let mut rnd: rand::rngs::ThreadRng = rand::thread_rng();
-        let i: usize = rnd.gen_range(0..len - level);
-        let j: usize = i + level;
-        let sample_string: String = words[i..=j].join(" ");
-        let sample_str: &str = &sample_string;
-
-        println!("==> Type following words.\r");
-        println!(
-            "{color}{}{reset}\r",
-            sample_string,
-            color = color::Fg(color::LightCyan),
-            reset = style::Reset
-        );
-
-        let mut inputs: Vec<String> = Vec::new();
-
-        for evt in stdin.events() {
-            match evt.unwrap() {
-                Event::Key(Key::Ctrl('c')) => {
-                    return;
-                }
-                Event::Key(Key::Char('\n')) => {
-                    print!("\r\n");
-                    break;
-                }
-                Event::Key(Key::Backspace) => {
-                    print!("{}", termion::cursor::Left(1));
-                    print!(" ");
-                    print!("{}", termion::cursor::Left(1));
-                    inputs.pop();
-                }
-                Event::Key(Key::Char(c)) => {
-                    let l = inputs.len();
-                    if sample_str.chars().nth(l) == Some(c) {
-                        print!("{}", c);
-                    } else {
-                        print!("{}{}{}", color::Fg(color::Red), c, style::Reset);
-                    }
-                    inputs.push(String::from(c.to_string()));
-                }
-                _ => {}
-            }
-            stdout.flush().unwrap();
-        }
-
-        let input = inputs.join("");
-
-        if input.trim() == sample_string.trim() {
-            let _ = tx.send(());
-            println!(
-                "==> {green}OK{reset}\r",
-                green = color::Fg(color::Green),
-                reset = style::Reset
-            );
-            println!("==> Try next words.\r");
-        } else {
-            println!(
-                "==> {red}NG{reset}\r",
-                red = color::Fg(color::Red),
-                reset = style::Reset
-            );
-            println!("==> Quit process.\r");
-            return;
-        }
-    }
-}
-
-fn play_audio() {
-    let (_stream, handle) = rodio::OutputStream::try_default().unwrap();
-    let sink = rodio::Sink::try_new(&handle).unwrap();
-
-    let bytes = include_bytes!("../audio/BGM.mp3");
-    let cursor = Cursor::new(bytes);
-
-    sink.append(rodio::Decoder::new(BufReader::new(cursor)).unwrap());
-    sink.set_volume(0.4);
-    sink.sleep_until_end();
+    words[i..=j].join(" ")
 }
