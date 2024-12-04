@@ -34,14 +34,17 @@ fn main() -> io::Result<()> {
     let level: usize = *matches.get_one::<usize>("level").expect("expect number");
     let sound: bool = matches.get_flag("sound");
 
+    // イントロを表示
     print_intro();
 
+    // 音の処理
     if sound {
         let _handle = thread::spawn(|| loop {
             play_audio();
         });
     }
 
+    // 初期化
     let mut stdout = stdout().into_raw_mode().unwrap();
     let stdin: io::Stdin = stdin();
     let mut timer: i32 = 0;
