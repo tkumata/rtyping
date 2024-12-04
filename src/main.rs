@@ -39,7 +39,7 @@ fn main() -> io::Result<()> {
 
     // 音の処理
     if sound {
-        let _handle = thread::spawn(|| loop {
+        thread::spawn(|| loop {
             play_audio();
         });
     }
@@ -50,14 +50,14 @@ fn main() -> io::Result<()> {
     let mut timer: i32 = 0;
 
     // タイマーの表示とカウントを thread で実装。
-    let _handle = thread::spawn(move || loop {
+    let timer_handler = thread::spawn(move || {
         while timer < timeout {
             print_timer(timer);
             thread::sleep(Duration::from_secs(1));
             timer += 1;
         }
 
-        println!("==> {}Time up{}\r", color::Fg(color::Red), style::Reset);
+        println!("\r==> {}Time up{}\r", color::Fg(color::Red), style::Reset);
         std::process::exit(0);
     });
 
@@ -116,7 +116,8 @@ fn main() -> io::Result<()> {
     //     return;
     // }
 
-    println!("Exiting...");
+    timer_handler.join().unwrap();
+    println!("Quit.");
     return Ok(());
 }
 
