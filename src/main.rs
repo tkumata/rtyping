@@ -78,10 +78,10 @@ fn main() -> io::Result<()> {
                 break;
             }
             Event::Key(Key::Backspace) => {
-                print!("{}", termion::cursor::Left(1)); // カーソルを戻す。
-                print!(" "); // 空白を入力するとカーソルがまた進むので
-                print!("{}", termion::cursor::Left(1)); // 再度カーソルを戻す。
-                inputs.pop();
+                if !inputs.is_empty() {
+                    inputs.pop();
+                    print!("\x08 \x08"); // カーソルを戻して削除
+                }
             }
             Event::Key(Key::Char(c)) => {
                 let l = inputs.len();
