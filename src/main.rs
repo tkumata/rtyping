@@ -50,7 +50,7 @@ fn main() -> io::Result<()> {
     let mut timer: i32 = 0;
 
     // タイマーの表示とカウントを thread で実装。
-    let timer_handler = thread::spawn(move || {
+    thread::spawn(move || {
         while timer < timeout {
             print_timer(timer);
             thread::sleep(Duration::from_secs(1));
@@ -71,16 +71,23 @@ fn main() -> io::Result<()> {
     // ユーザの入力をためるための Vec を用意する。
     let mut inputs: Vec<String> = Vec::new();
 
+    // 入力位置を調整
+    println!("{}", termion::cursor::Up(2));
+
     // ユーザ入力を監視する。
     for evt in stdin.events() {
         match evt.unwrap() {
-            Event::Key(Key::Ctrl('c') | Key::Esc | Key::Char('\n')) => {
+            Event::Key(Key::Ctrl('c')) | Event::Key(Key::Esc) | Event::Key(Key::Char('\n')) => {
+                println!("\r");
                 break;
             }
             Event::Key(Key::Backspace) => {
                 if !inputs.is_empty() {
+                    let l = inputs.len();
+                    print!("{}", termion::cursor::Left(1));
+                    print!("{}", target_str.chars().nth(l - 1).unwrap().to_string());
+                    print!("{}", termion::cursor::Left(1));
                     inputs.pop();
-                    print!("\x08 \x08"); // カーソルを戻して削除
                 }
             }
             Event::Key(Key::Char(c)) => {
@@ -116,9 +123,9 @@ fn main() -> io::Result<()> {
     //     return;
     // }
 
-    timer_handler.join().unwrap();
-    println!("Quit.");
-    return Ok(());
+    println!("Quit.\r");
+
+    Ok(())
 }
 
 fn print_intro() {
