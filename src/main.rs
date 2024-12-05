@@ -34,27 +34,30 @@ fn main() -> io::Result<()> {
     let level: usize = *matches.get_one::<usize>("level").expect("expect number");
     let sound: bool = matches.get_flag("sound");
 
+    // イントロを表示
     print_intro();
 
+    // 音の処理
     if sound {
-        let _handle = thread::spawn(|| loop {
+        thread::spawn(|| loop {
             play_audio();
         });
     }
 
+    // 初期化
     let mut stdout = stdout().into_raw_mode().unwrap();
     let stdin: io::Stdin = stdin();
     let mut timer: i32 = 0;
 
     // タイマーの表示とカウントを thread で実装。
-    let _handle = thread::spawn(move || loop {
+    thread::spawn(move || {
         while timer < timeout {
             print_timer(timer);
             thread::sleep(Duration::from_secs(1));
             timer += 1;
         }
 
-        println!("==> {}Time up{}\r", color::Fg(color::Red), style::Reset);
+        println!("\r==> {}Time up{}\r", color::Fg(color::Red), style::Reset);
         std::process::exit(0);
     });
 
@@ -68,17 +71,24 @@ fn main() -> io::Result<()> {
     // ユーザの入力をためるための Vec を用意する。
     let mut inputs: Vec<String> = Vec::new();
 
+    // 入力位置を調整
+    println!("{}", termion::cursor::Up(2));
+
     // ユーザ入力を監視する。
     for evt in stdin.events() {
         match evt.unwrap() {
-            Event::Key(Key::Ctrl('c') | Key::Esc | Key::Char('\n')) => {
+            Event::Key(Key::Ctrl('c')) | Event::Key(Key::Esc) | Event::Key(Key::Char('\n')) => {
+                println!("\r");
                 break;
             }
             Event::Key(Key::Backspace) => {
-                print!("{}", termion::cursor::Left(1)); // カーソルを戻す。
-                print!(" "); // 空白を入力するとカーソルがまた進むので
-                print!("{}", termion::cursor::Left(1)); // 再度カーソルを戻す。
-                inputs.pop();
+                if !inputs.is_empty() {
+                    let l = inputs.len();
+                    print!("{}", termion::cursor::Left(1));
+                    print!("{}", target_str.chars().nth(l - 1).unwrap().to_string());
+                    print!("{}", termion::cursor::Left(1));
+                    inputs.pop();
+                }
             }
             Event::Key(Key::Char(c)) => {
                 let l = inputs.len();
@@ -113,8 +123,9 @@ fn main() -> io::Result<()> {
     //     return;
     // }
 
-    println!("Exiting...");
-    return Ok(());
+    println!("Quit.\r");
+
+    Ok(())
 }
 
 fn print_intro() {

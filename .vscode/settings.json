@@ -1,10 +1,9 @@
 {
-    "editor.fontSize": 16,
-    "editor.fontFamily": "monospace",
-    "editor.fontLigatures": false,
-    "editor.scrollBeyondLastLine": false,
-    "editor.rulers": [120],
-    "editor.wordWrap": "on",
-    "editor.formatOnSave": true
-  }
-  
+  "editor.fontSize": 16,
+  "editor.fontFamily": "monospace",
+  "editor.fontLigatures": false,
+  "editor.scrollBeyondLastLine": false,
+  "editor.rulers": [120],
+  "editor.wordWrap": "on",
+  "editor.formatOnSave": true
+}
