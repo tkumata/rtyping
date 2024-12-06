@@ -3,6 +3,7 @@ use rand::Rng;
 use std::fs;
 use std::io;
 use std::io::{stdin, stdout, BufReader, Cursor, Write};
+use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 use termion;
@@ -47,38 +48,52 @@ fn main() -> io::Result<()> {
     // 初期化
     let mut stdout = stdout().into_raw_mode().unwrap();
     let stdin: io::Stdin = stdin();
-    let mut timer: i32 = 0;
+    let timer = Arc::new(Mutex::new(0));
+    let timer_clone = Arc::clone(&timer);
 
-    // タイマーの表示とカウントを thread で実装。
+    // ユーザの入力をためるための Vec を用意する
+    let mut inputs: Vec<String> = Vec::new();
+
+    // 間違い文字数
+    let mut incorrect_chars = 0;
+
+    // メインスレッドとタイマースレッド間で通信するチャンネルを作成
+    let (tx, rx) = mpsc::channel();
+
+    // String と str 型で打鍵すべき目的の単語を level に応じて抽出する
+    let target_string = load_words(level);
+    let target_str = &target_string;
+
+    // タイマーの表示とカウントを thread で実装
     thread::spawn(move || {
-        while timer < timeout {
-            print_timer(timer);
+        while *timer_clone.lock().unwrap() < timeout {
+            let mut timer_value = timer_clone.lock().unwrap();
+            print_timer(*timer_value);
             thread::sleep(Duration::from_secs(1));
-            timer += 1;
+            *timer_value += 1;
+
+            // メッセージが受信されたら終了
+            if let Ok(_) = rx.try_recv() {
+                return;
+            }
         }
 
         println!("\r==> {}Time up{}\r", color::Fg(color::Red), style::Reset);
         std::process::exit(0);
     });
 
-    // String と str 型で打鍵すべき目的の単語を level に応じて抽出する。
-    let target_string = load_words(level);
-    let target_str = &target_string;
-
-    // 目的の単語を表示する。
+    // 目的の単語を表示する
     println!("{}\r", target_string);
-
-    // ユーザの入力をためるための Vec を用意する。
-    let mut inputs: Vec<String> = Vec::new();
 
     // 入力位置を調整
     println!("{}", termion::cursor::Up(2));
 
-    // ユーザ入力を監視する。
+    // ユーザ入力を監視する
     for evt in stdin.events() {
         match evt.unwrap() {
             Event::Key(Key::Ctrl('c')) | Event::Key(Key::Esc) | Event::Key(Key::Char('\n')) => {
                 println!("\r");
+                tx.send(()).unwrap(); // タイマースレッドに終了通知を送る
                 break;
             }
             Event::Key(Key::Backspace) => {
@@ -96,6 +111,7 @@ fn main() -> io::Result<()> {
                     print!("{}{}{}", color::Fg(color::Green), c, style::Reset);
                 } else {
                     print!("{}{}{}", color::Fg(color::Red), c, style::Reset);
+                    incorrect_chars += 1;
                 }
                 inputs.push(String::from(c.to_string()));
             }
@@ -104,26 +120,12 @@ fn main() -> io::Result<()> {
         stdout.flush().unwrap();
     }
 
-    // let input = inputs.join("");
-    // if input.trim() == target_string.trim() {
-    //     let _ = tx.send(());
-    //     println!(
-    //         "==> {green}OK{reset}\r",
-    //         green = color::Fg(color::Green),
-    //         reset = style::Reset
-    //     );
-    //     println!("==> Try next words.\r");
-    // } else {
-    //     println!(
-    //         "==> {red}NG{reset}\r",
-    //         red = color::Fg(color::Red),
-    //         reset = style::Reset
-    //     );
-    //     println!("==> Quit process.\r");
-    //     return;
-    // }
+    // wpm 計算
+    let elapsed_timer = *timer.lock().unwrap();
+    let wpm = calc_wpm(inputs.len(), elapsed_timer, incorrect_chars);
 
     println!("Quit.\r");
+    println!("WPM: {}{}{}\r", color::Fg(color::Red), wpm, style::Reset);
 
     Ok(())
 }
@@ -182,4 +184,8 @@ fn load_words(level: usize) -> String {
     let j: usize = i + level;
 
     words[i..=j].join(" ")
+}
+
+fn calc_wpm(inputs_length: usize, seconds: i32, incorrect: i32) -> f64 {
+    ((inputs_length as f64 - incorrect as f64) * 12.0) / (5.0 * seconds as f64)
 }
