@@ -52,7 +52,7 @@ Options:
 - [x] Fix that Backspace is behavior as "^R\\n" in `std::io` after `termion::Restore`. (I use Raw mode.)
 - [x] `temion::clear::All` has buggy when I use the Warp. (I did not use `clear::All`.)
 - [x] To check typo.
-- [ ] To calculate the wpm (words per minutes?).
+- [x] To calculate the wpm (words per minutes?).
 - [x] Play a BGM.
 - [ ] Implements adding sound effect while typing.
 - [x] Include external file, assets file etc, when building.
