@@ -18,13 +18,11 @@ fn main() -> io::Result<()> {
         .about("Typing Practis Program")
         .arg(
             arg!(-t --timeout <TIMEOUT> "Seconds")
-                // .required(false)
                 .default_value("60")
                 .value_parser(clap::value_parser!(i32)),
         )
         .arg(
             arg!(-l --level <LEVEL> "Number of words")
-                // .required(false)
                 .default_value("9")
                 .value_parser(clap::value_parser!(usize)),
         )
@@ -47,58 +45,54 @@ fn main() -> io::Result<()> {
 
     // 初期化
     let mut stdout = stdout().into_raw_mode().unwrap();
-    let stdin: io::Stdin = stdin();
+    let stdin = stdin();
     let timer = Arc::new(Mutex::new(0));
     let timer_clone = Arc::clone(&timer);
 
-    // ユーザの入力をためるための Vec を用意する
-    let mut inputs: Vec<String> = Vec::new();
+    let mut inputs: Vec<String> = Vec::new(); // ユーザ入力保持 Vec 用意
+    let mut incorrect_chars = 0; // 入力間違い文字数
 
-    // 間違い文字数
-    let mut incorrect_chars = 0;
+    let (tx_mt, rx_mt) = mpsc::channel(); // メイン -> タイマー
+    let (tx_tt, rx_tt) = mpsc::channel(); // タイマー -> メイン
 
-    // メインスレッドとタイマースレッド間で通信するチャンネルを作成
-    let (tx_mt, rx_mt) = mpsc::channel();
-    let (tx_tt, rx_tt) = mpsc::channel();
-
-    // String と str 型で打鍵すべき目的の単語を level に応じて抽出する
-    let target_string = load_words(level);
+    let target_string = load_words(level); // 目標単語列
     let target_str = &target_string;
 
-    // タイマーの表示とカウントを thread で実装
-    thread::spawn(move || {
-        while *timer_clone.lock().unwrap() <= timeout {
-            let mut timer_value = timer_clone.lock().unwrap();
-            print_timer(*timer_value);
-            *timer_value += 1;
-            thread::sleep(Duration::from_secs(1));
+    println!("{}\r", target_string); // 目的単語列を表示
+    println!("{}", termion::cursor::Up(2)); // 入力位置を調整
 
+    // タイマーの表示とカウント
+    let timer_thread = thread::spawn(move || {
+        loop {
             if rx_tt.try_recv().is_ok() {
                 return;
             }
+            {
+                let mut timer_value = timer_clone.lock().unwrap();
+                if *timer_value > timeout {
+                    break;
+                }
+                print_timer(*timer_value);
+                *timer_value += 1;
+            }
+            thread::sleep(Duration::from_secs(1));
         }
 
-        tx_mt.send(()).unwrap();
         println!(
             "\r{}==> {}Time up. Press any key.{}\r",
             termion::cursor::Down(1),
             color::Fg(color::Red),
             style::Reset
         );
-        return;
+        tx_mt.send(()).unwrap();
     });
-
-    // 目的の単語を表示する
-    println!("{}\r", target_string);
-
-    // 入力位置を調整
-    println!("{}", termion::cursor::Up(2));
 
     // ユーザ入力を監視する
     for evt in stdin.events() {
-        if let Ok(_) = rx_mt.try_recv() {
+        if rx_mt.try_recv().is_ok() {
             break;
         }
+
         match evt.unwrap() {
             Event::Key(Key::Ctrl('c')) | Event::Key(Key::Esc) | Event::Key(Key::Char('\n')) => {
                 println!("\r");
@@ -116,18 +110,23 @@ fn main() -> io::Result<()> {
             }
             Event::Key(Key::Char(c)) => {
                 let l = inputs.len();
+
                 if target_str.chars().nth(l) == Some(c) {
                     print!("{}{}{}", color::Fg(color::Green), c, style::Reset);
                 } else {
                     print!("{}{}{}", color::Fg(color::Red), c, style::Reset);
                     incorrect_chars += 1;
                 }
+
                 inputs.push(String::from(c.to_string()));
             }
             _ => {}
         }
+
         stdout.flush().unwrap();
     }
+
+    timer_thread.join().unwrap();
 
     // wpm 計算
     let elapsed_timer = *timer.lock().unwrap() - 1;
@@ -152,7 +151,9 @@ fn print_intro() {
         reset = style::Reset
     );
     println!("==> Press *ENTER* key to start.");
+
     let mut start: String = String::new();
+
     io::stdin()
         .read_line(&mut start)
         .expect("==> Failed to read line.");
@@ -164,6 +165,7 @@ fn print_timer(timer: i32) {
     print!("{}", termion::clear::CurrentLine);
     print!("Time: {}sec", timer);
     print!("{}", termion::cursor::Restore);
+
     io::stdout().flush().unwrap();
 }
 
@@ -179,20 +181,19 @@ fn play_audio() {
 }
 
 fn load_words(level: usize) -> String {
-    let mut words: Vec<String> = Vec::new();
+    let words: Vec<_> = fs::read_dir("/usr/bin")
+        .unwrap()
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.file_name().into_string().unwrap())
+        .collect();
+    let len = words.len();
 
-    for entry in fs::read_dir("/usr/bin").unwrap() {
-        words.push(String::from(
-            entry.unwrap().path().file_name().unwrap().to_str().unwrap(),
-        ));
+    if len < level {
+        panic!("Not enough words available!");
     }
 
-    let len: usize = words.len();
-    let mut rnd: rand::rngs::ThreadRng = rand::thread_rng();
-    let i: usize = rnd.gen_range(0..len - level);
-    let j: usize = i + level;
-
-    words[i..=j].join(" ")
+    let start = rand::thread_rng().gen_range(0..=len - level);
+    words[start..start + level].join(" ")
 }
 
 fn calc_wpm(inputs_length: usize, seconds: i32, incorrect: i32) -> f64 {
