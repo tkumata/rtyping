@@ -145,7 +145,7 @@ fn main() -> io::Result<()> {
     println!("Total Types: {} chars\r", inputs.len());
     println!("Incorrect Types: {} chars\r", incorrect_chars);
     println!(
-        "WPM: {}{}{}\r",
+        "WPM: {}{:.2}{}\r",
         color::Fg(color::Green),
         calc_wpm(inputs.len(), elapsed_timer, incorrect_chars),
         style::Reset
