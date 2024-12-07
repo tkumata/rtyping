@@ -130,6 +130,9 @@ fn main() -> io::Result<()> {
 
     // wpm 計算
     let elapsed_timer = *timer.lock().unwrap() - 1;
+    println!("Total Time: {}\r", elapsed_timer);
+    println!("Total Types: {}\r", inputs.len());
+    println!("Incorrect Types: {}\r", incorrect_chars);
     let wpm = calc_wpm(inputs.len(), elapsed_timer, incorrect_chars);
 
     println!("Quit.\r");
