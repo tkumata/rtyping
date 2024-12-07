@@ -58,7 +58,8 @@ fn main() -> io::Result<()> {
     let mut incorrect_chars = 0;
 
     // メインスレッドとタイマースレッド間で通信するチャンネルを作成
-    let (tx, rx) = mpsc::channel();
+    let (tx_mt, rx_mt) = mpsc::channel();
+    let (tx_tt, rx_tt) = mpsc::channel();
 
     // String と str 型で打鍵すべき目的の単語を level に応じて抽出する
     let target_string = load_words(level);
@@ -66,20 +67,25 @@ fn main() -> io::Result<()> {
 
     // タイマーの表示とカウントを thread で実装
     thread::spawn(move || {
-        while *timer_clone.lock().unwrap() < timeout {
+        while *timer_clone.lock().unwrap() <= timeout {
             let mut timer_value = timer_clone.lock().unwrap();
             print_timer(*timer_value);
-            thread::sleep(Duration::from_secs(1));
             *timer_value += 1;
+            thread::sleep(Duration::from_secs(1));
 
-            // メッセージが受信されたら終了
-            if let Ok(_) = rx.try_recv() {
+            if rx_tt.try_recv().is_ok() {
                 return;
             }
         }
 
-        println!("\r==> {}Time up{}\r", color::Fg(color::Red), style::Reset);
-        std::process::exit(0);
+        tx_mt.send(()).unwrap();
+        println!(
+            "\r{}==> {}Time up. Press any key.{}\r",
+            termion::cursor::Down(1),
+            color::Fg(color::Red),
+            style::Reset
+        );
+        return;
     });
 
     // 目的の単語を表示する
@@ -90,10 +96,13 @@ fn main() -> io::Result<()> {
 
     // ユーザ入力を監視する
     for evt in stdin.events() {
+        if let Ok(_) = rx_mt.try_recv() {
+            break;
+        }
         match evt.unwrap() {
             Event::Key(Key::Ctrl('c')) | Event::Key(Key::Esc) | Event::Key(Key::Char('\n')) => {
                 println!("\r");
-                tx.send(()).unwrap(); // タイマースレッドに終了通知を送る
+                tx_tt.send(()).unwrap();
                 break;
             }
             Event::Key(Key::Backspace) => {
@@ -121,7 +130,7 @@ fn main() -> io::Result<()> {
     }
 
     // wpm 計算
-    let elapsed_timer = *timer.lock().unwrap();
+    let elapsed_timer = *timer.lock().unwrap() - 1;
     let wpm = calc_wpm(inputs.len(), elapsed_timer, incorrect_chars);
 
     println!("Quit.\r");
@@ -136,13 +145,13 @@ fn print_intro() {
         termion::clear::CurrentLine,
         termion::clear::AfterCursor,
         termion::clear::BeforeCursor,
-        goto = termion::cursor::Goto(1, 2),
+        goto = termion::cursor::Goto(1, 1),
         lightblue = color::Fg(color::LightBlue),
         bold = style::Bold,
         italic = style::Italic,
         reset = style::Reset
     );
-    println!("==> Press enter key to start.");
+    println!("==> Press *ENTER* key to start.");
     let mut start: String = String::new();
     io::stdin()
         .read_line(&mut start)
