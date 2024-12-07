@@ -3,6 +3,9 @@
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "mounts": [
+    "source=${localWorkspaceFolder}/asound.conf,target=/etc/asound.conf,type=bind"
+  ],
   "customizations": {
     "vscode": {
       "extensions": [

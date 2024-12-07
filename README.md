@@ -54,7 +54,7 @@ Options:
 - [x] To check typo.
 - [x] To calculate the wpm (words per minutes?).
 - [x] Play a BGM.
-- [ ] Implements adding sound effect while typing.
+- [x] Implements adding sound effect while typing.
 - [x] Include external file, assets file etc, when building.
 - [ ] Fix that terminal tty is broken after executing `process::exit()` with raw mode.
 - [x] Implements options.

@@ -1,5 +1,7 @@
 use clap::{arg, Command};
 use rand::Rng;
+use rodio::Source;
+use rodio::{source::SineWave, OutputStream};
 use std::fs;
 use std::io;
 use std::io::{stdin, stdout, BufReader, Cursor, Write};
@@ -87,6 +89,9 @@ fn main() -> io::Result<()> {
         tx_mt.send(()).unwrap();
     });
 
+    // ストリーミング用意
+    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+
     // ユーザ入力を監視する
     for evt in stdin.events() {
         if rx_mt.try_recv().is_ok() {
@@ -113,8 +118,12 @@ fn main() -> io::Result<()> {
 
                 if target_str.chars().nth(l) == Some(c) {
                     print!("{}{}{}", color::Fg(color::Green), c, style::Reset);
+
+                    // Produce a 440Hz beep sound
+                    let source = SineWave::new(440.0).take_duration(Duration::from_millis(200));
+                    stream_handle.play_raw(source.convert_samples()).unwrap();
                 } else {
-                    print!("{}{}{}", color::Fg(color::Red), c, style::Reset);
+                    print!("{}{}{}{}", "\x07", color::Fg(color::Red), c, style::Reset);
                     incorrect_chars += 1;
                 }
 
@@ -128,12 +137,19 @@ fn main() -> io::Result<()> {
 
     timer_thread.join().unwrap();
 
-    // wpm 計算
-    let elapsed_timer = *timer.lock().unwrap() - 1;
-    let wpm = calc_wpm(inputs.len(), elapsed_timer, incorrect_chars);
-
     println!("Quit.\r");
-    println!("WPM: {}{}{}\r", color::Fg(color::Red), wpm, style::Reset);
+
+    // WPM 計算と表示
+    let elapsed_timer = *timer.lock().unwrap() - 1;
+    println!("Total Time: {}\r", elapsed_timer);
+    println!("Total Types: {}\r", inputs.len());
+    println!("Incorrect Types: {}\r", incorrect_chars);
+    println!(
+        "WPM: {}{}{}\r",
+        color::Fg(color::Green),
+        calc_wpm(inputs.len(), elapsed_timer, incorrect_chars),
+        style::Reset
+    );
 
     Ok(())
 }
