@@ -156,7 +156,7 @@ fn main() -> io::Result<()> {
 
 fn print_intro() {
     println!(
-        "{}{}{}{goto}==> {lightblue}{bold}{italic}R-Typing - Rust Typing Practis Program{reset}",
+        "{}{}{}{goto}{lightblue}{bold}{italic}R-Typing - Rust Typing Practis Program{reset}",
         termion::clear::CurrentLine,
         termion::clear::AfterCursor,
         termion::clear::BeforeCursor,
@@ -166,7 +166,7 @@ fn print_intro() {
         italic = style::Italic,
         reset = style::Reset
     );
-    println!("==> Press *ENTER* key to start.\r");
+    println!("Press *ENTER* key to start.\r");
 
     let mut start: String = String::new();
 
