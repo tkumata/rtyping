@@ -141,11 +141,11 @@ fn main() -> io::Result<()> {
 
     // WPM 計算と表示
     let elapsed_timer = *timer.lock().unwrap() - 1;
-    println!("Total Time: {}\r", elapsed_timer);
-    println!("Total Types: {}\r", inputs.len());
-    println!("Incorrect Types: {}\r", incorrect_chars);
+    println!("Total Time: {} sec\r", elapsed_timer);
+    println!("Total Types: {} chars\r", inputs.len());
+    println!("Incorrect Types: {} chars\r", incorrect_chars);
     println!(
-        "WPM: {}{}{}\r",
+        "WPM: {}{:.2}{}\r",
         color::Fg(color::Green),
         calc_wpm(inputs.len(), elapsed_timer, incorrect_chars),
         style::Reset
@@ -156,7 +156,7 @@ fn main() -> io::Result<()> {
 
 fn print_intro() {
     println!(
-        "{}{}{}{goto}==> {lightblue}{bold}{italic}R-Typing - Rust Typing Practis Program{reset}",
+        "{}{}{}{goto}{lightblue}{bold}{italic}R-Typing - Rust Typing Practis Program{reset}",
         termion::clear::CurrentLine,
         termion::clear::AfterCursor,
         termion::clear::BeforeCursor,
@@ -166,7 +166,7 @@ fn print_intro() {
         italic = style::Italic,
         reset = style::Reset
     );
-    println!("==> Press *ENTER* key to start.");
+    println!("Press *ENTER* key to start.\r");
 
     let mut start: String = String::new();
 
@@ -213,5 +213,5 @@ fn load_words(level: usize) -> String {
 }
 
 fn calc_wpm(inputs_length: usize, seconds: i32, incorrect: i32) -> f64 {
-    ((inputs_length as f64 - incorrect as f64) * 12.0) / (5.0 * seconds as f64)
+    (inputs_length as f64 - incorrect as f64) / (5.0 * seconds as f64 / 60.0)
 }
