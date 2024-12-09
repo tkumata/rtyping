@@ -28,12 +28,18 @@ fn main() -> io::Result<()> {
                 .default_value("9")
                 .value_parser(clap::value_parser!(usize)),
         )
+        .arg(
+            arg!(--freq <FREQUENCY> "Frequency e.g, 800.0 or 480.0")
+                .default_value("800.0")
+                .value_parser(clap::value_parser!(f32)),
+        )
         .arg(arg!(-s --sound "Enable BGM"))
         .get_matches();
 
     let timeout: i32 = *matches.get_one::<i32>("timeout").expect("expect number");
     let level: usize = *matches.get_one::<usize>("level").expect("expect number");
     let sound: bool = matches.get_flag("sound");
+    let freq: f32 = *matches.get_one::<f32>("freq").expect("expect frequency");
 
     // イントロを表示
     print_intro();
@@ -51,6 +57,7 @@ fn main() -> io::Result<()> {
     let timer = Arc::new(Mutex::new(0));
     let timer_clone = Arc::clone(&timer);
 
+    let (_stream, stream_handle) = OutputStream::try_default().unwrap(); // 打鍵用ストリーミング
     let mut inputs: Vec<String> = Vec::new(); // ユーザ入力保持 Vec 用意
     let mut incorrect_chars = 0; // 入力間違い文字数
 
@@ -89,9 +96,6 @@ fn main() -> io::Result<()> {
         tx_mt.send(()).unwrap();
     });
 
-    // ストリーミング用意
-    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-
     // ユーザ入力を監視する
     for evt in stdin.events() {
         if rx_mt.try_recv().is_ok() {
@@ -120,7 +124,7 @@ fn main() -> io::Result<()> {
                     print!("{}{}{}", color::Fg(color::Green), c, style::Reset);
 
                     // Produce a 440Hz beep sound
-                    let source = SineWave::new(440.0).take_duration(Duration::from_millis(200));
+                    let source = SineWave::new(freq).take_duration(Duration::from_millis(200));
                     stream_handle.play_raw(source.convert_samples()).unwrap();
                 } else {
                     print!("{}{}{}{}", "\x07", color::Fg(color::Red), c, style::Reset);
