@@ -36,10 +36,10 @@ fn main() -> io::Result<()> {
         .arg(arg!(-s --sound "Enable BGM"))
         .get_matches();
 
-    let timeout = *matches.get_one::<i32>("timeout").expect("expect number");
-    let level = *matches.get_one::<usize>("level").expect("expect number");
-    let sound = matches.get_flag("sound");
-    let freq = *matches.get_one::<f32>("freq").expect("expect frequency");
+    let timeout: i32 = *matches.get_one::<i32>("timeout").expect("expect number");
+    let level: usize = *matches.get_one::<usize>("level").expect("expect number");
+    let sound: bool = matches.get_flag("sound");
+    let freq: f32 = *matches.get_one::<f32>("freq").expect("expect frequency");
 
     // イントロを表示
     print_intro();
