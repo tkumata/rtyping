@@ -88,7 +88,7 @@ fn main() -> io::Result<()> {
         }
 
         println!(
-            "\r{}==> {}Time up. Press any key.{}\r",
+            "\r{}==> {}⏱ Time up. ⌨ Press any key.{}\r",
             termion::cursor::Down(1),
             color::Fg(color::Red),
             style::Reset
@@ -123,7 +123,7 @@ fn main() -> io::Result<()> {
                 if target_str.chars().nth(l) == Some(c) {
                     print!("{}{}{}", color::Fg(color::Green), c, style::Reset);
 
-                    // Produce a 440Hz beep sound
+                    // Produce a <FREQ> beep sound
                     let source = SineWave::new(freq).take_duration(Duration::from_millis(200));
                     stream_handle.play_raw(source.convert_samples()).unwrap();
                 } else {
@@ -145,9 +145,9 @@ fn main() -> io::Result<()> {
 
     // WPM 計算と表示
     let elapsed_timer = *timer.lock().unwrap() - 1;
-    println!("Total Time: {} sec\r", elapsed_timer);
-    println!("Total Types: {} chars\r", inputs.len());
-    println!("Incorrect Types: {} chars\r", incorrect_chars);
+    println!("⌚ Total Time: {} sec\r", elapsed_timer);
+    println!("🎹 Total Types: {} chars\r", inputs.len());
+    println!("❌ Incorrect Types: {} chars\r", incorrect_chars);
     println!(
         "WPM: {}{:.2}{}\r",
         color::Fg(color::Green),
@@ -170,7 +170,7 @@ fn print_intro() {
         italic = style::Italic,
         reset = style::Reset
     );
-    println!("Press *ENTER* key to start.\r");
+    println!("🚀 Press *ENTER* key to start.\r");
 
     let mut start: String = String::new();
 
