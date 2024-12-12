@@ -36,107 +36,115 @@ fn main() -> io::Result<()> {
         .arg(arg!(-s --sound "Enable BGM"))
         .get_matches();
 
+    // 引数処理
     let timeout: i32 = *matches.get_one::<i32>("timeout").expect("expect number");
     let level: usize = *matches.get_one::<usize>("level").expect("expect number");
     let sound: bool = matches.get_flag("sound");
     let freq: f32 = *matches.get_one::<f32>("freq").expect("expect frequency");
 
-    // イントロを表示
-    print_intro();
+    // sine 波生成ストリーミング
+    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+
+    // スレッド間通信チャンネル
+    let (mt_tx, mt_rx) = mpsc::channel(); // メイン -> タイマー
+    let (tt_tx, tt_rx) = mpsc::channel(); // タイマー -> メイン
+    let (bgm_tx, bgm_rx) = mpsc::channel();
 
     // 音の処理
     if sound {
-        thread::spawn(|| loop {
+        thread::spawn(move || loop {
+            if bgm_rx.try_recv().is_ok() {
+                break;
+            }
             play_audio();
         });
     }
 
-    // 初期化
-    let mut stdout = stdout().into_raw_mode().unwrap();
-    let stdin = stdin();
-    let timer = Arc::new(Mutex::new(0));
-    let timer_clone = Arc::clone(&timer);
+    // イントロを表示
+    print_intro();
 
-    let (_stream, stream_handle) = OutputStream::try_default().unwrap(); // 打鍵用ストリーミング
+    // 目標単語列表示
+    let stdin = stdin();
+    let mut stdout = stdout().into_raw_mode().unwrap();
     let mut inputs: Vec<String> = Vec::new(); // ユーザ入力保持 Vec 用意
     let mut incorrect_chars = 0; // 入力間違い文字数
-
-    let (tx_mt, rx_mt) = mpsc::channel(); // メイン -> タイマー
-    let (tx_tt, rx_tt) = mpsc::channel(); // タイマー -> メイン
-
-    let target_string = load_words(level); // 目標単語列
+    let target_string = load_words(level); // 目標単語列取得
     let target_str = &target_string;
-
-    println!("{}\r", target_string); // 目的単語列を表示
-    println!("{}", termion::cursor::Up(2)); // 入力位置を調整
+    println!("{}\r", target_string);
+    println!("{}", termion::cursor::Up(2));
 
     // タイマーの表示とカウント
+    let timer = Arc::new(Mutex::new(0));
+    let timer_clone = Arc::clone(&timer);
     let timer_thread = thread::spawn(move || {
         loop {
-            if rx_tt.try_recv().is_ok() {
+            if tt_rx.try_recv().is_ok() {
                 return;
             }
-            {
-                let mut timer_value = timer_clone.lock().unwrap();
+
+            if let Ok(mut timer_value) = timer_clone.try_lock() {
                 if *timer_value > timeout {
                     break;
                 }
                 print_timer(*timer_value);
                 *timer_value += 1;
             }
+
             thread::sleep(Duration::from_secs(1));
         }
 
         println!(
-            "\r{}==> {}Time up. Press any key.{}\r",
+            "\r{}{}⏱ Time up. ⌨ Press any key.{}\r",
             termion::cursor::Down(1),
             color::Fg(color::Red),
             style::Reset
         );
-        tx_mt.send(()).unwrap();
+        mt_tx.send(()).unwrap();
     });
 
     // ユーザ入力を監視する
     for evt in stdin.events() {
-        if rx_mt.try_recv().is_ok() {
+        // Todo: Change stdin.events
+        if mt_rx.try_recv().is_ok() {
             break;
         }
 
-        match evt.unwrap() {
-            Event::Key(Key::Ctrl('c')) | Event::Key(Key::Esc) | Event::Key(Key::Char('\n')) => {
-                println!("\r");
-                tx_tt.send(()).unwrap();
-                break;
-            }
-            Event::Key(Key::Backspace) => {
-                if !inputs.is_empty() {
+        if let Ok(Event::Key(key)) = evt {
+            match key {
+                Key::Ctrl('c') | Key::Esc | Key::Char('\n') => {
+                    println!("\r");
+                    tt_tx.send(()).unwrap();
+                    break;
+                }
+                Key::Backspace => {
+                    if !inputs.is_empty() {
+                        let l = inputs.len();
+                        print!("{}", termion::cursor::Left(1));
+                        print!("{}", target_str.chars().nth(l - 1).unwrap().to_string());
+                        print!("{}", termion::cursor::Left(1));
+                        inputs.pop();
+                    }
+                }
+                Key::Char(c) => {
                     let l = inputs.len();
-                    print!("{}", termion::cursor::Left(1));
-                    print!("{}", target_str.chars().nth(l - 1).unwrap().to_string());
-                    print!("{}", termion::cursor::Left(1));
-                    inputs.pop();
+
+                    if target_str.chars().nth(l) == Some(c) {
+                        print!("{}{}{}", color::Fg(color::Green), c, style::Reset);
+
+                        // Produce a <FREQ> beep sound
+                        let source = SineWave::new(freq).take_duration(Duration::from_millis(200));
+                        stream_handle.play_raw(source.convert_samples()).unwrap();
+                    } else {
+                        print!("{}{}{}{}", "\x07", color::Fg(color::Red), c, style::Reset);
+                        incorrect_chars += 1;
+                    }
+
+                    inputs.push(String::from(c.to_string()));
                 }
+                _ => {}
             }
-            Event::Key(Key::Char(c)) => {
-                let l = inputs.len();
-
-                if target_str.chars().nth(l) == Some(c) {
-                    print!("{}{}{}", color::Fg(color::Green), c, style::Reset);
-
-                    // Produce a 440Hz beep sound
-                    let source = SineWave::new(freq).take_duration(Duration::from_millis(200));
-                    stream_handle.play_raw(source.convert_samples()).unwrap();
-                } else {
-                    print!("{}{}{}{}", "\x07", color::Fg(color::Red), c, style::Reset);
-                    incorrect_chars += 1;
-                }
-
-                inputs.push(String::from(c.to_string()));
-            }
-            _ => {}
+            stdout.flush().unwrap();
         }
-
-        stdout.flush().unwrap();
     }
 
     timer_thread.join().unwrap();
@@ -145,45 +153,45 @@ fn main() -> io::Result<()> {
 
     // WPM 計算と表示
     let elapsed_timer = *timer.lock().unwrap() - 1;
-    println!("Total Time: {} sec\r", elapsed_timer);
-    println!("Total Types: {} chars\r", inputs.len());
-    println!("Incorrect Types: {} chars\r", incorrect_chars);
+    println!("⌚Total Time: {}sec\r", elapsed_timer);
+    println!("✅Total Types: {}chars\r", inputs.len());
+    println!("❌Incorrect Types: {}chars\r", incorrect_chars);
     println!(
-        "WPM: {}{:.2}{}\r",
+        "🛹WPM: {}{:.2}{}\r",
         color::Fg(color::Green),
         calc_wpm(inputs.len(), elapsed_timer, incorrect_chars),
         style::Reset
     );
 
+    bgm_tx.send(()).unwrap();
     Ok(())
 }
 
 fn print_intro() {
     println!(
-        "{}{}{}{goto}{lightblue}{bold}{italic}R-Typing - Rust Typing Practis Program{reset}",
+        "{}{}{}{goto}{lightblue}{bold}R-Typing - Rust⚙ Typing Practis Program{reset}\r",
         termion::clear::CurrentLine,
         termion::clear::AfterCursor,
         termion::clear::BeforeCursor,
         goto = termion::cursor::Goto(1, 1),
         lightblue = color::Fg(color::LightBlue),
         bold = style::Bold,
-        italic = style::Italic,
         reset = style::Reset
     );
-    println!("Press *ENTER* key to start.\r");
+    println!("🚀Press *ENTER* key to start.\r");
 
     let mut start: String = String::new();
 
     io::stdin()
         .read_line(&mut start)
-        .expect("==> Failed to read line.");
+        .expect("Failed to read line.");
 }
 
 fn print_timer(timer: i32) {
     print!("{}", termion::cursor::Save);
     print!("{}", termion::cursor::Goto(1, 3));
     print!("{}", termion::clear::CurrentLine);
-    print!("Time: {}sec", timer);
+    print!("⏳Time: {}sec", timer);
     print!("{}", termion::cursor::Restore);
 
     io::stdout().flush().unwrap();

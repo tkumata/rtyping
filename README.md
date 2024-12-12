@@ -4,13 +4,17 @@ I want to make something app for purpose of learning the Rust. For the time begi
 
 ![sample](./ScreenShot.png)
 
-## How to run
+## How to run on VSCode
 
 ```shell
 cargo run
-or
+
+# or
+
 cargo run -- --timeout 30 --level 20 --sound
-or
+
+# or
+
 cargo run -- --help
 ```
 
@@ -37,6 +41,7 @@ Usage: rtyping [OPTIONS]
 Options:
   -t, --timeout <TIMEOUT>  Seconds [default: 60]
   -l, --level <LEVEL>      Number of words [default: 9]
+  --freq <FREQUENCY>       Frequency e.g, 800.0 or 480.0
   -s, --sound              Turn BGM on
   -h, --help               Print help
 ```
@@ -56,10 +61,10 @@ Options:
 - [x] Play a BGM.
 - [x] Implements adding sound effect while typing.
 - [x] Include external file, assets file etc, when building.
-- [ ] Fix that terminal tty is broken after executing `process::exit()` with raw mode.
+- [x] Fix that terminal tty is broken after executing `process::exit()` with raw mode.
 - [x] Implements options.
 - [x] Change behavior depending on options.
-- [ ] Implements Validating arguments of options.
+- [x] Implements Validating arguments of options.
 
 ## Appendix
 
