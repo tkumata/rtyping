@@ -25,7 +25,7 @@ jobs:
 
       - name: 📦 Install dependecies
         run: |
-          sudo apt install -y libasound2-dev gcc-aarch64-linux-gnu pkg-config pkg-config-aarch64-linux-gnu
+          sudo apt install -y libasound2-dev gcc-aarch64-linux-gnu pkg-config pkg-config-aarch64-linux-gnu libasound2-dev:armhf crossbuild-essential-armhf
 
       - name: Configure pkg-config for cross-compilation
         run: |
