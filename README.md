@@ -6,6 +6,8 @@ I want to make something app for purpose of learning the Rust. For the time begi
 
 ## ⚙️ How to run on VSCode
 
+VS Code 編集画面 `fn main()` の直上の `▶ Run` をクリック。もしくは以下のコマンドを実行。
+
 ```shell
 cargo run
 
@@ -24,13 +26,13 @@ How to install to under your `~/.cargo/bin/` directory.
 
 ```shell
 cargo check
-cargo build --release --locked
+cargo build --release
 cargo install --path .
 ```
 
 ## 💻 Usage
 
-```shell
+```text
 This is typing practice app on terminal.
 
 Usage: rtyping [OPTIONS]
@@ -63,7 +65,7 @@ Options:
 - [x] Change behavior depending on options.
 - [x] Implements Validating arguments of options.
 
-## Appendix
+## 🔖 Appendix
 
 ### 🛠 How to cross-compile
 
@@ -76,7 +78,7 @@ cargo build --release --target=aarch64-apple-darwin
 
 for Windows
 
-```
+```shell
 rustup target add x86_64-pc-windows-gnu
 cargo build --release --target=x86_64-pc-windows-gnu
 ```
