@@ -1,4 +1,4 @@
-# 🚀 Description
+# 🦀 Description
 
 I want to make something app for purpose of learning the Rust. For the time begining, I threw away readable code and tried to make to typing app. I would be happy to point out any my mistakes.
 
