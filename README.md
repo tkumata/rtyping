@@ -24,13 +24,13 @@ How to install to under your `~/.cargo/bin/` directory.
 
 ```shell
 cargo check
-cargo build --release --locked
+cargo build --release
 cargo install --path .
 ```
 
 ## 💻 Usage
 
-```shell
+```text
 This is typing practice app on terminal.
 
 Usage: rtyping [OPTIONS]
