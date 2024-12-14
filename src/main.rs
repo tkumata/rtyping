@@ -3,7 +3,7 @@ use rand::Rng;
 use rodio::Source;
 use rodio::{source::SineWave, OutputStream};
 use std::fs;
-use std::io;
+use std::io::{self};
 use std::io::{stdin, stdout, BufReader, Cursor, Write};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
@@ -12,7 +12,7 @@ use termion;
 use termion::event::{Event, Key};
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
-use termion::{color, style};
+use termion::{color, style, terminal_size};
 
 fn main() -> io::Result<()> {
     let matches = Command::new("rtyping")
@@ -50,6 +50,13 @@ fn main() -> io::Result<()> {
     let (tt_tx, tt_rx) = mpsc::channel(); // タイマー -> メイン
     let (bgm_tx, bgm_rx) = mpsc::channel();
 
+    // 横幅を固定（例: 80）
+    let fixed_width: u16 = 80;
+    // 現在のターミナルサイズを取得
+    let (width, _height) = terminal_size().unwrap_or((80, 24));
+    // 使用する幅を固定幅と現在の横幅の小さい方にする
+    let use_width = std::cmp::min(width, fixed_width);
+
     // 音の処理
     if sound {
         thread::spawn(move || loop {
@@ -70,8 +77,13 @@ fn main() -> io::Result<()> {
     let mut incorrect_chars = 0; // 入力間違い文字数
     let target_string = load_words(level); // 目標単語列取得
     let target_str = &target_string;
-    println!("{}\r", target_string);
-    println!("{}", termion::cursor::Up(2));
+    let line = "-".repeat(use_width as usize);
+    print!("{}\r\n", line);
+    print!("{}", termion::cursor::Save); // カーソル位置保存
+    print!("{}\r\n", target_string);
+    print!("{}\r\n", line);
+    print!("{}", termion::cursor::Restore); // カーソル位置復元 (入力位置がここになる)
+    io::stdout().flush().unwrap();
 
     // タイマーの表示とカウント
     let timer = Arc::new(Mutex::new(0));
@@ -93,8 +105,8 @@ fn main() -> io::Result<()> {
             thread::sleep(Duration::from_secs(1));
         }
 
-        println!(
-            "\r{}{}⏱ Time up. ⌨ Press any key.{}\r",
+        print!(
+            "{}{}⏰Time up. Press any key.{}\r\n",
             termion::cursor::Down(1),
             color::Fg(color::Red),
             style::Reset
@@ -112,7 +124,7 @@ fn main() -> io::Result<()> {
         if let Ok(Event::Key(key)) = evt {
             match key {
                 Key::Ctrl('c') | Key::Esc | Key::Char('\n') => {
-                    println!("\r");
+                    print!("\r\n");
                     tt_tx.send(()).unwrap();
                     break;
                 }
@@ -149,15 +161,15 @@ fn main() -> io::Result<()> {
 
     timer_thread.join().unwrap();
 
-    println!("Quit.\r");
+    print!("\r\nQuit.\r\n");
 
     // WPM 計算と表示
     let elapsed_timer = *timer.lock().unwrap() - 1;
-    println!("⌚Total Time: {}sec\r", elapsed_timer);
-    println!("✅Total Types: {}chars\r", inputs.len());
-    println!("❌Incorrect Types: {}chars\r", incorrect_chars);
-    println!(
-        "🛹WPM: {}{:.2}{}\r",
+    print!("⌚Total Time: {} sec\r\n", elapsed_timer);
+    print!("🔢Total Types: {} chars\r\n", inputs.len());
+    print!("❌Incorrect Types: {} chars\r\n", incorrect_chars);
+    print!(
+        "🎯WPM: {}{:.2}{}\r\n",
         color::Fg(color::Green),
         calc_wpm(inputs.len(), elapsed_timer, incorrect_chars),
         style::Reset
@@ -168,17 +180,16 @@ fn main() -> io::Result<()> {
 }
 
 fn print_intro() {
-    println!(
-        "{}{}{}{goto}{lightblue}{bold}R-Typing - Rust⚙ Typing Practis Program{reset}\r",
+    print!(
+        "{}{}{}{}{lightblue}R-Typing - 🦀 Rust Typing Practis Program{reset}\r\n",
         termion::clear::CurrentLine,
         termion::clear::AfterCursor,
         termion::clear::BeforeCursor,
-        goto = termion::cursor::Goto(1, 1),
+        termion::cursor::Goto(1, 1),
         lightblue = color::Fg(color::LightBlue),
-        bold = style::Bold,
         reset = style::Reset
     );
-    println!("🚀Press *ENTER* key to start.\r");
+    print!("🚀Press *ENTER* key to start.\r\n");
 
     let mut start: String = String::new();
 
@@ -191,7 +202,7 @@ fn print_timer(timer: i32) {
     print!("{}", termion::cursor::Save);
     print!("{}", termion::cursor::Goto(1, 3));
     print!("{}", termion::clear::CurrentLine);
-    print!("⏳Time: {}sec", timer);
+    print!("Time: {} sec", timer);
     print!("{}", termion::cursor::Restore);
 
     io::stdout().flush().unwrap();
