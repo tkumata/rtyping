@@ -9,41 +9,42 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        target: [aarch64-unknown-linux-gnu, aarch64-apple-darwin]
-    runs-on: ${{ matrix.os }}
+  build-macos:
+    runs-on: macos-latest
 
     steps:
-      - name: 📋 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: ⚙️ Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
+      - name: Install Rust
+        run: |
+          rm -rf $HOME/.rustup $HOME/.cargo
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source $HOME/.cargo/env
+          rustup update
+          rustup default stable
+          rustup target add aarch64-apple-darwin
 
-      - name: 🍺 Install clang (if on macOS)
-        if: ${{ matrix.os == 'macos-latest' }}
+      - name: Check if target was added
+        run: rustup show
+
+      - name: Install clang (if missing)
         run: |
           if ! command -v clang &> /dev/null; then
             brew install clang
           fi
 
-      - name: 🔨 Build binary
+      - name: Build for ARM Mac
         run: |
-          cargo build --release --target ${{ matrix.target }}
+          export CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER=/usr/bin/clang
+          cargo build --release --target aarch64-apple-darwin
           mkdir -p dist
-          cp target/${{ matrix.target }}/release/rtyping dist/rtyping-${{ matrix.target }}
+          cp target/aarch64-apple-darwin/release/rtyping dist/rtyping-aarch64-apple-darwin
 
-      - name: 🔝 Upload to Release
+      - name: Upload to Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/rtyping-${{ matrix.target }}
+            dist/rtyping-aarch64-apple-darwin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
