@@ -26,11 +26,11 @@ jobs:
       - name: 📦 Install dependecies
         run: |
           sudo apt update
-          sudo apt install -y libasound2-dev gcc-aarch64-linux-gnu pkg-config crossbuild-essential-armhf
+          sudo apt install -y libasound2-dev:aarch64 gcc-aarch64-linux-gnu pkg-config crossbuild-essential-armhf
 
       - name: Configure pkg-config for cross-compilation
         run: |
-          export PKG_CONFIG=pkg-config-aarch64-linux-gnu
+          export ALSA_NO_PKG_CONFIG=1
           export PKG_CONFIG_SYSROOT_DIR=/usr/aarch64-linux-gnu
           export PKG_CONFIG_PATH=/usr/aarch64-linux-gnu/lib/pkgconfig
 
