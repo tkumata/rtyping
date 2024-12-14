@@ -63,7 +63,7 @@ Options:
 - [x] Change behavior depending on options.
 - [x] Implements Validating arguments of options.
 
-## Appendix
+## 🔖 Appendix
 
 ### 🛠 How to cross-compile
 
@@ -76,7 +76,7 @@ cargo build --release --target=aarch64-apple-darwin
 
 for Windows
 
-```
+```shell
 rustup target add x86_64-pc-windows-gnu
 cargo build --release --target=x86_64-pc-windows-gnu
 ```
