@@ -16,21 +16,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: 🦀 Install Rust
+      - name: 🦀 Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-unknown-linux-gnu
+          override: true
+
+      - name: Install packages
         run: |
-          sudo apt install -y libasound2-dev gcc-aarch64-linux-gnu
-          rm -rf $HOME/.rustup $HOME/.cargo
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          source $HOME/.cargo/env
-          rustup update
-          rustup default stable
-          rustup target add aarch64-unknown-linux-gnu
+          sudo apt install -y libasound2-dev gcc-aarch64-linux-gnu pkg-config
 
       - name: Check if target was added
         run: rustup show
 
       - name: 🛠🐧 Build for ARM Linux
         run: |
+          rustup target add aarch64-unknown-linux-gnu
           cargo build --release --target aarch64-unknown-linux-gnu
           mkdir -p dist
           cp target/aarch64-unknown-linux-gnu/release/rtyping dist/rtyping-aarch64-unknown-linux-gnu
