@@ -1,10 +1,10 @@
-# Description
+# 🚀 Description
 
 I want to make something app for purpose of learning the Rust. For the time begining, I threw away readable code and tried to make to typing app. I would be happy to point out any my mistakes.
 
 ![sample](./ScreenShot.png)
 
-## How to run on VSCode
+## ⚙️ How to run on VSCode
 
 ```shell
 cargo run
@@ -18,7 +18,7 @@ cargo run -- --timeout 30 --level 20 --sound
 cargo run -- --help
 ```
 
-## How to build and install
+## 🔨 How to build and install
 
 How to install to under your `~/.cargo/bin/` directory.
 
@@ -26,12 +26,9 @@ How to install to under your `~/.cargo/bin/` directory.
 cargo check
 cargo build --release --locked
 cargo install --path .
-rtyping
-or
-rtyping -s -t 100
 ```
 
-## Usage
+## 💻 Usage
 
 ```shell
 This is typing practice app on terminal.
@@ -46,7 +43,7 @@ Options:
   -h, --help               Print help
 ```
 
-## Todo list
+## ✅ Todo list
 
 - [x] Implements timeout while user input.
 - [x] Implements user can input.
@@ -68,7 +65,7 @@ Options:
 
 ## Appendix
 
-### How to cross-compile
+### 🛠 How to cross-compile
 
 for Apple silicon
 
