@@ -6,6 +6,8 @@ I want to make something app for purpose of learning the Rust. For the time begi
 
 ## ⚙️ How to run on VSCode
 
+VS Code 編集画面 `fn main()` の直上の `▶ Run` をクリック。もしくは以下のコマンドを実行。
+
 ```shell
 cargo run
 
