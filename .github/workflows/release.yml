@@ -1,6 +1,7 @@
 name: Release CLI Tool
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'v*.*.*'
@@ -70,13 +71,31 @@ jobs:
             gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
             libasound2t64 libasound2-dev libudev-dev pkg-config \
             librust-alsa-sys-dev
-          sudo tee /etc/apt/sources.list.d/arm64.list <<EOF
+          sudo tee /etc/apt/sources.list.d/arm64.source <<EOF
+          Types: deb
+          URIs: http://archive.ubuntu.com/ubuntu/
+          Suites: noble
+          Components: main restricted universe
+          Architectures: amd64
+
+          Types: deb
+          URIs: http://security.ubuntu.com/ubuntu/
+          Suites: noble-security
+          Components: main restricted universe
+          Architectures: amd64
+
+          Types: deb
+          URIs: http://archive.ubuntu.com/ubuntu/
+          Suites: noble-updates
+          Components: main restricted universe
+          Architectures: amd64
+
           Types: deb
           URIs: http://azure.ports.ubuntu.com/ubuntu-ports/
           Suites: noble
           Components: main restricted multiverse universe
           Architectures: arm64
-          
+
           Types: deb
           URIs: http://azure.ports.ubuntu.com/ubuntu-ports/
           Suites: noble-updates
