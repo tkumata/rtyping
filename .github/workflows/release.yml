@@ -67,9 +67,9 @@ jobs:
         run: |
           sudo apt update && sudo apt upgrade -y
           sudo apt install -y libc6-dev-arm64-cross crossbuild-essential-arm64 gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libasound2-dev libudev-dev pkg-config librust-alsa-sys-dev
-          sudo dpkg --add-architecture arm64
-          sudo apt update && sudo apt upgrade -y
-          sudo apt install librust-alsa-sys-dev:arm64 libasound2-dev:arm64
+          # sudo dpkg --add-architecture arm64
+          # sudo apt update && sudo apt upgrade -y
+          # sudo apt install librust-alsa-sys-dev:arm64 libasound2-dev:arm64
 
       - name: ⚙️ Configure
         run: |
