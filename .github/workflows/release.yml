@@ -70,6 +70,11 @@ jobs:
             gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
             libasound2t64 libasound2-dev libudev-dev pkg-config \
             librust-alsa-sys-dev
+          sudo sed -i "s/deb http/deb [arch=amd64] http/" /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ $(lsb_release -c -s) main multiverse universe" | sudo tee -a /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ $(lsb_release -c -s)-security main multiverse universe" | sudo tee -a /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ $(lsb_release -c -s)-backports main multiverse universe" | sudo tee -a /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ $(lsb_release -c -s)-updates main multiverse universe" | sudo tee -a /etc/apt/sources.list
           sudo dpkg --add-architecture arm64
           sudo apt update
           sudo apt install libasound2t64:arm64 libasound2-dev:arm64
@@ -91,7 +96,8 @@ jobs:
       - name: 🛠 Build for ARM Linux
         run: |
           rustup target add aarch64-unknown-linux-gnu
-          cargo build --release --target aarch64-unknown-linux-gnu
+          # cargo build --release --target aarch64-unknown-linux-gnu
+          CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc cargo build --target=aarch64-unknown-linux-gnu
           mkdir -p dist
           cp target/aarch64-unknown-linux-gnu/release/rtyping dist/rtyping-aarch64-unknown-linux-gnu
 
