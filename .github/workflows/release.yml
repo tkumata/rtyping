@@ -74,12 +74,6 @@ jobs:
           export UBUNTU=$(lsb_release -cs)
           sudo tee /etc/apt/sources.list.d/arm64.list <<EOF
           deb [arch=arm64] http://azure.archive.ubuntu.com/ubuntu/ $UBUNTU main restricted
-          deb [arch=arm64] http://azure.archive.ubuntu.com/ubuntu/ $UBUNTU-updates main restricted
-          deb [arch=arm64] http://azure.archive.ubuntu.com/ubuntu/ $UBUNTU universe
-          deb [arch=arm64] http://azure.archive.ubuntu.com/ubuntu/ $UBUNTU-updates universe
-          deb [arch=arm64] http://azure.archive.ubuntu.com/ubuntu/ $UBUNTU multiverse
-          deb [arch=arm64] http://azure.archive.ubuntu.com/ubuntu/ $UBUNTU-updates multiverse
-          deb [arch=arm64] http://azure.archive.ubuntu.com/ubuntu/ $UBUNTU-backports main restricted universe multiverse
           EOF
           sudo apt update
           sudo apt install libasound2t64:arm64 libasound2-dev:arm64
