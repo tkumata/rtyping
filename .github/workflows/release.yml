@@ -70,9 +70,18 @@ jobs:
             gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
             libasound2t64 libasound2-dev libudev-dev pkg-config \
             librust-alsa-sys-dev
-          export UBUNTU=$(lsb_release -cs)
           sudo tee /etc/apt/sources.list.d/arm64.list <<EOF
-          deb [arch=arm64] http://ports.ubuntu.com/ $UBUNTU main restricted
+          Types: deb
+          URIs: http://azure.ports.ubuntu.com/ubuntu-ports/
+          Suites: noble
+          Components: main restricted multiverse universe
+          Architectures: arm64
+          
+          Types: deb
+          URIs: http://azure.ports.ubuntu.com/ubuntu-ports/
+          Suites: noble-updates
+          Components: main restricted multiverse universe
+          Architectures: arm64
           EOF
           sudo dpkg --add-architecture arm64
           sudo apt update
