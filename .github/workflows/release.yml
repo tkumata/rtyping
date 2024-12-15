@@ -28,13 +28,11 @@ jobs:
           sudo apt update
           sudo apt install -y libc6-dev-arm64-cross crossbuild-essential-arm64 \
             gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-            libasound2-dev libudev-dev pkg-config
+            libasound2t64 libasound2-dev libudev-dev pkg-config \
+            librust-alsa-sys-dev
           # sudo dpkg --add-architecture arm64
           # sudo apt update
           # sudo apt install libasound2t64:arm64 libasound2-dev:arm64
-
-      - name: Check if target was added
-        run: rustup show
 
       - name: ⚙️ Configure
         run: |
@@ -44,10 +42,14 @@ jobs:
           echo "linker = \"aarch64-linux-gnu-gcc\"" >> .cargo/config.toml
           echo "export PKG_CONFIG_SYSROOT_DIR=/usr/aarch64-linux-gnu" >> $GITHUB_ENV
           echo "export PKG_CONFIG_PATH=/usr/aarch64-linux-gnu/lib/pkgconfig:/usr/aarch64-linux-gnu/share/pkgconfig" >> $GITHUB_ENV
+          echo "export PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
+          echo "export RUST_BACKTRACE=1" >> $GITHUB_ENV
 
+      - name: Check if target was added
+        run: rustup show
+  
       - name: 🛠 Build for ARM Linux
         run: |
-          rustup install stable-aarch64-unknown-linux-gnu
           rustup target add aarch64-unknown-linux-gnu
           cargo build --release --target aarch64-unknown-linux-gnu
           mkdir -p dist
