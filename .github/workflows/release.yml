@@ -84,7 +84,7 @@ jobs:
           echo "export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig" >> $GITHUB_ENV
           echo "export PKG_CONFIG_ALLOW_CROSS=true" >> $GITHUB_ENV
           echo "export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-          echo "export CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++"" >> $GITHUB_ENV
+          echo "export CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++" >> $GITHUB_ENV
 
       - name: Check if target was added
         run: rustup show
