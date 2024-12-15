@@ -42,6 +42,8 @@ jobs:
           touch .cargo/config.toml
           echo "[target.aarch64-unknown-linux-gnu]" >> .cargo/config.toml
           echo "linker = \"aarch64-linux-gnu-gcc\"" >> .cargo/config.toml
+          echo "export PKG_CONFIG_SYSROOT_DIR=/usr/aarch64-linux-gnu" >> $GITHUB_ENV
+          echo "export PKG_CONFIG_PATH=/usr/aarch64-linux-gnu/lib/pkgconfig:/usr/aarch64-linux-gnu/share/pkgconfig" >> $GITHUB_ENV
 
       - name: 🛠 Build for ARM Linux
         run: |
