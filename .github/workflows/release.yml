@@ -70,11 +70,11 @@ jobs:
             gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
             libasound2t64 libasound2-dev libudev-dev pkg-config \
             librust-alsa-sys-dev
-          sudo dpkg --add-architecture arm64
           export UBUNTU=$(lsb_release -cs)
           sudo tee /etc/apt/sources.list.d/arm64.list <<EOF
-          deb [arch=arm64] http://azure.archive.ubuntu.com/ubuntu/ $UBUNTU main restricted
+          deb [arch=arm64] http://ports.ubuntu.com/ $UBUNTU main restricted
           EOF
+          sudo dpkg --add-architecture arm64
           sudo apt update
           sudo apt install libasound2t64:arm64 libasound2-dev:arm64
 
