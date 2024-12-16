@@ -1,8 +1,14 @@
-# 🦀 Typing Practice Program - R-Typing
+# ⌨️ Typing Practice Program - R-Typing 🦀
 
 ## 📖 Description
 
 I want to make something app for purpose of learning the Rust. For the time begining, I threw away readable code and tried to make to typing app. I would be happy to point out any my mistakes.
+
+When playing...
+
+![sample1](./Screenshot1.png)
+
+Finish
 
 ![sample2](./Screenshot2.png)
 
