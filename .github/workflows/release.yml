@@ -13,8 +13,8 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: ✍ Checkout repository
+        uses: actions/checkout@v4
 
       - name: 🦀 Install Rust
         run: |
@@ -53,45 +53,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: ✍ Checkout repository
+        uses: actions/checkout@v4
 
-      - name: 🦀 Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: aarch64-unknown-linux-gnu
-          override: true
-
-      - name: 📦 Install dependecies
+      - name: 🛠 Set up Docker and build for ARM Linux
         run: |
-          sudo apt update
-          sudo apt install -y libc6-dev-arm64-cross crossbuild-essential-arm64 gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libasound2-dev libudev-dev pkg-config librust-alsa-sys-dev
-          # sudo dpkg --add-architecture arm64
-          # sudo apt update && sudo apt upgrade -y
-          # sudo apt install librust-alsa-sys-dev:arm64 libasound2-dev:arm64
+          docker run --rm -v $(pwd):/workspace rustembedded/cross:aarch64-unknown-linux-gnu \
+          sh -c "
+          apt-get update &&
+          apt-get install -y libasound2-dev &&
+          cd /workspace &&
+          cargo build --target=aarch64-unknown-linux-gnu
+          "
 
-      - name: ⚙️ Configure
+      - name: Move the binary
         run: |
-          mkdir .cargo
-          touch .cargo/config.toml
-          echo "[target.aarch64-unknown-linux-gnu]" >> .cargo/config.toml
-          echo "linker = \"aarch64-linux-gnu-gcc\"" >> .cargo/config.toml
-          echo "export PKG_CONFIG_SYSROOT_DIR=/usr/aarch64-linux-gnu" >> $GITHUB_ENV
-          echo "export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/aarch64-linux-gnu/lib/pkgconfig:/usr/aarch64-linux-gnu/share/pkgconfig" >> $GITHUB_ENV
-          echo "export PKG_CONFIG_ALLOW_CROSS=1" >> $GITHUB_ENV
-          echo "export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-          echo "export PKG_CONFIG_ALLOW_CROSS=true" >> $GITHUB_ENV
-          echo "export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-          echo "export CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++" >> $GITHUB_ENV
-
-      - name: Check if target was added
-        run: rustup show
-  
-      - name: 🛠 Build for ARM Linux
-        run: |
-          rustup target add aarch64-unknown-linux-gnu
-          cargo build --release --target aarch64-unknown-linux-gnu
           mkdir -p dist
           cp target/aarch64-unknown-linux-gnu/release/rtyping dist/rtyping-aarch64-unknown-linux-gnu
 
