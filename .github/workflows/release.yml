@@ -58,12 +58,14 @@ jobs:
 
       - name: 🛠 Set up Docker and build for ARM Linux
         run: |
-          docker run --rm -v $(pwd):/workspace rustembedded/cross:aarch64-unknown-linux-gnu \
+          docker run --rm -v ${{ github.workspace }}:/workspace rustembedded/cross:aarch64-unknown-linux-gnu \
           sh -c "
           apt-get update &&
-          apt-get install -y libasound2-dev &&
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
+          source $HOME/.cargo/env &&
+          rustup target add aarch64-unknown-linux-gnu &&
           cd /workspace &&
-          cargo build --target=aarch64-unknown-linux-gnu
+          cargo build --release --target=aarch64-unknown-linux-gnu
           "
 
       - name: Move the binary
