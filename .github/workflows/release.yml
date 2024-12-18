@@ -62,9 +62,13 @@ jobs:
           sh -c "
           apt update && apt install libasound2-dev -y &&
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
-          /root/.cargo/bin/rustup target add aarch64-unknown-linux-gnu &&
+          ls -la /root/.cargo/bin &&
+          ls -la /usr/local/cargo/bin &&
+          ls -la $HOME/.cargo/bin &&
+          . $HOME/.cargo/bin &&
+          rustup target add aarch64-unknown-linux-gnu &&
           cd /workspace &&
-          /root/.cargo/bin/cargo build --release --target=aarch64-unknown-linux-gnu
+          cargo build --release --target=aarch64-unknown-linux-gnu
           "
 
       - name: Move the binary
