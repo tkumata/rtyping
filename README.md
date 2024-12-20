@@ -1,36 +1,31 @@
 # ⌨️ Typing Practice Program - R-Typing 🦀
 
-## 📖 Description
+## 📖 Overview
+R-Typing is a terminal-based typing practice application created as a learning project for Rust. The app is designed with simplicity in mind, focusing on essential features for a fun and educational experience.
 
-I want to make something app for purpose of learning the Rust. For the time begining, I threw away readable code and tried to make to typing app. I would be happy to point out any my mistakes.
-
-When playing...
+I’m still learning Rust, so feedback and corrections are very welcome!
 
 ![sample1](./Screenshot1.png)
 
-Finish
-
 ![sample2](./Screenshot2.png)
 
-## ⚙️ How to run on VSCode
+## ⚙️ How to Run in VSCode
 
-Click `▶ Run` located just above `fn main()` in the VS Code editor. Alternatively, run the following command.
+1. Open the main file in VSCode.
+2. Click the `▶ Run` button above the `fn main()` function.
+3. Alternatively, run the following commands in the terminal:
 
 ```shell
+# Default
 cargo run
 
 # or
-
 cargo run -- --timeout 30 --level 20 --sound
-
-# or
-
-cargo run -- --help
 ```
 
-## 🔨 How to build and install
+## 🔨 Build and Install
 
-How to install to under your `~/.cargo/bin/` directory.
+To build and install the application in your `~/.cargo/bin/` directory:
 
 ```shell
 cargo check
@@ -41,7 +36,7 @@ cargo install --path .
 ## 💻 Usage
 
 ```text
-This is typing practice app on terminal.
+R-Typing: A terminal-based typing practice app.
 
 Usage: rtyping [OPTIONS]
 
@@ -53,38 +48,38 @@ Options:
   -h, --help               Print help
 ```
 
-## ✅ Todo list
+## ✅ Features and To-Do List
 
-- [x] Implements timeout while user input.
-- [x] Implements user can input.
-- [x] Print some words on screen.
-- [x] Using basic of random function of the Rust.
-- [x] Decorate strings which print on the screen.
-- [x] Implements timeout counter on top left.
-- [x] Fix that Backspace is behavior as "^R\\n" in `std::io` after `termion::Restore`. (I use Raw mode.)
-- [x] `temion::clear::All` has buggy when I use the Warp. (I did not use `clear::All`.)
-- [x] To check typo.
-- [x] To calculate the wpm (words per minutes?).
-- [x] Play a BGM.
-- [x] Implements adding sound effect while typing.
-- [x] Include external file, assets file etc, when building.
-- [x] Fix that terminal tty is broken after executing `process::exit()` with raw mode.
-- [x] Implements options.
-- [x] Change behavior depending on options.
-- [x] Implements Validating arguments of options.
+### Completed Features
+
+- [x] Timeout functionality during user input.
+- [x] Accept user input.
+- [x] Display words on the screen.
+- [x] Use Rust's basic random functions.
+- [x] Add decorative strings to enhance visuals.
+- [x] Display a countdown timer in the top-left corner.
+- [x] Resolve Backspace handling issues in raw mode.
+- [x] Avoid bugs with `termion::clear::All` by using alternative methods.
+- [x] Calculate WPM (Words Per Minute).
+- [x] Add background music (BGM).
+- [x] Include sound effects for typing.
+- [x] Handle external asset files during build.
+- [x] Restore terminal state after exiting raw mode.
+- [x] Add command-line options for customization.
+- [x] Validate command-line arguments.
 
 ## 🔖 Appendix
 
-### 🛠 How to cross-compile
+### 🛠 Cross-Compilation Instructions
 
-for Apple silicon
+For Apple silicon
 
 ```shell
 rustup target add aarch64-apple-darwin
 cargo build --release --target=aarch64-apple-darwin
 ```
 
-for Windows
+For Windows
 
 ```shell
 rustup target add x86_64-pc-windows-gnu

@@ -17,7 +17,7 @@ use termion::{color, style, terminal_size};
 fn main() -> io::Result<()> {
     let matches = Command::new("rtyping")
         .author("Tomokatsu Kumata")
-        .about("Typing Practis Program")
+        .about("R-Typing: A terminal-based typing practice app.")
         .arg(
             arg!(-t --timeout <TIMEOUT> "Seconds")
                 .default_value("60")
