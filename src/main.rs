@@ -83,6 +83,7 @@ fn main() -> io::Result<()> {
     print!("{}\r\n", target_string);
     print!("{}\r\n", line);
     print!("{}", termion::cursor::Restore); // カーソル位置復元 (入力位置がここになる)
+    print!("{}", termion::cursor::BlinkingBar); // カーソルをバーに変形
     io::stdout().flush().unwrap();
 
     // タイマーの表示とカウント
@@ -174,6 +175,7 @@ fn main() -> io::Result<()> {
         calc_wpm(inputs.len(), elapsed_timer, incorrect_chars),
         style::Reset
     );
+    print!("{}", termion::cursor::BlinkingBlock); // カーソルをブロックに変形
 
     bgm_tx.send(()).unwrap();
     Ok(())
