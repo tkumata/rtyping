@@ -75,20 +75,18 @@ jobs:
             pkg-config \
             libasound2-dev
 
-      - name: 📦 Add aarch64 target to rustup
-        run: rustup target add aarch64-unknown-linux-gnu
-
       - name: 🛠 Build ALSA library for aarch64
         run: |
           git clone https://github.com/alsa-project/alsa-lib.git
           cd alsa-lib
-          git checkout v1.2.6
           ./configure --host=aarch64-linux-gnu --prefix=/tmp/alsa
           make
           sudo make install
 
       - name: 🛠 Build project for aarch64
-        run: cargo build --release --target aarch64-unknown-linux-gnu
+        run: |
+          rustup target add aarch64-unknown-linux-gnu
+          cargo build --release --target aarch64-unknown-linux-gnu
 
       - name: 🚛 Move the binary
         run: |
