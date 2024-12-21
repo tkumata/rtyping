@@ -3,7 +3,7 @@ name: Release CLI Tool
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 't*.*.*'
 
 permissions:
   contents: write
