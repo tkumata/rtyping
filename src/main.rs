@@ -17,7 +17,7 @@ use termion::{color, style, terminal_size};
 fn main() -> io::Result<()> {
     let matches = Command::new("rtyping")
         .author("Tomokatsu Kumata")
-        .about("R-Typing: A terminal-based typing practice app.")
+        .about("R-Typing: A terminal-based ⌨️ typing practice app.")
         .arg(
             arg!(-t --timeout <TIMEOUT> "Seconds")
                 .default_value("60")
@@ -29,11 +29,11 @@ fn main() -> io::Result<()> {
                 .value_parser(clap::value_parser!(usize)),
         )
         .arg(
-            arg!(--freq <FREQUENCY> "Frequency e.g, 800.0 or 480.0")
+            arg!(--freq <FREQUENCY> "Frequency📶 e.g, 800.0 or 480.0")
                 .default_value("800.0")
                 .value_parser(clap::value_parser!(f32)),
         )
-        .arg(arg!(-s --sound "Enable BGM"))
+        .arg(arg!(-s --sound "Enable BGM🔊"))
         .get_matches();
 
     // 引数処理
@@ -166,8 +166,8 @@ fn main() -> io::Result<()> {
     // WPM 計算と表示
     let elapsed_timer = *timer.lock().unwrap() - 1;
     print!("⌚Total Time: {} sec\r\n", elapsed_timer);
-    print!("🔢Total Types: {} chars\r\n", inputs.len());
-    print!("❌Incorrect Types: {} chars\r\n", incorrect_chars);
+    print!("🔢Total Typing: {} chars\r\n", inputs.len());
+    print!("❌Misses: {} chars\r\n", incorrect_chars);
     print!(
         "🎯WPM: {}{:.2}{}\r\n",
         color::Fg(color::Green),
@@ -181,7 +181,7 @@ fn main() -> io::Result<()> {
 
 fn print_intro() {
     print!(
-        "{}{}{}{}{lightblue}R-Typing - 🦀 Rust Typing Practis Program{reset}\r\n",
+        "{}{}{}{}{lightblue}R-Typing - ⌨️ Typing Practice Program 🦀{reset}\r\n",
         termion::clear::CurrentLine,
         termion::clear::AfterCursor,
         termion::clear::BeforeCursor,
