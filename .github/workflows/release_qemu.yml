@@ -56,44 +56,27 @@ jobs:
       - name: ✍ Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🦀 Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-
-      - name: 📦 Install cross-compilation dependencies
+      - name: 🛠 Set up Docker and build for ARM Linux
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            gcc-aarch64-linux-gnu \
-            g++-aarch64-linux-gnu \
-            libc6-dev-arm64-cross \
-            binutils-aarch64-linux-gnu \
-            autoconf \
-            automake \
-            libtool \
-            pkg-config \
-            libasound2-dev
+          sudo apt update
+          sudo apt install -y qemu binfmt-support qemu-user-static
 
-      - name: 📦 Add aarch64 target to rustup
-        run: rustup target add aarch64-unknown-linux-gnu
+          # QEMU を Docker に登録
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-      - name: 🛠 Build ALSA library for aarch64
-        run: |
-          git clone https://github.com/alsa-project/alsa-lib.git
-          cd alsa-lib
-          git checkout v1.2.6
-          ./configure --host=aarch64-linux-gnu --prefix=/tmp/alsa
-          make
-          sudo make install
-
-      - name: 🛠 Build project for aarch64
-        run: cargo build --release --target aarch64-unknown-linux-gnu
+          # ARM64 コンテナを起動してビルド処理を実行
+          docker run --rm -v ${{ github.workspace }}:/workspace arm64v8/debian:bookworm sh -c "
+          apt update && apt install -y libasound2-dev &&
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
+          source \$HOME/.cargo/env &&
+          cd /workspace &&
+          \$HOME/.cargo/bin/cargo build --release
+          "
 
       - name: 🚛 Move the binary
         run: |
           mkdir -p dist
-          cp target/aarch64-unknown-linux-gnu/release/rtyping dist/rtyping-aarch64-unknown-linux-gnu
+          cp target/release/rtyping dist/rtyping-aarch64-unknown-linux-gnu
 
       - name: 🆙 Upload to Release
         uses: softprops/action-gh-release@v1
