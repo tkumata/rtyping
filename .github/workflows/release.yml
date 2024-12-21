@@ -58,18 +58,25 @@ jobs:
 
       - name: 🛠 Set up Docker and build for ARM Linux
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace rustembedded/cross:aarch64-unknown-linux-gnu \
-          sh -c "
-          apt update && apt install libasound2-dev -y &&
+          sudo apt update
+          sudo apt install -y qemu binfmt-support qemu-user-static
+
+          # QEMU を Docker に登録
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+          # ARM64 コンテナを起動してビルド処理を実行
+          docker run --rm -v ${{ github.workspace }}:/workspace arm64v8/debian:bookworm sh -c "
+          apt update && apt install -y libasound2-dev &&
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
+          source \$HOME/.cargo/env &&
           cd /workspace &&
-          $HOME/.cargo/bincargo build --release
+          \$HOME/.cargo/bin/cargo build --release
           "
 
-      - name: Move the binary
+      - name: 🚛 Move the binary
         run: |
           mkdir -p dist
-          cp target/aarch64-unknown-linux-gnu/release/rtyping dist/rtyping-aarch64-unknown-linux-gnu
+          cp target/release/rtyping dist/rtyping-aarch64-unknown-linux-gnu
 
       - name: 🆙 Upload to Release
         uses: softprops/action-gh-release@v1
