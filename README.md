@@ -1,9 +1,10 @@
 # ⌨️ Typing Practice Program - R-Typing 🦀
 
 ## 📖 Overview
+
 R-Typing is a terminal-based typing practice application created as a learning project for Rust. The app is designed with simplicity in mind, focusing on essential features for a fun and educational experience.
 
-I’m still learning Rust, so feedback and corrections are very welcome!
+I\’m still learning Rust, so feedback and corrections are very welcome!
 
 ![sample1](./Screenshot1.png)
 
@@ -43,8 +44,8 @@ Usage: rtyping [OPTIONS]
 Options:
   -t, --timeout <TIMEOUT>  Seconds [default: 60]
   -l, --level <LEVEL>      Number of words [default: 9]
-  --freq <FREQUENCY>       Frequency e.g, 800.0 or 480.0
-  -s, --sound              Turn BGM on
+  --freq <FREQUENCY>       Frequency📶 e.g, 800.0 or 480.0
+  -s, --sound              Turn BGM🔊
   -h, --help               Print help
 ```
 
@@ -67,6 +68,7 @@ Options:
 - [x] Restore terminal state after exiting raw mode.
 - [x] Add command-line options for customization.
 - [x] Validate command-line arguments.
+- [x] Change cursor style when user input.
 
 ## 🔖 Appendix
 
@@ -79,7 +81,7 @@ rustup target add aarch64-apple-darwin
 cargo build --release --target=aarch64-apple-darwin
 ```
 
-For Windows
+For Windows (x86_64)
 
 ```shell
 rustup target add x86_64-pc-windows-gnu
