@@ -17,7 +17,7 @@ use termion::{color, style, terminal_size};
 fn main() -> io::Result<()> {
     let matches = Command::new("rtyping")
         .author("Tomokatsu Kumata")
-        .about("R-Typing: A terminal-based ⌨️ typing practice app.")
+        .about("R-Typing: A terminal-based typing practice app.")
         .arg(
             arg!(-t --timeout <TIMEOUT> "Seconds")
                 .default_value("60")
@@ -29,11 +29,11 @@ fn main() -> io::Result<()> {
                 .value_parser(clap::value_parser!(usize)),
         )
         .arg(
-            arg!(--freq <FREQUENCY> "Frequency📶 e.g, 800.0 or 480.0")
+            arg!(--freq <FREQUENCY> "Frequency e.g, 800.0 or 480.0")
                 .default_value("800.0")
                 .value_parser(clap::value_parser!(f32)),
         )
-        .arg(arg!(-s --sound "Enable BGM🔊"))
+        .arg(arg!(-s --sound "Enable BGM"))
         .get_matches();
 
     // 引数処理
@@ -54,8 +54,8 @@ fn main() -> io::Result<()> {
     let fixed_width: u16 = 80;
     // 現在のターミナルサイズを取得
     let (width, _height) = terminal_size().unwrap_or((80, 24));
-    // 使用する幅を固定幅と現在の横幅の小さい方にする
-    let use_width = std::cmp::min(width, fixed_width);
+    // 使用する幅を固定幅と現在の横幅の大きい方にする
+    let use_width = std::cmp::max(width, fixed_width);
 
     // 音の処理
     if sound {
@@ -83,6 +83,7 @@ fn main() -> io::Result<()> {
     print!("{}\r\n", target_string);
     print!("{}\r\n", line);
     print!("{}", termion::cursor::Restore); // カーソル位置復元 (入力位置がここになる)
+    print!("{}", termion::cursor::BlinkingBar); // カーソルをバーに変形
     io::stdout().flush().unwrap();
 
     // タイマーの表示とカウント
@@ -165,15 +166,17 @@ fn main() -> io::Result<()> {
 
     // WPM 計算と表示
     let elapsed_timer = *timer.lock().unwrap() - 1;
-    print!("⌚Total Time: {} sec\r\n", elapsed_timer);
-    print!("🔢Total Typing: {} chars\r\n", inputs.len());
-    print!("❌Misses: {} chars\r\n", incorrect_chars);
+    print!("{:<13}: {} sec\r\n", "⌚Total Time", elapsed_timer);
+    print!("{:<13}: {} chars\r\n", "🔢Total Typing", inputs.len());
+    print!("{:<13}: {} chars\r\n", "❌Misses", incorrect_chars);
     print!(
-        "🎯WPM: {}{:.2}{}\r\n",
+        "{:<13}: {}{:.2}{}\r\n",
+        "🎯WPM",
         color::Fg(color::Green),
         calc_wpm(inputs.len(), elapsed_timer, incorrect_chars),
         style::Reset
     );
+    print!("{}", termion::cursor::BlinkingBlock); // カーソルをブロックに変形
 
     bgm_tx.send(()).unwrap();
     Ok(())
@@ -181,13 +184,11 @@ fn main() -> io::Result<()> {
 
 fn print_intro() {
     print!(
-        "{}{}{}{}{lightblue}R-Typing - ⌨️ Typing Practice Program 🦀{reset}\r\n",
-        termion::clear::CurrentLine,
-        termion::clear::AfterCursor,
-        termion::clear::BeforeCursor,
+        "{}{}{}🦀 R-Typing - Typing Practice Program ⌨️{}\r\n",
+        termion::clear::All,
         termion::cursor::Goto(1, 1),
-        lightblue = color::Fg(color::LightBlue),
-        reset = style::Reset
+        color::Fg(color::LightBlue),
+        style::Reset
     );
     print!("🚀Press *ENTER* key to start.\r\n");
 
