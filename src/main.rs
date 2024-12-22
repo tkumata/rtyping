@@ -53,8 +53,8 @@ fn main() -> io::Result<()> {
     // 横幅を固定（例: 80）
     let fixed_width: u16 = 80;
     // 現在のターミナルサイズを取得
-    let (width, _height) = terminal_size().unwrap_or((80, 10));
-    // 使用する幅を固定幅と現在の横幅の小さい方にする
+    let (width, _height) = terminal_size().unwrap_or((80, 24));
+    // 使用する幅を固定幅と現在の横幅の大きい方にする
     let use_width = std::cmp::max(width, fixed_width);
 
     // 音の処理
