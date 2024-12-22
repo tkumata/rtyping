@@ -29,11 +29,11 @@ fn main() -> io::Result<()> {
                 .value_parser(clap::value_parser!(usize)),
         )
         .arg(
-            arg!(--freq <FREQUENCY> "Frequency📶 e.g, 800.0 or 480.0")
+            arg!(--freq <FREQUENCY> "Frequency e.g, 800.0 or 480.0")
                 .default_value("800.0")
                 .value_parser(clap::value_parser!(f32)),
         )
-        .arg(arg!(-s --sound "Enable BGM🔊"))
+        .arg(arg!(-s --sound "Enable BGM"))
         .get_matches();
 
     // 引数処理
@@ -166,11 +166,12 @@ fn main() -> io::Result<()> {
 
     // WPM 計算と表示
     let elapsed_timer = *timer.lock().unwrap() - 1;
-    print!("Total Time⌚: {} sec\r\n", elapsed_timer);
-    print!("Total Typing🔢: {} chars\r\n", inputs.len());
-    print!("Misses❌: {} chars\r\n", incorrect_chars);
+    print!("{:<13}: {} sec\r\n", "⌚Total Time", elapsed_timer);
+    print!("{:<13}: {} chars\r\n", "🔢Total Typing", inputs.len());
+    print!("{:<13}: {} chars\r\n", "❌Misses", incorrect_chars);
     print!(
-        "WPM: {}{:.2}{}\r\n",
+        "{:<13}: {}{:.2}{}\r\n",
+        "🎯WPM",
         color::Fg(color::Green),
         calc_wpm(inputs.len(), elapsed_timer, incorrect_chars),
         style::Reset
@@ -183,7 +184,7 @@ fn main() -> io::Result<()> {
 
 fn print_intro() {
     print!(
-        "{}{}{}🦀R-Typing - Typing Practice Program⌨️{}\r\n",
+        "{}{}{}🦀 R-Typing - Typing Practice Program ⌨️{}\r\n",
         termion::clear::All,
         termion::cursor::Goto(1, 1),
         color::Fg(color::LightBlue),
