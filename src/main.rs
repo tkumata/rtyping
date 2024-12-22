@@ -17,7 +17,7 @@ use termion::{color, style, terminal_size};
 fn main() -> io::Result<()> {
     let matches = Command::new("rtyping")
         .author("Tomokatsu Kumata")
-        .about("R-Typing: A terminal-based ⌨️ typing practice app.")
+        .about("R-Typing: A terminal-based typing practice app.")
         .arg(
             arg!(-t --timeout <TIMEOUT> "Seconds")
                 .default_value("60")
@@ -53,9 +53,9 @@ fn main() -> io::Result<()> {
     // 横幅を固定（例: 80）
     let fixed_width: u16 = 80;
     // 現在のターミナルサイズを取得
-    let (width, _height) = terminal_size().unwrap_or((80, 24));
+    let (width, _height) = terminal_size().unwrap();
     // 使用する幅を固定幅と現在の横幅の小さい方にする
-    let use_width = std::cmp::min(width, fixed_width);
+    let use_width = std::cmp::max(width, fixed_width);
 
     // 音の処理
     if sound {
@@ -166,11 +166,11 @@ fn main() -> io::Result<()> {
 
     // WPM 計算と表示
     let elapsed_timer = *timer.lock().unwrap() - 1;
-    print!("⌚Total Time: {} sec\r\n", elapsed_timer);
-    print!("🔢Total Typing: {} chars\r\n", inputs.len());
-    print!("❌Misses: {} chars\r\n", incorrect_chars);
+    print!("Total Time⌚: {} sec\r\n", elapsed_timer);
+    print!("Total Typing🔢: {} chars\r\n", inputs.len());
+    print!("Misses❌: {} chars\r\n", incorrect_chars);
     print!(
-        "🎯WPM: {}{:.2}{}\r\n",
+        "WPM: {}{:.2}{}\r\n",
         color::Fg(color::Green),
         calc_wpm(inputs.len(), elapsed_timer, incorrect_chars),
         style::Reset
@@ -183,13 +183,11 @@ fn main() -> io::Result<()> {
 
 fn print_intro() {
     print!(
-        "{}{}{}{}{lightblue}R-Typing - ⌨️ Typing Practice Program 🦀{reset}\r\n",
-        termion::clear::CurrentLine,
-        termion::clear::AfterCursor,
-        termion::clear::BeforeCursor,
+        "{}{}{}🦀R-Typing - Typing Practice Program⌨️{}\r\n",
+        termion::clear::All,
         termion::cursor::Goto(1, 1),
-        lightblue = color::Fg(color::LightBlue),
-        reset = style::Reset
+        color::Fg(color::LightBlue),
+        style::Reset
     );
     print!("🚀Press *ENTER* key to start.\r\n");
 
