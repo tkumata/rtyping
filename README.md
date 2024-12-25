@@ -6,9 +6,9 @@ R-Typing is a terminal-based typing practice application created as a learning p
 
 I\’m still learning Rust, so feedback and corrections are very welcome!
 
-![sample1](./Screenshot1.png)
+![sample1](./docs/Screenshot1.png)
 
-![sample2](./Screenshot2.png)
+![sample2](./docs/Screenshot2.png)
 
 ## ⚙️ How to Run in VSCode
 
