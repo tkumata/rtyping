@@ -116,7 +116,7 @@ fn main() -> io::Result<()> {
         }
 
         print!(
-            "{}{}⏰Time up. Press any key.{}\r\n",
+            "\r\n\r\n{}{}⏰Time up. Press any key.{}\r\n",
             termion::cursor::Down(1),
             color::Fg(color::Red),
             style::Reset
@@ -171,7 +171,7 @@ fn main() -> io::Result<()> {
 
     timer_thread.join().unwrap();
 
-    print!("\r\nQuit.\r\n");
+    print!("\r\n\r\nQuit.\r\n");
 
     // WPM 計算と表示
     let elapsed_timer = *timer.lock().unwrap() - 1;
