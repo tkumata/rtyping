@@ -1,10 +1,10 @@
 use clap::{arg, Command};
-use rand::Rng;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use std::collections::HashMap;
+use rand::Rng;
 use rodio::Source;
 use rodio::{source::SineWave, OutputStream};
+use std::collections::HashMap;
 use std::fs;
 use std::io::{self};
 use std::io::{stdin, stdout, BufReader, Cursor, Write};
