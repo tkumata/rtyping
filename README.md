@@ -69,6 +69,7 @@ Options:
 - [x] Add command-line options for customization.
 - [x] Validate command-line arguments.
 - [x] Change cursor style when user input.
+- [x] Generate sentence with Markov Chain.
 
 ## 🔖 Appendix
 

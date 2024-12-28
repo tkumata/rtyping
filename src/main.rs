@@ -1,5 +1,8 @@
 use clap::{arg, Command};
 use rand::Rng;
+use rand::seq::SliceRandom;
+use rand::thread_rng;
+use std::collections::HashMap;
 use rodio::Source;
 use rodio::{source::SineWave, OutputStream};
 use std::fs;
@@ -57,6 +60,9 @@ fn main() -> io::Result<()> {
     // 使用する幅を固定幅と現在の横幅の大きい方にする
     let use_width = std::cmp::max(width, fixed_width);
 
+    // サンプルテキスト定数
+    let text = "The quick brown fox jumps over the lazy dog. The sun was shining brightly over the hill, and the wind blew gently through the trees. The birds chirped merrily as they fluttered from branch to branch, and the scent of fresh flowers filled the air. It was a peaceful morning in the village, with everyone going about their daily routines. The children played in the field, their laughter echoing through the valley. A few farmers were tending to their crops, while the cows grazed lazily in the meadow. Suddenly, a loud noise echoed from the nearby forest, and the animals in the field froze in place. The birds stopped singing, and even the wind seemed to hold its breath. The noise grew louder, and the ground began to shake slightly. From the trees emerged a figure, tall and mysterious, cloaked in a dark robe. The villagers watched in awe as the figure approached the center of the village, moving with a grace that was almost unnatural. The figure raised a hand, and the air around them seemed to shimmer. With a voice that was soft yet commanding, the figure spoke. I have come to bring a message, they said. The villagers gathered around, their curiosity piqued. The figure paused for a moment, as if gathering their thoughts, before continuing. The time has come for change, they said. The winds of destiny are shifting, and a new chapter is about to begin. The villagers exchanged confused glances, unsure of what the figure meant. Some whispered among themselves, wondering if this was some kind of omen or prophecy. Others felt a sense of unease, as if the figure’s presence brought a chill to the air. The figure lowered their hand, and the shimmering aura around them faded. Do not be afraid, the figure said, sensing the fear in the crowd. This is not a warning, but an invitation. An invitation to join me on a journey that will change everything. The villagers were silent, unsure of how to respond. They had never seen anyone like this before, and the idea of leaving their peaceful village was unsettling. But the figure was undeterred. Come with me, they urged. There is much you do not know, much that is hidden from your eyes. But together, we can uncover the truth and shape the future. Slowly, one by one, the villagers began to approach the figure. Some were hesitant, while others were eager to know more. The children, sensing something extraordinary, crowded around, their eyes wide with wonder. The figure smiled, a faint and mysterious smile, as they led the group toward the edge of the village. As they walked, the air seemed to grow heavier, and the atmosphere became charged with a strange energy. The villagers had no idea what lay ahead, but they knew that their lives were about to change forever. And so, with a sense of trepidation and excitement, they followed the figure into the unknown.";
+
     // 音の処理
     if sound {
         thread::spawn(move || loop {
@@ -75,7 +81,10 @@ fn main() -> io::Result<()> {
     let mut stdout = stdout().into_raw_mode().unwrap();
     let mut inputs: Vec<String> = Vec::new(); // ユーザ入力保持 Vec 用意
     let mut incorrect_chars = 0; // 入力間違い文字数
-    let target_string = load_words(level); // 目標単語列取得
+    // 目標単語列取得
+    // let target_string = load_words(level);
+    // n-gram を使用して生成
+    let target_string = generate_markov_chain(text, 3, level);
     let target_str = &target_string;
     let line = "-".repeat(use_width as usize);
     print!("{}\r\n", line);
@@ -220,7 +229,7 @@ fn play_audio() {
     sink.sleep_until_end();
 }
 
-fn load_words(level: usize) -> String {
+fn _load_words(level: usize) -> String {
     let words: Vec<_> = fs::read_dir("/usr/bin")
         .unwrap()
         .filter_map(|entry| entry.ok())
@@ -238,4 +247,43 @@ fn load_words(level: usize) -> String {
 
 fn calc_wpm(inputs_length: usize, seconds: i32, incorrect: i32) -> f64 {
     (inputs_length as f64 - incorrect as f64) / (5.0 * seconds as f64 / 60.0)
+}
+
+// マルコフ連鎖関数
+fn generate_markov_chain(text: &str, n: usize, level: usize) -> String {
+    //
+    let limit_sentence = level + 9;
+
+    // サンプルテキストを単語に分割
+    let words: Vec<&str> = text.split_whitespace().collect();
+
+    // n-gram モデルを作成
+    let mut markov_chain: HashMap<Vec<&str>, Vec<&str>> = HashMap::new();
+
+    for i in 0..(words.len() - n) {
+        let key = words[i..i + n].to_vec();
+        let value = words[i + n];
+        markov_chain.entry(key).or_insert_with(Vec::new).push(value);
+    }
+
+    // 初期状態としてランダムな開始単語を選ぶ
+    let mut rng = thread_rng();
+    let start_index = rand::Rng::gen_range(&mut rng, 0..words.len() - n);
+    let mut current_state = words[start_index..start_index + n].to_vec();
+
+    // 次の単語をランダムに選びながら生成
+    let mut result = current_state.clone();
+    for _ in 0..limit_sentence {
+        if let Some(next_words) = markov_chain.get(&current_state) {
+            let next_word = next_words.choose(&mut rng).unwrap();
+            result.push(*next_word);
+            current_state.push(*next_word);
+            current_state.remove(0); // 最初の単語を削除して次の状態に移動
+        } else {
+            break; // マッチするパターンが見つからない場合、終了
+        }
+    }
+
+    // 結果を結合して文を返す
+    result.join(" ")
 }
