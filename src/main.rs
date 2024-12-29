@@ -1,11 +1,9 @@
 mod domain;
 mod presentation;
+mod usecase;
 
-use rand::seq::SliceRandom;
-use rand::thread_rng;
 use rodio::Source;
 use rodio::{source::SineWave, OutputStream};
-use std::collections::HashMap;
 use std::io::{self};
 use std::io::{stdin, stdout, Write};
 use std::sync::{mpsc, Arc, Mutex};
@@ -15,12 +13,14 @@ use termion;
 use termion::event::{Event, Key};
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
-use termion::{color, style, terminal_size};
+use termion::{color, style};
 
 use domain::entity;
 use presentation::bgm;
 use presentation::cli;
 use presentation::intro;
+use usecase::wpm;
+use usecase::generate_sentence;
 
 fn main() -> io::Result<()> {
     let args = cli::parse_args();
@@ -32,13 +32,6 @@ fn main() -> io::Result<()> {
     let (mt_tx, mt_rx) = mpsc::channel(); // メイン -> タイマー
     let (tt_tx, tt_rx) = mpsc::channel(); // タイマー -> メイン
     let (bgm_tx, bgm_rx) = mpsc::channel();
-
-    // 横幅を固定（例: 80）
-    let fixed_width: u16 = 80;
-    // 現在のターミナルサイズを取得
-    let (width, _height) = terminal_size().unwrap_or((80, 24));
-    // 使用する幅を固定幅と現在の横幅の大きい方にする
-    let use_width = std::cmp::max(width, fixed_width);
 
     // サンプルテキスト
     let mut sample_contents = String::new();
@@ -70,16 +63,8 @@ fn main() -> io::Result<()> {
     let mut stdout = stdout().into_raw_mode().unwrap();
     let mut inputs: Vec<String> = Vec::new(); // ユーザ入力保持 Vec 用意
     let mut incorrect_chars = 0; // 入力間違い文字数
-    let target_string = generate_markov_chain(text, 3, args.level); // n-gram を使用して生成
+    let target_string = generate_sentence::markov(text, args.level).unwrap();
     let target_str = &target_string;
-    let line = "-".repeat(use_width as usize);
-    print!("{}\r\n", line);
-    print!("{}", termion::cursor::Save); // カーソル位置保存
-    print!("{}\r\n", target_string);
-    print!("{}\r\n", line);
-    print!("{}", termion::cursor::Restore); // カーソル位置復元 (入力位置がここになる)
-    print!("{}", termion::cursor::BlinkingBar); // カーソルをバーに変形
-    io::stdout().flush().unwrap();
 
     // タイマーの表示とカウント
     let timer = Arc::new(Mutex::new(0));
@@ -161,18 +146,7 @@ fn main() -> io::Result<()> {
     print!("\r\n\r\nQuit.\r\n");
 
     // WPM 計算と表示
-    let elapsed_timer = *timer.lock().unwrap() - 1;
-    print!("{:<13}: {} sec\r\n", "⌚Total Time", elapsed_timer);
-    print!("{:<13}: {} chars\r\n", "🔢Total Typing", inputs.len());
-    print!("{:<13}: {} chars\r\n", "❌Misses", incorrect_chars);
-    print!(
-        "{:<13}: {}{:.2}{}\r\n",
-        "🎯WPM",
-        color::Fg(color::Green),
-        calc_wpm(inputs.len(), elapsed_timer, incorrect_chars),
-        style::Reset
-    );
-    print!("{}", termion::cursor::BlinkingBlock); // カーソルをブロックに変形
+    wpm::print_wpm(*timer.lock().unwrap() - 1, inputs.len(), incorrect_chars);
 
     bgm_tx.send(()).unwrap();
     Ok(())
@@ -188,42 +162,3 @@ fn print_timer(timer: i32) {
     io::stdout().flush().unwrap();
 }
 
-fn calc_wpm(inputs_length: usize, seconds: i32, incorrect: i32) -> f64 {
-    (inputs_length as f64 - incorrect as f64) / (5.0 * seconds as f64 / 60.0)
-}
-
-// マルコフ連鎖関数
-fn generate_markov_chain(text: &str, n: usize, level: usize) -> String {
-    // サンプルテキストを単語に分割
-    let words: Vec<&str> = text.split_whitespace().collect();
-
-    // n-gram モデルを作成
-    let mut markov_chain: HashMap<Vec<&str>, Vec<&str>> = HashMap::new();
-
-    for i in 0..(words.len() - n) {
-        let key = words[i..i + n].to_vec();
-        let value = words[i + n];
-        markov_chain.entry(key).or_insert_with(Vec::new).push(value);
-    }
-
-    // 初期状態としてランダムな開始単語を選ぶ
-    let mut rng = thread_rng();
-    let start_index = rand::Rng::gen_range(&mut rng, 0..words.len() - n);
-    let mut current_state = words[start_index..start_index + n].to_vec();
-
-    // 次の単語をランダムに選びながら生成
-    let mut result = current_state.clone();
-    for _ in 0..level {
-        if let Some(next_words) = markov_chain.get(&current_state) {
-            let next_word = next_words.choose(&mut rng).unwrap();
-            result.push(*next_word);
-            current_state.push(*next_word);
-            current_state.remove(0); // 最初の単語を削除して次の状態に移動
-        } else {
-            break; // マッチするパターンが見つからない場合、終了
-        }
-    }
-
-    // 結果を結合して文を返す
-    result.join(" ")
-}
