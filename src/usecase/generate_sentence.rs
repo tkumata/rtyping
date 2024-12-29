@@ -17,7 +17,7 @@ pub fn markov(text: &str, level: usize) -> Result<String, io::Error> {
     let use_width = std::cmp::max(width, fixed_width);
 
     // n-gram を使用して生成
-    let target_string = generate_markov_chain(text, 3, level);
+    let target_string = generate_markov_chain(text, 4, level);
     let line = "-".repeat(use_width as usize);
 
     print!("{}\r\n", line);
