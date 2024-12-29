@@ -2,31 +2,24 @@ use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::collections::HashMap;
 use std::io::{self};
-use std::io::Write;
-use termion;
-use termion::terminal_size;
 
-pub fn markov(text: &str, level: usize) -> Result<String, io::Error> {
-    // 横幅を固定（例: 80）
-    let fixed_width: u16 = 80;
+use crate::domain::entity;
 
-    // 現在のターミナルサイズを取得
-    let (width, _height) = terminal_size().unwrap_or((80, 24));
-
-    // 使用する幅を固定幅と現在の横幅の大きい方にする
-    let use_width = std::cmp::max(width, fixed_width);
+pub fn markov(level: usize) -> Result<String, io::Error> {
+    // サンプルテキスト
+    let mut sample_contents = String::new();
+    match entity::get_sample() {
+        Ok(contents) => {
+            sample_contents = contents;
+        }
+        Err(err) => {
+            eprintln!("Failed to read file: {}", err);
+        }
+    }
+    let text = sample_contents.as_str();
 
     // n-gram を使用して生成
     let target_string = generate_markov_chain(text, 4, level);
-    let line = "-".repeat(use_width as usize);
-
-    print!("{}\r\n", line);
-    print!("{}", termion::cursor::Save); // カーソル位置保存
-    print!("{}\r\n", target_string);
-    print!("{}\r\n", line);
-    print!("{}", termion::cursor::Restore); // カーソル位置復元 (入力位置がここになる)
-    print!("{}", termion::cursor::BlinkingBar); // カーソルをバーに変形
-    io::stdout().flush().unwrap();
 
     Ok(target_string)
 }
@@ -66,4 +59,3 @@ fn generate_markov_chain(text: &str, n: usize, level: usize) -> String {
     // 結果を結合して文を返す
     result.join(" ")
 }
-

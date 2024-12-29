@@ -15,15 +15,12 @@ use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use termion::{color, style};
 
-use domain::entity;
 use presentation::bgm;
-use presentation::cli;
-use presentation::intro;
-use usecase::wpm;
-use usecase::generate_sentence;
+use presentation::sentence_handler::SentenceHandler;
+use presentation::ui::ui_handler::UiHandler;
 
 fn main() -> io::Result<()> {
-    let args = cli::parse_args();
+    let args = UiHandler::parse_args();
 
     // sine 波生成ストリーミング
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
@@ -32,18 +29,6 @@ fn main() -> io::Result<()> {
     let (mt_tx, mt_rx) = mpsc::channel(); // メイン -> タイマー
     let (tt_tx, tt_rx) = mpsc::channel(); // タイマー -> メイン
     let (bgm_tx, bgm_rx) = mpsc::channel();
-
-    // サンプルテキスト
-    let mut sample_contents = String::new();
-    match entity::get_sample() {
-        Ok(contents) => {
-            sample_contents = contents;
-        }
-        Err(err) => {
-            eprintln!("Failed to read file: {}", err);
-        }
-    }
-    let text = sample_contents.as_str();
 
     // 音の処理
     if args.sound {
@@ -56,14 +41,16 @@ fn main() -> io::Result<()> {
     }
 
     // イントロを表示
-    intro::print_intro();
+    UiHandler::print_intro();
 
-    // 目標単語列表示
+    // 目標文字列表示初期化 (イントロ表示後に初期化が必要)
     let stdin = stdin();
     let mut stdout = stdout().into_raw_mode().unwrap();
     let mut inputs: Vec<String> = Vec::new(); // ユーザ入力保持 Vec 用意
     let mut incorrect_chars = 0; // 入力間違い文字数
-    let target_string = generate_sentence::markov(text, args.level).unwrap();
+
+    // 目標単語列表示
+    let target_string = SentenceHandler::print_sentence(args.level);
     let target_str = &target_string;
 
     // タイマーの表示とカウント
@@ -79,19 +66,17 @@ fn main() -> io::Result<()> {
                 if *timer_value > args.timeout {
                     break;
                 }
-                print_timer(*timer_value);
+                UiHandler::print_timer(*timer_value);
+                // print_timer(*timer_value);
                 *timer_value += 1;
             }
 
             thread::sleep(Duration::from_secs(1));
         }
 
-        print!(
-            "\r\n\r\n{}{}⏰Time up. Press any key.{}\r\n",
-            termion::cursor::Down(1),
-            color::Fg(color::Red),
-            style::Reset
-        );
+        // Print time up
+        UiHandler::print_timeup();
+
         mt_tx.send(()).unwrap();
     });
 
@@ -143,22 +128,9 @@ fn main() -> io::Result<()> {
 
     timer_thread.join().unwrap();
 
-    print!("\r\n\r\nQuit.\r\n");
-
     // WPM 計算と表示
-    wpm::print_wpm(*timer.lock().unwrap() - 1, inputs.len(), incorrect_chars);
+    UiHandler::print_wpm(*timer.lock().unwrap() - 1, inputs.len(), incorrect_chars);
 
     bgm_tx.send(()).unwrap();
     Ok(())
 }
-
-fn print_timer(timer: i32) {
-    print!("{}", termion::cursor::Save);
-    print!("{}", termion::cursor::Goto(1, 3));
-    print!("{}", termion::clear::CurrentLine);
-    print!("Time: {} sec", timer);
-    print!("{}", termion::cursor::Restore);
-
-    io::stdout().flush().unwrap();
-}
-

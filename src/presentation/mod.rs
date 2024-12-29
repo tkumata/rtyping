@@ -1,3 +1,3 @@
 pub mod bgm;
-pub mod cli;
-pub mod intro;
+pub mod sentence_handler;
+pub mod ui;
