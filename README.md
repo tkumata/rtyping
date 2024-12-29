@@ -44,8 +44,8 @@ Usage: rtyping [OPTIONS]
 Options:
   -t, --timeout <TIMEOUT>  Seconds [default: 60]
   -l, --level <LEVEL>      Number of words [default: 9]
-  --freq <FREQUENCY>       Frequency📶 e.g, 800.0 or 480.0
-  -s, --sound              Turn BGM🔊
+  --freq <FREQUENCY>       Frequency e.g, 800.0 or 480.0
+  -s, --sound              Turn BGM
   -h, --help               Print help
 ```
 
@@ -61,15 +61,15 @@ Options:
 - [x] Display a countdown timer in the top-left corner.
 - [x] Resolve Backspace handling issues in raw mode.
 - [x] Avoid bugs with `termion::clear::All` by using alternative methods.
-- [x] Calculate WPM (Words Per Minute).
-- [x] Add background music (BGM).
-- [x] Include sound effects for typing.
+- [x] ⌨️ Calculate WPM (Words Per Minute).
+- [x] 🎶 Add background music (BGM).
+- [x] 🔊 Include sound effects for typing.
 - [x] Handle external asset files during build.
 - [x] Restore terminal state after exiting raw mode.
 - [x] Add command-line options for customization.
 - [x] Validate command-line arguments.
 - [x] Change cursor style when user input.
-- [x] Generate sentence with Markov Chain.
+- [x] ✨ Generate sentence with Markov Chain.⛓
 
 ## 🔖 Appendix
 
