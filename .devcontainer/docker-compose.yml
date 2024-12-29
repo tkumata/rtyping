@@ -7,12 +7,12 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ../..:/workspaces:cached
-      - /run/user/1000/pipewire-0:/tmp/pipewire-0
-      - /run/user/1000/pulse:/run/user/1000/pulse
+      # - /run/user/1000/pipewire-0:/tmp/pipewire-0
+      # - /run/user/1000/pulse:/run/user/1000/pulse
     devices:
       - "/dev/snd:/dev/snd"
-    environment:
-      - PULSE_SERVER=unix:/run/user/1000/pulse/native
+    # environment:
+    #   - PULSE_SERVER=unix:/run/user/1000/pulse/native
     group_add:
       - audio
     privileged: true
