@@ -43,9 +43,9 @@ Usage: rtyping [OPTIONS]
 
 Options:
   -t, --timeout <TIMEOUT>  Seconds [default: 60]
-  -l, --level <LEVEL>      Number of words [default: 9]
+  -l, --level <LEVEL>      Number of words [default: 30]
   --freq <FREQUENCY>       Frequency e.g, 800.0 or 480.0
-  -s, --sound              Turn BGM
+  -s, --sound              Turn BGM on
   -h, --help               Print help
 ```
 
