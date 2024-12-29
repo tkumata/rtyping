@@ -67,7 +67,6 @@ fn main() -> io::Result<()> {
                     break;
                 }
                 UiHandler::print_timer(*timer_value);
-                // print_timer(*timer_value);
                 *timer_value += 1;
             }
 
