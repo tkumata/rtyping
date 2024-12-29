@@ -1,4 +1,4 @@
-# ⌨️ Typing Practice Program - R-Typing 🦀
+# ⌨️ R-Typing - Typing Program 🦀
 
 ## 📖 Overview
 
