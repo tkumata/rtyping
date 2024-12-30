@@ -6,22 +6,17 @@ use std::io::{self};
 use crate::domain::entity;
 
 pub fn generate_sentence(level: usize) -> Result<String, io::Error> {
-    // サンプルテキスト
-    let mut sample_contents = String::new();
+    // サンプリングテキスト取得
     match entity::get_sample() {
-        Ok(contents) => {
-            sample_contents = contents;
+        Ok(sampling_contents) => {
+            // n-gram を使用して生成と返却
+            Ok(generate_markov_chain(&sampling_contents, 4, level))
         }
         Err(err) => {
             eprintln!("Failed to read file: {}", err);
+            Err(err)
         }
     }
-    let text = sample_contents.as_str();
-
-    // n-gram を使用して生成
-    let target_string = generate_markov_chain(text, 4, level);
-
-    Ok(target_string)
 }
 
 // マルコフ連鎖関数

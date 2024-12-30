@@ -51,7 +51,13 @@ fn main() -> io::Result<()> {
     let mut incorrects = 0; // 入力間違い文字数
 
     // 目標単語列表示
-    let target_string = SentenceHandler::print_sentence(args.level);
+    let target_string = match SentenceHandler::print_sentence(args.level) {
+        Ok(contents) => contents,
+        Err(err) => {
+            println!("Failed to generate sentence: {}", err);
+            return Err(err)
+        }
+    };
     let target_str = &target_string;
 
     // タイマーの表示とカウント
