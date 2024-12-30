@@ -52,7 +52,7 @@ impl UiHandler {
         print!("{}", termion::clear::All);
         print!("{}", termion::cursor::Goto(1, Y_TITLE));
         print!(
-            "{}🦀 <<< R-Typing >>> ⌨️{}\r\n",
+            "{}🦀 >>> R-Typing <<< ⌨️{}\r\n",
             color::Fg(color::LightBlue),
             style::Reset
         );
