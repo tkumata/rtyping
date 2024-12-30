@@ -78,9 +78,24 @@ impl UiHandler {
     pub fn print_wpm(elapsed_timer: i32, length: usize, incorrect_chars: i32) {
         print!("{}", termion::cursor::Goto(1, Y_QUIT));
         print!("{}", termion::clear::AfterCursor);
-        print!("{:<width$}: {} sec\r\n", "Total Time", elapsed_timer, width = SCORE_TITLE_WIDTH);
-        print!("{:<width$}: {} chars\r\n", "Total Typing", length, width = SCORE_TITLE_WIDTH);
-        print!("{:<width$}: {} chars\r\n", "Misses", incorrect_chars, width = SCORE_TITLE_WIDTH);
+        print!(
+            "{:<width$}: {} sec\r\n",
+            "Total Time",
+            elapsed_timer,
+            width = SCORE_TITLE_WIDTH
+        );
+        print!(
+            "{:<width$}: {} chars\r\n",
+            "Total Typing",
+            length,
+            width = SCORE_TITLE_WIDTH
+        );
+        print!(
+            "{:<width$}: {} chars\r\n",
+            "Misses",
+            incorrect_chars,
+            width = SCORE_TITLE_WIDTH
+        );
         print!(
             "{:<width$}: {}{:.2}{} wpm\r\n",
             "Word Per Minute",

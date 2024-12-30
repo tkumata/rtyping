@@ -26,7 +26,7 @@ impl SentenceHandler {
         let target_string = generate_sentence::generate_sentence(level).unwrap();
 
         // 画面に反映
-        print!("{}",termion::cursor::Goto(1, Y_TARGET));
+        print!("{}", termion::cursor::Goto(1, Y_TARGET));
         print!("{}\r\n", line);
         print!("{}", termion::cursor::Save); // カーソル位置保存
         print!("{}\r\n", target_string);

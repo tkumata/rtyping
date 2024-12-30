@@ -1,7 +1,7 @@
+mod config;
 mod domain;
 mod presentation;
 mod usecase;
-mod config;
 
 use rodio::Source;
 use rodio::{source::SineWave, OutputStream};
