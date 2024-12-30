@@ -20,7 +20,7 @@ impl UiHandler {
     pub fn parse_args() -> CliArgs {
         let matches = Command::new("rtyping")
             .author("Tomokatsu Kumata")
-            .about("R-Typing: A terminal-based typing practice app.")
+            .about("R-Typing: A terminal-based typing app.")
             .arg(
                 arg!(-t --timeout <TIMEOUT> "Seconds")
                     .default_value("60")
@@ -48,17 +48,17 @@ impl UiHandler {
     }
 
     pub fn print_intro() {
+        print!("{}", termion::clear::All);
+        print!("{}", termion::cursor::Goto(1, Y_TITLE));
         print!(
-            "{}{}{}🦀 R-Typing - Rust Typing Program ⌨️{}\r\n",
-            termion::clear::All,
-            termion::cursor::Goto(1, Y_TITLE),
+            "{}🦀 R-Typing ⌨️{}\r\n",
             color::Fg(color::LightBlue),
             style::Reset
         );
-        print!("🚀Press *ENTER* key to start.\r\n");
+        print!("Press *ENTER* key to start.🚀\r\n");
 
+        // ENTER 入力待ち
         let mut start: String = String::new();
-
         io::stdin()
             .read_line(&mut start)
             .expect("Failed to read line.");
@@ -71,29 +71,31 @@ impl UiHandler {
         print!("Time: {} sec", timer);
         print!("{}", termion::cursor::Restore); // 入力中の位置に戻す
 
+        // フラッシュ
         io::stdout().flush().unwrap();
     }
 
     pub fn print_wpm(elapsed_timer: i32, length: usize, incorrect_chars: i32) {
         print!("{}", termion::cursor::Goto(1, Y_QUIT));
         print!("{}", termion::clear::AfterCursor);
-        print!("{:<13}: {} sec\r\n", "⌚Total Time", elapsed_timer);
-        print!("{:<13}: {} chars\r\n", "🔢Total Typing", length);
-        print!("{:<13}: {} chars\r\n", "❌Misses", incorrect_chars);
+        print!("{:<width$}: {} sec\r\n", "Total Time", elapsed_timer, width = SCORE_TITLE_WIDTH);
+        print!("{:<width$}: {} chars\r\n", "Total Typing", length, width = SCORE_TITLE_WIDTH);
+        print!("{:<width$}: {} chars\r\n", "Misses", incorrect_chars, width = SCORE_TITLE_WIDTH);
         print!(
-            "{:<13}: {}{:.2}{}\r\n",
-            "🎯WPM",
+            "{:<width$}: {}{:.2}{} wpm\r\n",
+            "Word Per Minute",
             color::Fg(color::Green),
             wpm::calc_wpm(length, elapsed_timer, incorrect_chars),
-            style::Reset
+            style::Reset,
+            width = SCORE_TITLE_WIDTH
         );
-        print!("{}", termion::cursor::BlinkingBlock); // カーソルをブロックに変形
     }
 
     pub fn print_timeup() {
         print!("{}", termion::cursor::Goto(1, Y_QUIT));
+        print!("{}", termion::clear::AfterCursor);
         print!(
-            "{}⏰Time up. Press any key.{}\r\n",
+            "{}⏰Time up. Press any key.↩️{}\r\n",
             color::Fg(color::Red),
             style::Reset
         );
