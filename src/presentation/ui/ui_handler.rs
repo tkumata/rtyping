@@ -1,5 +1,4 @@
 use clap::{arg, Command};
-use std::io::Write;
 use std::io::{self};
 use termion;
 use termion::{color, style};
@@ -52,7 +51,7 @@ impl UiHandler {
         print!("{}", termion::clear::All);
         print!("{}", termion::cursor::Goto(1, Y_TITLE));
         print!(
-            "{}🦀 >>> R-Typing <<< ⌨️{}\r\n",
+            "{}>>> R-Typing <<<{}\r\n",
             color::Fg(color::LightBlue),
             style::Reset
         );
@@ -63,18 +62,6 @@ impl UiHandler {
         io::stdin()
             .read_line(&mut start)
             .expect("Failed to read line.");
-    }
-
-    // タイマー表示
-    pub fn print_timer(timer: i32) {
-        print!("{}", termion::cursor::Save); // 入力中の位置を保存
-        print!("{}", termion::cursor::Goto(1, Y_TIMER));
-        print!("{}", termion::clear::CurrentLine);
-        print!("Time: {} sec", timer);
-        print!("{}", termion::cursor::Restore); // 入力中の位置に戻す
-
-        // 再描画
-        io::stdout().flush().unwrap();
     }
 
     // WPM 表示
@@ -106,17 +93,6 @@ impl UiHandler {
             wpm::calc_wpm(length, elapsed_timer, incorrects),
             style::Reset,
             width = SUMMARY_TITLE_WIDTH
-        );
-    }
-
-    // タイムアップ表示
-    pub fn print_timeup() {
-        print!("{}", termion::cursor::Goto(1, Y_QUIT));
-        print!("{}", termion::clear::AfterCursor);
-        print!(
-            "{}⏰Time up. Press any key.↩️{}\r\n",
-            color::Fg(color::Red),
-            style::Reset
         );
     }
 }

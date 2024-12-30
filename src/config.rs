@@ -9,8 +9,8 @@ pub const SUMMARY_TITLE_WIDTH: usize = 17;
 pub const TOTAL_TIME: &'static str = "⏰Total Time";
 pub const TOTAL_TYPE: &'static str = "🔢Total Typing";
 pub const TOTAL_MISSES: &'static str = "❌Total Misses";
-pub const WORD_PER_MINUTE: &'static str = "Word Per Minute";
+pub const WORD_PER_MINUTE: &'static str = "🏆Words Per Minute";
 
 // Define window line
 pub const FIXED_WIDTH: u16 = 80;
-pub const WINDOW_LINE: &'static str = "=";
+pub const WINDOW_LINE: &'static str = "-";
