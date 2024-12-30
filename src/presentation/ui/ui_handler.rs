@@ -4,6 +4,7 @@ use std::io::{self};
 use termion;
 use termion::{color, style};
 
+use crate::config::*;
 use crate::usecase::wpm;
 
 pub struct CliArgs {
@@ -50,7 +51,7 @@ impl UiHandler {
         print!(
             "{}{}{}🦀 R-Typing - Rust Typing Program ⌨️{}\r\n",
             termion::clear::All,
-            termion::cursor::Goto(1, 1),
+            termion::cursor::Goto(1, Y_TITLE),
             color::Fg(color::LightBlue),
             style::Reset
         );
@@ -63,7 +64,19 @@ impl UiHandler {
             .expect("Failed to read line.");
     }
 
+    pub fn print_timer(timer: i32) {
+        print!("{}", termion::cursor::Save); // 入力中の位置を保存
+        print!("{}", termion::cursor::Goto(1, Y_TIMER));
+        print!("{}", termion::clear::CurrentLine);
+        print!("Time: {} sec", timer);
+        print!("{}", termion::cursor::Restore); // 入力中の位置に戻す
+
+        io::stdout().flush().unwrap();
+    }
+
     pub fn print_wpm(elapsed_timer: i32, length: usize, incorrect_chars: i32) {
+        print!("{}", termion::cursor::Goto(1, Y_QUIT));
+        print!("{}", termion::clear::AfterCursor);
         print!("{:<13}: {} sec\r\n", "⌚Total Time", elapsed_timer);
         print!("{:<13}: {} chars\r\n", "🔢Total Typing", length);
         print!("{:<13}: {} chars\r\n", "❌Misses", incorrect_chars);
@@ -78,21 +91,11 @@ impl UiHandler {
     }
 
     pub fn print_timeup() {
+        print!("{}", termion::cursor::Goto(1, Y_QUIT));
         print!(
-            "\r\n\r\n{}{}⏰Time up. Press any key.{}\r\n",
-            termion::cursor::Down(1),
+            "{}⏰Time up. Press any key.{}\r\n",
             color::Fg(color::Red),
             style::Reset
         );
-    }
-
-    pub fn print_timer(timer: i32) {
-        print!("{}", termion::cursor::Save);
-        print!("{}", termion::cursor::Goto(1, 3));
-        print!("{}", termion::clear::CurrentLine);
-        print!("Time: {} sec", timer);
-        print!("{}", termion::cursor::Restore);
-
-        io::stdout().flush().unwrap();
     }
 }

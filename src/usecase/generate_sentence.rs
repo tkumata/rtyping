@@ -5,7 +5,7 @@ use std::io::{self};
 
 use crate::domain::entity;
 
-pub fn markov(level: usize) -> Result<String, io::Error> {
+pub fn generate_sentence(level: usize) -> Result<String, io::Error> {
     // サンプルテキスト
     let mut sample_contents = String::new();
     match entity::get_sample() {

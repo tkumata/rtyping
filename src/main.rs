@@ -1,6 +1,7 @@
 mod domain;
 mod presentation;
 mod usecase;
+mod config;
 
 use rodio::Source;
 use rodio::{source::SineWave, OutputStream};
@@ -94,13 +95,11 @@ fn main() -> io::Result<()> {
                     break;
                 }
                 Key::Backspace => {
-                    if !inputs.is_empty() {
-                        let l = inputs.len();
-                        print!("{}", termion::cursor::Left(1));
-                        print!("{}", target_str.chars().nth(l - 1).unwrap().to_string());
-                        print!("{}", termion::cursor::Left(1));
-                        inputs.pop();
-                    }
+                    let l = inputs.len();
+                    print!("{}", termion::cursor::Left(1));
+                    print!("{}", target_str.chars().nth(l - 1).unwrap().to_string());
+                    print!("{}", termion::cursor::Left(1));
+                    inputs.pop();
                 }
                 Key::Char(c) => {
                     let l = inputs.len();

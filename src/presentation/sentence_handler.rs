@@ -2,6 +2,7 @@ use std::io::Write;
 use std::io::{self};
 use termion::terminal_size;
 
+use crate::config::*;
 use crate::usecase::generate_sentence;
 
 pub struct SentenceHandler;
@@ -17,9 +18,15 @@ impl SentenceHandler {
         // 使用する幅を固定幅と現在の横幅の大きい方にする
         let use_width = std::cmp::max(width, fixed_width);
 
-        let target_string = generate_sentence::markov(level).unwrap();
-        // let target_str = &target_string;
+        // 枠
         let line = "-".repeat(use_width as usize);
+
+        // 文章を生成依頼
+        // Todo: unwrap() じゃなくてエラーハンドリングする。
+        let target_string = generate_sentence::generate_sentence(level).unwrap();
+
+        // 画面に反映
+        print!("{}",termion::cursor::Goto(1, Y_TARGET));
         print!("{}\r\n", line);
         print!("{}", termion::cursor::Save); // カーソル位置保存
         print!("{}\r\n", target_string);
