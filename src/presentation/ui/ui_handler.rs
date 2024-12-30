@@ -47,11 +47,12 @@ impl UiHandler {
         }
     }
 
+    // イントロ表示
     pub fn print_intro() {
         print!("{}", termion::clear::All);
         print!("{}", termion::cursor::Goto(1, Y_TITLE));
         print!(
-            "{}🦀 R-Typing ⌨️{}\r\n",
+            "{}🦀 <<< R-Typing >>> ⌨️{}\r\n",
             color::Fg(color::LightBlue),
             style::Reset
         );
@@ -64,6 +65,7 @@ impl UiHandler {
             .expect("Failed to read line.");
     }
 
+    // タイマー表示
     pub fn print_timer(timer: i32) {
         print!("{}", termion::cursor::Save); // 入力中の位置を保存
         print!("{}", termion::cursor::Goto(1, Y_TIMER));
@@ -71,41 +73,43 @@ impl UiHandler {
         print!("Time: {} sec", timer);
         print!("{}", termion::cursor::Restore); // 入力中の位置に戻す
 
-        // フラッシュ
+        // 再描画
         io::stdout().flush().unwrap();
     }
 
+    // WPM 表示
     pub fn print_wpm(elapsed_timer: i32, length: usize, incorrect_chars: i32) {
         print!("{}", termion::cursor::Goto(1, Y_QUIT));
         print!("{}", termion::clear::AfterCursor);
         print!(
             "{:<width$}: {} sec\r\n",
-            "Total Time",
+            TOTAL_TIME,
             elapsed_timer,
-            width = SCORE_TITLE_WIDTH
+            width = SUMMARY_TITLE_WIDTH
         );
         print!(
             "{:<width$}: {} chars\r\n",
-            "Total Typing",
+            TOTAL_TYPE,
             length,
-            width = SCORE_TITLE_WIDTH
+            width = SUMMARY_TITLE_WIDTH
         );
         print!(
             "{:<width$}: {} chars\r\n",
-            "Misses",
+            TOTAL_MISSES,
             incorrect_chars,
-            width = SCORE_TITLE_WIDTH
+            width = SUMMARY_TITLE_WIDTH
         );
         print!(
             "{:<width$}: {}{:.2}{} wpm\r\n",
-            "Word Per Minute",
+            WORD_PER_MINUTE,
             color::Fg(color::Green),
             wpm::calc_wpm(length, elapsed_timer, incorrect_chars),
             style::Reset,
-            width = SCORE_TITLE_WIDTH
+            width = SUMMARY_TITLE_WIDTH
         );
     }
 
+    // タイムアップ表示
     pub fn print_timeup() {
         print!("{}", termion::cursor::Goto(1, Y_QUIT));
         print!("{}", termion::clear::AfterCursor);

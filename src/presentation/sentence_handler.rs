@@ -9,17 +9,14 @@ pub struct SentenceHandler;
 
 impl SentenceHandler {
     pub fn print_sentence(level: usize) -> String {
-        // 横幅を固定
-        let fixed_width: u16 = 80;
-
         // 現在のターミナルサイズを取得
-        let (width, _height) = terminal_size().unwrap_or((80, 24));
+        let (width, _height) = terminal_size().unwrap_or((FIXED_WIDTH, 14));
 
         // 使用する幅を固定幅と現在の横幅の大きい方にする
-        let use_width = std::cmp::max(width, fixed_width);
+        let use_width = std::cmp::max(width, FIXED_WIDTH);
 
         // 枠
-        let line = "-".repeat(use_width as usize);
+        let line = WINDOW_LINE.repeat(use_width as usize);
 
         // 文章を生成依頼
         // Todo: unwrap() じゃなくてエラーハンドリングする。

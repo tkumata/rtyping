@@ -48,7 +48,7 @@ fn main() -> io::Result<()> {
     let stdin = stdin();
     let mut stdout = stdout().into_raw_mode().unwrap();
     let mut inputs: Vec<String> = Vec::new(); // ユーザ入力保持 Vec 用意
-    let mut incorrect_chars = 0; // 入力間違い文字数
+    let mut incorrects = 0; // 入力間違い文字数
 
     // 目標単語列表示
     let target_string = SentenceHandler::print_sentence(args.level);
@@ -107,13 +107,13 @@ fn main() -> io::Result<()> {
                     if target_str.chars().nth(l) == Some(c) {
                         print!("{}{}{}", color::Fg(color::Green), c, style::Reset);
 
-                        // Produce a <FREQ> beep sound
+                        // <FREQ> のビープ音を生成
                         let source =
                             SineWave::new(args.freq).take_duration(Duration::from_millis(200));
                         stream_handle.play_raw(source.convert_samples()).unwrap();
                     } else {
                         print!("{}{}{}{}", "\x07", color::Fg(color::Red), c, style::Reset);
-                        incorrect_chars += 1;
+                        incorrects += 1;
                     }
 
                     inputs.push(String::from(c.to_string()));
@@ -127,7 +127,7 @@ fn main() -> io::Result<()> {
     timer_thread.join().unwrap();
 
     // WPM 計算と表示
-    UiHandler::print_wpm(*timer.lock().unwrap() - 1, inputs.len(), incorrect_chars);
+    UiHandler::print_wpm(*timer.lock().unwrap() - 1, inputs.len(), incorrects);
 
     bgm_tx.send(()).unwrap();
     Ok(())
