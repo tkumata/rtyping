@@ -78,7 +78,7 @@ impl UiHandler {
     }
 
     // WPM 表示
-    pub fn print_wpm(elapsed_timer: i32, length: usize, incorrect_chars: i32) {
+    pub fn print_wpm(elapsed_timer: i32, length: usize, incorrects: i32) {
         print!("{}", termion::cursor::Goto(1, Y_QUIT));
         print!("{}", termion::clear::AfterCursor);
         print!(
@@ -96,14 +96,14 @@ impl UiHandler {
         print!(
             "{:<width$}: {} chars\r\n",
             TOTAL_MISSES,
-            incorrect_chars,
+            incorrects,
             width = SUMMARY_TITLE_WIDTH
         );
         print!(
             "{:<width$}: {}{:.2}{} wpm\r\n",
             WORD_PER_MINUTE,
             color::Fg(color::Green),
-            wpm::calc_wpm(length, elapsed_timer, incorrect_chars),
+            wpm::calc_wpm(length, elapsed_timer, incorrects),
             style::Reset,
             width = SUMMARY_TITLE_WIDTH
         );
