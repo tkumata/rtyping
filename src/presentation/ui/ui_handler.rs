@@ -16,6 +16,7 @@ pub struct CliArgs {
 pub struct UiHandler;
 
 impl UiHandler {
+    // ヘルプと引数処理
     pub fn parse_args() -> CliArgs {
         let matches = Command::new("rtyping")
             .author("Tomokatsu Kumata")

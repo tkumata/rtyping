@@ -70,13 +70,13 @@ fn main() -> io::Result<()> {
     // ユーザ入力を監視する
     // Todo: stdin.events を変える。
     for evt in stdin.events() {
-        if main_receiver.try_recv().is_ok() {
-            break;
-        }
-
         if let Ok(Event::Key(key)) = evt {
             match key {
                 Key::Ctrl('c') | Key::Esc | Key::Char('\n') => {
+                    if main_receiver.try_recv().is_ok() {
+                        break;
+                    }
+
                     timer_sender.send(()).unwrap();
                     break;
                 }

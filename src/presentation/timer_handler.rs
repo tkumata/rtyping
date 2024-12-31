@@ -82,7 +82,7 @@ fn print_timeup() {
     print!("{}", termion::clear::AfterCursor);
     // メッセージ表示
     print!(
-        "{}⏰Time up. Press any key.↩️{}\r\n",
+        "{}⏰Time up. Press ENTER key.↩️{}\r\n",
         color::Fg(color::Red),
         style::Reset
     );
