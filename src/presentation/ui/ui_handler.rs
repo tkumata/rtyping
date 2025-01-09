@@ -78,7 +78,7 @@ impl UiHandler {
             ",-----------------------------.\r
 | 🏁 Result                   |\r
 |-----------------------------|\r
-| Total Time      : {elapsed_timer:<2} sec    |\r
+| Total Time      : {elapsed_timer:<3} sec    |\r
 | Total Typing    : {length:<3} chars |\r
 | Total Misses    : {incorrects:<3} chars |\r
 | Words Per Minute: {color}{wpm:<5.1}{reset} wpm |\r
