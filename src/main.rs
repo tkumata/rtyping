@@ -55,7 +55,6 @@ fn main() -> io::Result<()> {
     let target_string = match SentenceHandler::print_sentence(args.level) {
         Ok(contents) => contents,
         Err(err) => {
-            println!("{}", style::Reset);
             println!("Failed to generate sentence: {}", err);
             return Err(err);
         }

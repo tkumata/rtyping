@@ -1,6 +1,6 @@
 use std::io::Write;
 use std::io::{self};
-use termion::{style, terminal_size};
+use termion::terminal_size;
 
 use crate::config::*;
 use crate::usecase::generate_sentence;
@@ -34,7 +34,6 @@ impl SentenceHandler {
                 Ok(contents)
             }
             Err(err) => {
-                println!("{}", style::Reset);
                 println!("Failed to generate strings: {}", err);
                 Err(err)
             }
