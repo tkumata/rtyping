@@ -1,7 +1,7 @@
 use clap::{arg, Command};
 use std::io::{self};
 use termion;
-use termion::{color, style};
+use termion::color;
 
 use crate::config::*;
 use crate::usecase::wpm;
@@ -49,13 +49,19 @@ impl UiHandler {
 
     // イントロ表示
     pub fn print_intro() {
+        let title = format!(
+            r" ____     _____            _
+|  _ \   |_   _|   _ _ __ (_)_ __   __ _ 
+| |_) |____| || | | | '_ \| | '_ \ / _` |
+|  _ <_____| || |_| | |_) | | | | | (_| |
+|_| \_\    |_| \__, | .__/|_|_| |_|\__, |
+               |___/|_|            |___/
+"
+        );
+
         print!("{}", termion::clear::All);
         print!("{}", termion::cursor::Goto(1, Y_TITLE));
-        print!(
-            "{}>>> R-Typing <<<{}\r\n",
-            color::Fg(color::LightBlue),
-            style::Reset
-        );
+        print!("{}", title);
         print!("Press *ENTER* key to start.🚀\r\n");
 
         // ENTER 入力待ち
@@ -67,33 +73,22 @@ impl UiHandler {
 
     // WPM 表示
     pub fn print_wpm(elapsed_timer: i32, length: usize, incorrects: i32) {
+        let wpm = wpm::calc_wpm(length, elapsed_timer, incorrects);
+        let result_text = format!(
+            ",-----------------------------.\r
+| 🏁 Result                   |\r
+|-----------------------------|\r
+| Total Time      : {elapsed_timer:<2} sec    |\r
+| Total Typing    : {length:<3} chars |\r
+| Total Misses    : {incorrects:<3} chars |\r
+| Words Per Minute: {color}{wpm:<5.1}{reset} wpm |\r
+`-----------------------------'\r",
+            color = color::Fg(color::Green),
+            reset = color::Fg(color::Reset)
+        );
+
         print!("{}", termion::cursor::Goto(1, Y_QUIT));
         print!("{}", termion::clear::AfterCursor);
-        print!(
-            "{:<width$}: {} sec\r\n",
-            TOTAL_TIME,
-            elapsed_timer,
-            width = SUMMARY_TITLE_WIDTH
-        );
-        print!(
-            "{:<width$}: {} chars\r\n",
-            TOTAL_TYPE,
-            length,
-            width = SUMMARY_TITLE_WIDTH
-        );
-        print!(
-            "{:<width$}: {} chars\r\n",
-            TOTAL_MISSES,
-            incorrects,
-            width = SUMMARY_TITLE_WIDTH
-        );
-        print!(
-            "{:<width$}: {}{:.2}{} wpm\r\n",
-            WORD_PER_MINUTE,
-            color::Fg(color::Green),
-            wpm::calc_wpm(length, elapsed_timer, incorrects),
-            style::Reset,
-            width = SUMMARY_TITLE_WIDTH
-        );
+        print!("{}\r\n", result_text);
     }
 }

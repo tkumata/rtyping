@@ -13,6 +13,7 @@ pub fn generate_sentence(level: usize) -> Result<String, io::Error> {
             Ok(generate_markov_chain(&sampling_contents, 4, level))
         }
         Err(err) => {
+            println!("");
             eprintln!("Failed to read file: {}", err);
             Err(err)
         }

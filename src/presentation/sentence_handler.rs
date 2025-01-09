@@ -1,6 +1,6 @@
 use std::io::Write;
 use std::io::{self};
-use termion::terminal_size;
+use termion::{style, terminal_size};
 
 use crate::config::*;
 use crate::usecase::generate_sentence;
@@ -22,6 +22,7 @@ impl SentenceHandler {
         match generate_sentence::generate_sentence(level) {
             Ok(contents) => {
                 // 画面に反映
+                print!("{}", termion::clear::All);
                 print!("{}", termion::cursor::Goto(1, Y_TARGET));
                 print!("{}\r\n", line);
                 print!("{}", termion::cursor::Save); // カーソル位置保存
@@ -33,6 +34,7 @@ impl SentenceHandler {
                 Ok(contents)
             }
             Err(err) => {
+                println!("{}", style::Reset);
                 println!("Failed to generate strings: {}", err);
                 Err(err)
             }

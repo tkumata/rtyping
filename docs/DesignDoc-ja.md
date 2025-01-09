@@ -66,3 +66,38 @@
 ## 📋 Todo
 
 - UI の再設計
+
+Title Screen
+
+```plaintext
+ ____     _____            _
+|  _ \   |_   _|   _ _ __ (_)_ __   __ _ 
+| |_) |____| || | | | '_ \| | '_ \ / _` |
+|  _ <_____| || |_| | |_) | | | | | (_| |
+|_| \_\    |_| \__, | .__/|_|_| |_|\__, |
+               |___/|_|            |___/
+Press ENTER to start.
+```
+
+Playing window
+
+```plaintext
+Time: 34 sec
+=====================================
+There is three man.........
+A time pencil when a find........
+=====================================
+```
+
+Result window
+
+```plaintext
+,-----------------------------.
+| 🏆 Result                   |
+|-----------------------------|
+| Total Time      : 00 sec    |
+| Total Typing    : 000 chars |
+| Total Misses    : 000 chars |
+| Words Per Minute: 000.0 wpm |
+`-----------------------------'
+```
