@@ -32,7 +32,7 @@ impl UiHandler {
                     .value_parser(clap::value_parser!(usize)),
             )
             .arg(
-                arg!(--freq <FREQUENCY> "Frequency e.g, 800.0 or 480.0")
+                arg!(--freq <FREQUENCY> "Frequency e.g, 880.0 or 480.0")
                     .default_value("800.0")
                     .value_parser(clap::value_parser!(f32)),
             )
@@ -50,19 +50,19 @@ impl UiHandler {
     // イントロ表示
     pub fn print_intro() {
         let title = format!(
-            r" ____     _____            _
+            r"
+ ____     _____            _
 |  _ \   |_   _|   _ _ __ (_)_ __   __ _ 
 | |_) |____| || | | | '_ \| | '_ \ / _` |
 |  _ <_____| || |_| | |_) | | | | | (_| |
 |_| \_\    |_| \__, | .__/|_|_| |_|\__, |
-               |___/|_|            |___/
-"
+               |___/|_|            |___/"
         );
 
         print!("{}", termion::clear::All);
         print!("{}", termion::cursor::Goto(1, Y_TITLE));
-        print!("{}", title);
-        print!("Press *ENTER* key to start.🚀\r\n");
+        println!("{}", title);
+        println!("Press *ENTER* key to start.🚀");
 
         // ENTER 入力待ち
         let mut start: String = String::new();
@@ -89,6 +89,6 @@ impl UiHandler {
 
         print!("{}", termion::cursor::Goto(1, Y_QUIT));
         print!("{}", termion::clear::AfterCursor);
-        print!("{}\r\n", result_text);
+        println!("{}", result_text);
     }
 }
