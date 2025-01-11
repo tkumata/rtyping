@@ -22,6 +22,7 @@ impl SentenceHandler {
         match generate_sentence::generate_sentence(level) {
             Ok(contents) => {
                 // 画面に反映
+                print!("{}", termion::clear::All);
                 print!("{}", termion::cursor::Goto(1, Y_TARGET));
                 print!("{}\r\n", line);
                 print!("{}", termion::cursor::Save); // カーソル位置保存
