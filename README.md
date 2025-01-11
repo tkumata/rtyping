@@ -10,6 +10,8 @@ I\’m still learning Rust, so feedback and corrections are very welcome!
 
 ![sample2](./docs/Screenshot2.png)
 
+![sample3](./docs/Screenshot3.png)
+
 ## ⚙️ How to Run in VSCode
 
 1. Open the main file in VSCode.

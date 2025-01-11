@@ -49,19 +49,79 @@ impl UiHandler {
 
     // イントロ表示
     pub fn print_intro() {
-        let title = format!(
-            r"
- ____     _____            _
-|  _ \   |_   _|   _ _ __ (_)_ __   __ _ 
-| |_) |____| || | | | '_ \| | '_ \ / _` |
-|  _ <_____| || |_| | |_) | | | | | (_| |
-|_| \_\    |_| \__, | .__/|_|_| |_|\__, |
-               |___/|_|            |___/"
-        );
+        let title_s1 = format!(r"                        Let' begin typing!");
+        let title_s2 = format!(r"                          Go for high WPM.");
+        let title_s3 = format!(r"                                 Credit 01");
+        let title_r1 = format!(r" ____      _____            _             ");
+        let title_r2 = format!(r"|  _ \    |_   _|   _ _ __ (_)_ __   __ _ ");
+        let title_r3 = format!(r"| |_) |  _  | || | | | '_ \| | '_ \ / _` |");
+        let title_r4 = format!(r"|  _ <  (_) | || |_| | |_) | | | | | (_| |");
+        let title_r5 = format!(r"|_| \_\     |_| \__, | .__/|_|_| |_|\__, |");
+        let title_r6 = format!(r"                |___/|_|            |___/ ");
+        let title_r7 = format!(r"                                © 2025 kmt");
 
         print!("{}", termion::clear::All);
         print!("{}", termion::cursor::Goto(1, Y_TITLE));
-        println!("{}", title);
+        println!(
+            "{}{}{}",
+            color::Fg(color::LightWhite),
+            title_s1,
+            color::Fg(color::Reset)
+        );
+        println!(
+            "{}{}{}",
+            color::Fg(color::LightWhite),
+            title_s2,
+            color::Fg(color::Reset)
+        );
+        println!(
+            "{}{}{}",
+            color::Fg(color::LightWhite),
+            title_s3,
+            color::Fg(color::Reset)
+        );
+        println!(
+            "{}{}{}",
+            color::Fg(color::Blue),
+            title_r1,
+            color::Fg(color::Reset)
+        );
+        println!(
+            "{}{}{}",
+            color::Fg(color::LightBlue),
+            title_r2,
+            color::Fg(color::Reset)
+        );
+        println!(
+            "{}{}{}",
+            color::Fg(color::Cyan),
+            title_r3,
+            color::Fg(color::Reset)
+        );
+        println!(
+            "{}{}{}",
+            color::Fg(color::LightCyan),
+            title_r4,
+            color::Fg(color::Reset)
+        );
+        println!(
+            "{}{}{}",
+            color::Fg(color::LightGreen),
+            title_r5,
+            color::Fg(color::Reset)
+        );
+        println!(
+            "{}{}{}",
+            color::Fg(color::Green),
+            title_r6,
+            color::Fg(color::Reset)
+        );
+        println!(
+            "{}{}{}",
+            color::Fg(color::LightCyan),
+            title_r7,
+            color::Fg(color::Reset)
+        );
         println!("Press *ENTER* key to start.🚀");
 
         // ENTER 入力待ち
@@ -75,14 +135,16 @@ impl UiHandler {
     pub fn print_wpm(elapsed_timer: i32, length: usize, incorrects: i32) {
         let wpm = wpm::calc_wpm(length, elapsed_timer, incorrects);
         let result_text = format!(
-            ",-----------------------------.\r
+            "
+,-----------------------------.\r
 | 🏁 Result                   |\r
 |-----------------------------|\r
 | Total Time      : {elapsed_timer:<3} sec   |\r
 | Total Typing    : {length:<3} chars |\r
 | Total Misses    : {incorrects:<3} chars |\r
 | Words Per Minute: {color}{wpm:<5.1}{reset} wpm |\r
-`-----------------------------'\r",
+`-----------------------------'\r
+",
             color = color::Fg(color::Green),
             reset = color::Fg(color::Reset)
         );

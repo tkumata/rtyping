@@ -6,4 +6,4 @@ pub const Y_QUIT: u16 = 6;
 
 // Define window line
 pub const FIXED_WIDTH: u16 = 80;
-pub const WINDOW_LINE: &'static str = "=";
+pub const WINDOW_LINE: &'static str = "-";
