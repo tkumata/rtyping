@@ -51,8 +51,7 @@ impl UiHandler {
     pub fn print_intro() {
         let title_s1 = format!(r"                        Let' begin typing!");
         let title_s2 = format!(r"                          Go for high WPM.");
-        let title_s3 = format!(r"                                 Credit 01");
-        let title_r1 = format!(r" ____      _____            _             ");
+        let title_r1 = format!(r" ____      _____            _    Credit 01");
         let title_r2 = format!(r"|  _ \    |_   _|   _ _ __ (_)_ __   __ _ ");
         let title_r3 = format!(r"| |_) |  _  | || | | | '_ \| | '_ \ / _` |");
         let title_r4 = format!(r"|  _ <  (_) | || |_| | |_) | | | | | (_| |");
@@ -72,12 +71,6 @@ impl UiHandler {
             "{}{}{}",
             color::Fg(color::LightWhite),
             title_s2,
-            color::Fg(color::Reset)
-        );
-        println!(
-            "{}{}{}",
-            color::Fg(color::LightWhite),
-            title_s3,
             color::Fg(color::Reset)
         );
         println!(
@@ -118,7 +111,7 @@ impl UiHandler {
         );
         println!(
             "{}{}{}",
-            color::Fg(color::LightCyan),
+            color::Fg(color::LightYellow),
             title_r7,
             color::Fg(color::Reset)
         );
