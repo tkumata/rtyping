@@ -70,38 +70,43 @@
 Title Screen
 
 ```plaintext
-                        Let' begin typing!
-                          Go for high WPM.
-                                 Credit 01
- ____      _____            _             
-|  _ \    |_   _|   _ _ __ (_)_ __   __ _ 
-| |_) |  _  | || | | | '_ \| | '_ \ / _` |
-|  _ <  (_) | || |_| | |_) | | | | | (_| |
-|_| \_\     |_| \__, | .__/|_|_| |_|\__, |
-                |___/|_|            |___/ 
-                                © 2025 kmt
+                       Let' begin typing!
+                         Go for high WPM.
+ ____     _____            _    Credit 01
+|  _ \   |_   _|   _ _ __ (_)_ __   __ _ 
+| |_) | _  | || | | | '_ \| | '_ \ / _` |
+|  _ < (_) | || |_| | |_) | | | | | (_| |
+|_| \_\    |_| \__, | .__/|_|_| |_|\__, |
+               |___/|_|            |___/ 
+                               © 2025 kmt
 Press *ENTER* key to start.🚀
 ```
 
-Playing window
+Playing screen
 
 ```plaintext
-Time: 34 sec
--------------------------------------
+Time: 00 sec / Types: 00 chars / Misses: 0 chars
+-------------------------------------------------------------------------------
 There is three man.........
 A time pencil when a find........
--------------------------------------
+-------------------------------------------------------------------------------
 ```
 
-Result window
+Result screen
 
 ```plaintext
+Time: 60 sec / Types: 200 chars / Misses: 3 chars
+-------------------------------------------------------------------------------
+There is three man.........
+A time pencil when a find........
+-------------------------------------------------------------------------------
+
 ,-----------------------------.
 | 🏁 Result                   |
 |-----------------------------|
-| Total Time      : 00 sec    |
-| Total Typing    : 000 chars |
-| Total Misses    : 000 chars |
-| Words Per Minute: 000.0 wpm |
+| Total Time      : 060 sec   |
+| Total Typing    : 200 chars |
+| Total Misses    : 003 chars |
+| Words Per Minute: 023.1 wpm |
 `-----------------------------'
 ```

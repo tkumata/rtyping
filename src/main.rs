@@ -67,6 +67,10 @@ fn main() -> io::Result<()> {
     let timer_handler = TimerHandler::new(timer_clone, timer_receiver, main_sender, args.timeout);
     timer_handler.start();
 
+    // 状態 (初期) の表示
+    // Types: 0 chars / Misses: 0 chars
+    UiHandler::print_stat(0, 0);
+
     // ユーザ入力を監視する
     // Todo: stdin.events を変える。
     for evt in stdin.events() {
@@ -103,6 +107,10 @@ fn main() -> io::Result<()> {
                     }
 
                     inputs.push(String::from(c.to_string()));
+
+                    // 状態の表示
+                    // Types: mm chars / Misses: n chars
+                    UiHandler::print_stat(inputs.len(), incorrects);
                 }
                 _ => {}
             }
@@ -111,7 +119,7 @@ fn main() -> io::Result<()> {
     }
 
     // WPM 計算と表示
-    UiHandler::print_wpm(
+    UiHandler::print_result(
         (*timer.lock().unwrap() - 1).try_into().unwrap(),
         inputs.len(),
         incorrects,
