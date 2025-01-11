@@ -63,9 +63,7 @@ fn print_timer(timer: i32) {
     // 入力中の位置を保存
     print!("{}", termion::cursor::Save);
     // カーソル移動
-    print!("{}", termion::cursor::Goto(1, Y_TIMER));
-    // カーソルのある行をクリア
-    print!("{}", termion::clear::CurrentLine);
+    print!("{}", termion::cursor::Goto(1, Y_STAT));
     // 経過時間表示
     print!("Time: {} sec", timer);
     // 入力中の位置に戻す
