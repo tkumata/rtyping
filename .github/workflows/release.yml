@@ -48,3 +48,38 @@ jobs:
             dist/rtyping-aarch64-apple-darwin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ✍ Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🦀 Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: 📦 Install cross-compilation dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool g++ pkg-config libasound2 libasound2-dev libudev-dev pulseaudio alsa-utils
+
+      - name: 🛠 Build project for x86_64
+        run: |
+          cargo build --release
+
+      - name: 🚛 Move the binary
+        run: |
+          mkdir -p dist
+          cp target/release/rtyping dist/rtyping-x86_64-unknown-linux-gnu
+
+      - name: 🆙 Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/rtyping-x86_64-unknown-linux-gnu
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
