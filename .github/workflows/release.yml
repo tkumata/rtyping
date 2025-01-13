@@ -64,7 +64,7 @@ jobs:
       - name: 📦 Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y autoconf automake libtool g++ pkg-config libasound2 libasound2-dev libudev-dev pulseaudio alsa-utils
+          sudo apt-get install -y autoconf automake libtool g++ pkg-config libasound2t64 libasound2-dev libudev-dev pulseaudio alsa-utils
 
       - name: 🛠 Build project for x86_64
         run: |
