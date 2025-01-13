@@ -49,7 +49,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  build-linux:
+  build-ubuntu:
     runs-on: ubuntu-latest
 
     steps:
@@ -73,12 +73,12 @@ jobs:
       - name: 🚛 Move the binary
         run: |
           mkdir -p dist
-          cp target/release/rtyping dist/rtyping-x86_64-unknown-linux-gnu
+          cp target/release/rtyping dist/rtyping-x86_64-ubuntu-linux-gnu
 
       - name: 🆙 Upload to Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/rtyping-x86_64-unknown-linux-gnu
+            dist/rtyping-x86_64-ubuntu-linux-gnu
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
