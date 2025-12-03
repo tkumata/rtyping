@@ -3,128 +3,178 @@ mod domain;
 mod presentation;
 mod usecase;
 
-use rodio::Source;
-use rodio::{source::SineWave, OutputStream};
-use std::io::{self};
-use std::io::{stdin, stdout, Write};
+use crossterm::{
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use ratatui::{backend::CrosstermBackend, Terminal};
+use rodio::{source::SineWave, OutputStream, Source};
+use std::io::{self, stdout};
 use std::sync::{mpsc, Arc, Mutex};
+use std::thread;
 use std::time::Duration;
-use termion;
-use termion::event::{Event, Key};
-use termion::input::TermRead;
-use termion::raw::IntoRawMode;
-use termion::{color, style};
 
 use presentation::bgm_handler::BgmHandler;
 use presentation::sentence_handler::SentenceHandler;
-use presentation::timer_handler::TimerHandler;
+use presentation::ui::app::{App, AppState};
+use presentation::ui::render;
 use presentation::ui::ui_handler::UiHandler;
 
 fn main() -> io::Result<()> {
-    // ヘルプと引数処理
     let args = UiHandler::parse_args();
 
-    // sine 波生成ストリーミング
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
 
-    // スレッド間通信チャンネル
-    let (main_sender, main_receiver) = mpsc::channel();
-    let (timer_sender, timer_receiver) = mpsc::channel();
     let (snd_sender, snd_receiver) = mpsc::channel();
 
-    // BGM 処理
     if args.sound {
         let bgm_handler = BgmHandler::new(snd_receiver);
         bgm_handler.start();
     }
 
-    // イントロを表示
-    UiHandler::print_intro();
+    enable_raw_mode()?;
+    let mut stdout = stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
 
-    // 目標文字列表示初期化 (イントロ表示後に初期化が必要)
-    // Todo: この歪な依存関係を排除する。
-    let stdin = stdin();
-    // Raw mode に移行
-    let mut stdout = stdout().into_raw_mode().unwrap();
-    // ユーザ入力保持 Vec 用意
-    let mut inputs: Vec<String> = Vec::new();
-    // 入力間違い文字数
-    let mut incorrects = 0;
+    let mut app = App::new(args.timeout, args.level, args.freq, args.sound);
 
-    // 目標単語列表示
-    let target_string = match SentenceHandler::print_sentence(args.level) {
-        Ok(contents) => contents,
-        Err(err) => {
-            println!("Failed to generate sentence: {}", err);
-            return Err(err);
-        }
-    };
-    let target_str = &target_string;
-
-    // タイマーの表示とカウント
-    let timer = Arc::new(Mutex::new(0));
+    let timer = Arc::new(Mutex::new(0i32));
     let timer_clone = Arc::clone(&timer);
-    let timer_handler = TimerHandler::new(timer_clone, timer_receiver, main_sender, args.timeout);
-    timer_handler.start();
+    let timeout = args.timeout;
 
-    // 状態 (初期) の表示
-    // Types: 0 chars / Misses: 0 chars
-    UiHandler::print_stat(0, 0);
+    let (timer_stop_tx, timer_stop_rx) = mpsc::channel::<()>();
+    let (timeout_tx, timeout_rx) = mpsc::channel::<()>();
 
-    // ユーザ入力を監視する
-    // Todo: stdin.events を変える。
-    for evt in stdin.events() {
-        if let Ok(Event::Key(key)) = evt {
-            match key {
-                Key::Ctrl('c') | Key::Esc | Key::Char('\n') => {
-                    if main_receiver.try_recv().is_ok() {
-                        break;
-                    }
-
-                    timer_sender.send(()).unwrap();
-                    break;
-                }
-                Key::Backspace => {
-                    let l = inputs.len();
-                    print!("{}", termion::cursor::Left(1));
-                    print!("{}", target_str.chars().nth(l - 1).unwrap().to_string());
-                    print!("{}", termion::cursor::Left(1));
-                    inputs.pop();
-                }
-                Key::Char(c) => {
-                    let l = inputs.len();
-
-                    if target_str.chars().nth(l) == Some(c) {
-                        print!("{}{}{}", color::Fg(color::Green), c, style::Reset);
-
-                        // <FREQ> のビープ音を生成
-                        let source =
-                            SineWave::new(args.freq).take_duration(Duration::from_millis(100));
-                        stream_handle.play_raw(source.convert_samples()).unwrap();
-                    } else {
-                        print!("{}{}{}{}", "\x07", color::Fg(color::Red), c, style::Reset);
-                        incorrects += 1;
-                    }
-
-                    inputs.push(String::from(c.to_string()));
-
-                    // 状態の表示
-                    // Types: mm chars / Misses: n chars
-                    UiHandler::print_stat(inputs.len(), incorrects);
-                }
-                _ => {}
+    let timer_thread = thread::spawn(move || {
+        loop {
+            if timer_stop_rx.try_recv().is_ok() {
+                break;
             }
-            stdout.flush().unwrap();
+            thread::sleep(Duration::from_secs(1));
+            let mut t = timer_clone.lock().unwrap();
+            *t += 1;
+            if *t >= timeout {
+                timeout_tx.send(()).ok();
+                break;
+            }
+        }
+    });
+
+    let res = run_app(&mut terminal, &mut app, &timer, &stream_handle, timer_stop_tx, timeout_rx);
+
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
+
+    timer_thread.join().unwrap();
+
+    snd_sender.send(()).ok();
+
+    if let Err(err) = res {
+        println!("Error: {:?}", err);
+    }
+
+    Ok(())
+}
+
+fn run_app(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    app: &mut App,
+    timer: &Arc<Mutex<i32>>,
+    stream_handle: &rodio::OutputStreamHandle,
+    timer_stop_tx: mpsc::Sender<()>,
+    timeout_rx: mpsc::Receiver<()>,
+) -> io::Result<()> {
+    loop {
+        terminal.draw(|f| render::render(f, app))?;
+
+        if app.should_quit {
+            break;
+        }
+
+        // Check for timeout notification from timer thread
+        if app.state == AppState::Typing {
+            if timeout_rx.try_recv().is_ok() {
+                let current_timer = *timer.lock().unwrap();
+                app.update_timer(current_timer);
+                app.finish_typing();
+            }
+        }
+
+        if event::poll(Duration::from_millis(100))? {
+            if let Event::Key(key) = event::read()? {
+                match app.state {
+                    AppState::Intro => {
+                        if key.code == KeyCode::Enter {
+                            match SentenceHandler::print_sentence(app.level) {
+                                Ok(contents) => {
+                                    app.set_target_string(contents);
+                                    app.start_typing();
+                                }
+                                Err(err) => {
+                                    return Err(err);
+                                }
+                            }
+                        } else if key.code == KeyCode::Esc
+                            || (key.code == KeyCode::Char('c')
+                                && key.modifiers.contains(KeyModifiers::CONTROL))
+                        {
+                            app.quit();
+                        }
+                    }
+                    AppState::Typing => {
+                        match key.code {
+                            KeyCode::Esc => {
+                                timer_stop_tx.send(()).ok();
+                                app.update_timer(*timer.lock().unwrap());
+                                app.finish_typing();
+                            }
+                            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                                timer_stop_tx.send(()).ok();
+                                app.quit();
+                            }
+                            KeyCode::Backspace => {
+                                app.pop_char();
+                            }
+                            KeyCode::Char(c) => {
+                                let is_correct = app.push_char(c);
+
+                                if is_correct {
+                                    let source = SineWave::new(app.freq)
+                                        .take_duration(Duration::from_millis(100));
+                                    stream_handle.play_raw(source.convert_samples()).unwrap();
+                                }
+
+                                if app.is_complete() {
+                                    timer_stop_tx.send(()).ok();
+                                    app.update_timer(*timer.lock().unwrap());
+                                    app.finish_typing();
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    AppState::Result => {
+                        if key.code == KeyCode::Enter {
+                            app.quit();
+                        }
+                    }
+                }
+            }
+        }
+
+        if app.state == AppState::Typing {
+            let current_timer = *timer.lock().unwrap();
+            app.update_timer(current_timer);
         }
     }
 
-    // WPM 計算と表示
-    UiHandler::print_result(
-        (*timer.lock().unwrap() - 1).try_into().unwrap(),
-        inputs.len(),
-        incorrects,
-    );
-
-    snd_sender.send(()).unwrap();
     Ok(())
 }
