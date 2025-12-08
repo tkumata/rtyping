@@ -1,20 +1,35 @@
 {
-  "name": "Rust Typing Practice",
-  "dockerComposeFile": "docker-compose.yml",
-  "service": "app",
-  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-  "mounts": [
-    "source=${localWorkspaceFolder}/asound.conf,target=/etc/asound.conf,type=bind"
+  "name": "R-Typing Dev",
+  "image": "mcr.microsoft.com/devcontainers/rust:1-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/rust:1": {
+      "version": "latest",
+      "profile": "default"
+    }
+  },
+  "runArgs": [
+    "--device=/dev/snd",
+    "--group-add=audio"
   ],
+  "mounts": [
+    "source=${localWorkspaceFolder}/asound.conf,target=/etc/asound.conf,type=bind,consistency=cached"
+  ],
+  "containerEnv": {
+    "PULSE_SERVER": "unix:/run/user/1000/pulse/native"
+  },
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev && rustup component add rustfmt clippy",
   "customizations": {
     "vscode": {
       "extensions": [
-        "ms-azuretools.vscode-docker",
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
         "vadimcn.vscode-lldb",
         "fill-labs.dependi",
-        "tamasfe.even-better-toml",
-        "rust-lang.rust-analyzer"
-      ]
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "rust-analyzer.check.command": "clippy"
+      }
     }
   }
 }

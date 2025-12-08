@@ -27,7 +27,7 @@ impl UiHandler {
             )
             .arg(
                 arg!(--freq <FREQUENCY> "Frequency e.g, 880.0 or 480.0")
-                    .default_value("440.0")
+                    .default_value("300.0")
                     .value_parser(clap::value_parser!(f32)),
             )
             .arg(arg!(-s --sound "Enable BGM"))

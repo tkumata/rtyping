@@ -20,12 +20,17 @@ pub fn render(frame: &mut Frame, app: &App) {
 fn render_intro(frame: &mut Frame) {
     let area = frame.area();
 
+    // アスキーアートの高さ(6行) + メッセージ(2行) + 空行(1行) + ボーダー(2行) = 11行
+    let content_height = 11;
+    let vertical_padding = area.height.saturating_sub(content_height + 3) / 2;
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
+            Constraint::Length(vertical_padding),
+            Constraint::Length(content_height),
             Constraint::Length(3),
-            Constraint::Min(10),
-            Constraint::Length(3),
+            Constraint::Min(0),
         ])
         .split(area);
 
@@ -96,18 +101,24 @@ fn render_intro(frame: &mut Frame) {
 fn render_typing(frame: &mut Frame, app: &App) {
     let area = frame.area();
 
+    // ヘッダー(3行) + タイピングエリア(最小5行) + フッター(3行) = 11行
+    let content_height = 11_u16;
+    let vertical_padding = area.height.saturating_sub(content_height) / 2;
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
+            Constraint::Length(vertical_padding),
             Constraint::Length(3),
             Constraint::Min(5),
             Constraint::Length(3),
+            Constraint::Length(vertical_padding),
         ])
         .split(area);
 
-    render_header(frame, chunks[0], app);
-    render_typing_area(frame, chunks[1], app);
-    render_footer(frame, chunks[2], app);
+    render_header(frame, chunks[1], app);
+    render_typing_area(frame, chunks[2], app);
+    render_footer(frame, chunks[3], app);
 }
 
 fn render_header(frame: &mut Frame, area: Rect, app: &App) {
@@ -197,12 +208,18 @@ fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
     for (i, target_char) in app.target_string.chars().enumerate() {
         if i < input_len {
             let input_char = app.inputs[i];
-            let style = if input_char == target_char {
-                Style::default().fg(Color::Green)
+            if input_char == target_char {
+                text_spans.push(Span::styled(
+                    input_char.to_string(),
+                    Style::default().fg(Color::Green),
+                ));
             } else {
-                Style::default().fg(Color::Red)
-            };
-            text_spans.push(Span::styled(input_char.to_string(), style));
+                // Show target char with red background for visibility
+                text_spans.push(Span::styled(
+                    target_char.to_string(),
+                    Style::default().fg(Color::White).bg(Color::Red),
+                ));
+            }
         } else if i == input_len {
             text_spans.push(Span::styled(
                 target_char.to_string(),
@@ -286,12 +303,17 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
 fn render_result(frame: &mut Frame, app: &App) {
     let area = frame.area();
 
+    // 結果表示エリア(10行) + ヘルプ(3行) = 13行
+    let content_height = 13_u16;
+    let vertical_padding = area.height.saturating_sub(content_height) / 2;
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
+            Constraint::Length(vertical_padding),
+            Constraint::Length(10),
             Constraint::Length(3),
-            Constraint::Min(10),
-            Constraint::Length(3),
+            Constraint::Min(0),
         ])
         .split(area);
 
@@ -307,7 +329,7 @@ fn render_result(frame: &mut Frame, app: &App) {
         )]),
         Line::from(""),
         Line::from(vec![
-            Span::styled("Total Time      : ", Style::default().fg(Color::Gray)),
+            Span::styled("Total Time     : ", Style::default().fg(Color::Gray)),
             Span::styled(
                 format!("{:03}", app.timer),
                 Style::default().fg(Color::Cyan),
