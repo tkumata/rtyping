@@ -129,7 +129,23 @@ fn run_app(
             if let Event::Key(key) = event::read()? {
                 match app.state {
                     AppState::Intro => {
-                        if key.code == KeyCode::Enter {
+                        if key.code == KeyCode::Char('h') {
+                            app.toggle_help();
+                        } else if app.show_help {
+                            // ヘルプ表示中のキー操作
+                            match key.code {
+                                KeyCode::Up => app.scroll_help_up(),
+                                KeyCode::Down => {
+                                    let max_scroll = render::help_line_count().saturating_sub(5);
+                                    app.scroll_help_down(max_scroll);
+                                }
+                                KeyCode::Esc => app.show_help = false,
+                                KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                                    app.quit();
+                                }
+                                _ => {}
+                            }
+                        } else if key.code == KeyCode::Enter {
                             match SentenceHandler::print_sentence(app.level) {
                                 Ok(contents) => {
                                     app.set_target_string(contents);
