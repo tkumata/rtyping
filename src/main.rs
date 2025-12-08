@@ -1,3 +1,8 @@
+//! R-Typing: A terminal-based typing practice application.
+//!
+//! This application provides a typing game with countdown timer,
+//! real-time WPM calculation, and optional background music.
+
 mod config;
 mod domain;
 mod presentation;
@@ -41,14 +46,24 @@ fn main() -> io::Result<()> {
 
     let mut app = App::new(args.timeout, args.level, args.freq, args.sound);
 
+    // Timer thread communication channels:
+    // - timer_start: signals the timer thread to begin counting
+    // - timer_stop: signals the timer thread to stop (on completion or early exit)
+    // - timeout: notifies the main thread when time runs out
     let timer = Arc::new(Mutex::new(0i32));
-    let timer_clone = Arc::clone(&timer);
     let timeout = args.timeout;
 
     let (timer_stop_tx, timer_stop_rx) = mpsc::channel::<()>();
     let (timeout_tx, timeout_rx) = mpsc::channel::<()>();
+    let (timer_start_tx, timer_start_rx) = mpsc::channel::<()>();
 
+    let timer_clone = Arc::clone(&timer);
     let timer_thread = thread::spawn(move || {
+        // Wait for game start signal
+        if timer_start_rx.recv().is_err() {
+            return;
+        }
+
         loop {
             if timer_stop_rx.try_recv().is_ok() {
                 break;
@@ -63,7 +78,7 @@ fn main() -> io::Result<()> {
         }
     });
 
-    let res = run_app(&mut terminal, &mut app, &timer, &stream_handle, timer_stop_tx, timeout_rx);
+    let res = run_app(&mut terminal, &mut app, &timer, &stream_handle, timer_stop_tx, timeout_rx, timer_start_tx);
 
     disable_raw_mode()?;
     execute!(
@@ -84,6 +99,7 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
+/// Runs the main event loop, handling user input and screen transitions.
 fn run_app(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
     app: &mut App,
@@ -91,6 +107,7 @@ fn run_app(
     stream_handle: &rodio::OutputStreamHandle,
     timer_stop_tx: mpsc::Sender<()>,
     timeout_rx: mpsc::Receiver<()>,
+    timer_start_tx: mpsc::Sender<()>,
 ) -> io::Result<()> {
     loop {
         terminal.draw(|f| render::render(f, app))?;
@@ -117,6 +134,7 @@ fn run_app(
                                 Ok(contents) => {
                                     app.set_target_string(contents);
                                     app.start_typing();
+                                    timer_start_tx.send(()).ok();
                                 }
                                 Err(err) => {
                                     return Err(err);
@@ -146,6 +164,7 @@ fn run_app(
                             KeyCode::Char(c) => {
                                 let is_correct = app.push_char(c);
 
+                                // Play feedback sound on correct input
                                 if is_correct {
                                     let source = SineWave::new(app.freq)
                                         .take_duration(Duration::from_millis(100));

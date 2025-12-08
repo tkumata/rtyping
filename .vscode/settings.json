@@ -5,5 +5,11 @@
   "editor.scrollBeyondLastLine": false,
   "editor.rulers": [100],
   "editor.wordWrap": "on",
-  "editor.formatOnSave": true
+  "editor.formatOnSave": true,
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
+    "editor.formatOnSave": true
+  },
+  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.cargo.features": "all"
 }

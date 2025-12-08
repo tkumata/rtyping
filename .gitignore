@@ -1,5 +1,8 @@
+.DS_Store
+AGENTS.md
+CLAUDE.md
+GEMINI.md
 /target
 .idea
-/.DS_Store
 Cargo.lock
 core
