@@ -17,6 +17,8 @@ pub struct App {
     pub freq: f32,
     pub sound_enabled: bool,
     pub time_started: bool,
+    pub show_help: bool,
+    pub help_scroll: u16,
 }
 
 impl App {
@@ -33,6 +35,25 @@ impl App {
             freq,
             sound_enabled,
             time_started: false,
+            show_help: false,
+            help_scroll: 0,
+        }
+    }
+
+    pub fn toggle_help(&mut self) {
+        self.show_help = !self.show_help;
+        if !self.show_help {
+            self.help_scroll = 0;
+        }
+    }
+
+    pub fn scroll_help_up(&mut self) {
+        self.help_scroll = self.help_scroll.saturating_sub(1);
+    }
+
+    pub fn scroll_help_down(&mut self, max_scroll: u16) {
+        if self.help_scroll < max_scroll {
+            self.help_scroll += 1;
         }
     }
 

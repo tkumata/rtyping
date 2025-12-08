@@ -2,22 +2,29 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear, Paragraph, Wrap},
     Frame,
 };
 
 use super::app::{App, AppState};
 use crate::usecase::wpm;
 
+const HELP_TEXT: &str = include_str!("../../../docs/HELP.md");
+
+/// ヘルプテキストの行数を返す
+pub fn help_line_count() -> u16 {
+    HELP_TEXT.lines().count() as u16
+}
+
 pub fn render(frame: &mut Frame, app: &App) {
     match app.state {
-        AppState::Intro => render_intro(frame),
+        AppState::Intro => render_intro(frame, app),
         AppState::Typing => render_typing(frame, app),
         AppState::Result => render_result(frame, app),
     }
 }
 
-fn render_intro(frame: &mut Frame) {
+fn render_intro(frame: &mut Frame, app: &App) {
     let area = frame.area();
 
     // アスキーアートの高さ(6行) + メッセージ(2行) + 空行(1行) + ボーダー(2行) = 11行
@@ -82,7 +89,7 @@ fn render_intro(frame: &mut Frame) {
 
     frame.render_widget(title_paragraph, chunks[1]);
 
-    let help_text = vec![Line::from(vec![
+    let help_hint_text = vec![Line::from(vec![
         Span::styled("Press ", Style::default().fg(Color::Gray)),
         Span::styled(
             "ENTER",
@@ -90,12 +97,24 @@ fn render_intro(frame: &mut Frame) {
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::styled(" to start", Style::default().fg(Color::Gray)),
+        Span::styled(" to start, ", Style::default().fg(Color::Gray)),
+        Span::styled(
+            "h",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(" for help", Style::default().fg(Color::Gray)),
     ])];
 
-    let help_paragraph = Paragraph::new(help_text).alignment(Alignment::Center);
+    let help_hint_paragraph = Paragraph::new(help_hint_text).alignment(Alignment::Center);
 
-    frame.render_widget(help_paragraph, chunks[2]);
+    frame.render_widget(help_hint_paragraph, chunks[2]);
+
+    // ヘルプオーバーレイの描画
+    if app.show_help {
+        render_help_overlay(frame, app.help_scroll);
+    }
 }
 
 fn render_typing(frame: &mut Frame, app: &App) {
@@ -390,4 +409,76 @@ fn render_result(frame: &mut Frame, app: &App) {
     let help_paragraph = Paragraph::new(help_text).alignment(Alignment::Center);
 
     frame.render_widget(help_paragraph, chunks[2]);
+}
+
+fn render_help_overlay(frame: &mut Frame, scroll: u16) {
+    let area = frame.area();
+
+    // ヘルプブロックのサイズを計算（画面の80%幅、70%高さ）
+    let popup_width = (area.width as f32 * 0.8) as u16;
+    let popup_height = (area.height as f32 * 0.7) as u16;
+
+    // 中央に配置
+    let popup_area = centered_rect(popup_width, popup_height, area);
+
+    // 背景をクリア
+    frame.render_widget(Clear, popup_area);
+
+    // ヘルプテキストをパースしてスタイル付きで表示
+    let help_lines: Vec<Line> = HELP_TEXT
+        .lines()
+        .map(|line| {
+            if line.starts_with("# ") {
+                Line::from(Span::styled(
+                    line,
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                ))
+            } else if line.starts_with("## ") {
+                Line::from(Span::styled(
+                    line,
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                ))
+            } else if line.starts_with("### ") {
+                Line::from(Span::styled(
+                    line,
+                    Style::default()
+                        .fg(Color::LightCyan)
+                        .add_modifier(Modifier::BOLD),
+                ))
+            } else if line.starts_with("```") {
+                Line::from(Span::styled(line, Style::default().fg(Color::DarkGray)))
+            } else if line.starts_with("- **") {
+                Line::from(Span::styled(line, Style::default().fg(Color::White)))
+            } else if line.starts_with("-") || line.starts_with("  -") {
+                Line::from(Span::styled(line, Style::default().fg(Color::Gray)))
+            } else {
+                Line::from(Span::styled(line, Style::default().fg(Color::White)))
+            }
+        })
+        .collect();
+
+    let help_block = Block::default()
+        .borders(Borders::ALL)
+        .title(" Help (h: close, ↑↓: scroll) ")
+        .title_alignment(Alignment::Center)
+        .border_style(Style::default().fg(Color::Yellow));
+
+    let help_paragraph = Paragraph::new(help_lines)
+        .block(help_block)
+        .wrap(Wrap { trim: false })
+        .alignment(Alignment::Left)
+        .scroll((scroll, 0));
+
+    frame.render_widget(help_paragraph, popup_area);
+}
+
+/// 中央に配置された矩形を計算するヘルパー関数
+fn centered_rect(width: u16, height: u16, area: Rect) -> Rect {
+    let x = area.x + (area.width.saturating_sub(width)) / 2;
+    let y = area.y + (area.height.saturating_sub(height)) / 2;
+    Rect::new(x, y, width.min(area.width), height.min(area.height))
 }
