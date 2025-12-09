@@ -120,8 +120,8 @@ fn render_intro(frame: &mut Frame, app: &App) {
 fn render_typing(frame: &mut Frame, app: &App) {
     let area = frame.area();
 
-    // ヘッダー(3行) + タイピングエリア(最小5行) + フッター(3行) = 11行
-    let content_height = 11_u16;
+    // ヘッダー(3行) + タイピングエリア(最小11行: 上下3行パディング+ボーダー2行+内容3行) + フッター(3行) = 17行
+    let content_height = 17_u16;
     let vertical_padding = area.height.saturating_sub(content_height) / 2;
 
     let chunks = Layout::default()
@@ -129,7 +129,7 @@ fn render_typing(frame: &mut Frame, app: &App) {
         .constraints([
             Constraint::Length(vertical_padding),
             Constraint::Length(3),
-            Constraint::Min(5),
+            Constraint::Min(11),
             Constraint::Length(3),
             Constraint::Length(vertical_padding),
         ])
@@ -254,7 +254,16 @@ fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
         }
     }
 
-    let typing_text = vec![Line::from(text_spans)];
+    // 上下に3行の空行を追加してテキストを中央に配置
+    let typing_text = vec![
+        Line::from(""),
+        Line::from(""),
+        Line::from(""),
+        Line::from(text_spans),
+        Line::from(""),
+        Line::from(""),
+        Line::from(""),
+    ];
 
     let typing_block = Block::default()
         .borders(Borders::ALL)
