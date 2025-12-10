@@ -11,6 +11,9 @@ use crate::usecase::wpm;
 
 const HELP_TEXT: &str = include_str!("../../../docs/HELP.md");
 
+/// 右下に表示するUnicodeブロック要素
+const DECORATION_BLOCK: &str = "▗ ████████ ▖\n ▚█▙████▟█▞\n  ████████\n   ▛    ▜";
+
 /// ヘルプテキストの行数を返す
 pub fn help_line_count() -> u16 {
     HELP_TEXT.lines().count() as u16
@@ -138,6 +141,9 @@ fn render_typing(frame: &mut Frame, app: &App) {
     render_header(frame, chunks[1], app);
     render_typing_area(frame, chunks[2], app);
     render_footer(frame, chunks[3], app);
+
+    // 右下余白にブロック要素を表示
+    render_decoration_block(frame, chunks[4]);
 }
 
 fn render_header(frame: &mut Frame, area: Rect, app: &App) {
@@ -490,4 +496,31 @@ fn centered_rect(width: u16, height: u16, area: Rect) -> Rect {
     let x = area.x + (area.width.saturating_sub(width)) / 2;
     let y = area.y + (area.height.saturating_sub(height)) / 2;
     Rect::new(x, y, width.min(area.width), height.min(area.height))
+}
+
+/// 右下余白にデコレーションブロックを表示
+fn render_decoration_block(frame: &mut Frame, area: Rect) {
+    // ブロックの高さは4行
+    let block_height = 4_u16;
+    // ブロックの幅は13文字（最長行の"▖ ████████ ▖"が13文字）
+    let block_width = 13_u16;
+
+    // 余白の高さと幅が十分にある場合のみ表示
+    if area.height >= block_height && area.width >= block_width {
+        // 右下に配置するための位置を計算
+        let x = area.x + area.width.saturating_sub(block_width);
+        let y = area.y + area.height.saturating_sub(block_height);
+
+        let block_area = Rect::new(x, y, block_width, block_height);
+
+        let block_lines: Vec<Line> = DECORATION_BLOCK
+            .lines()
+            .map(|line| Line::from(Span::styled(line, Style::default().fg(Color::DarkGray))))
+            .collect();
+
+        let block_paragraph = Paragraph::new(block_lines)
+            .alignment(Alignment::Left);
+
+        frame.render_widget(block_paragraph, block_area);
+    }
 }

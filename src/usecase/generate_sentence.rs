@@ -30,7 +30,7 @@ fn generate_markov_chain(text: &str, n: usize, level: usize) -> String {
     for i in 0..(words.len() - n) {
         let key = words[i..i + n].to_vec();
         let value = words[i + n];
-        markov_chain.entry(key).or_insert_with(Vec::new).push(value);
+        markov_chain.entry(key).or_default().push(value);
     }
 
     // 初期状態としてランダムな開始単語を選ぶ
