@@ -117,17 +117,16 @@ fn run_app(
         }
 
         // Check for timeout notification from timer thread
-        if app.state == AppState::Typing {
-            if timeout_rx.try_recv().is_ok() {
-                let current_timer = *timer.lock().unwrap();
-                app.update_timer(current_timer);
-                app.finish_typing();
-            }
+        if app.state == AppState::Typing && timeout_rx.try_recv().is_ok() {
+            let current_timer = *timer.lock().unwrap();
+            app.update_timer(current_timer);
+            app.finish_typing();
         }
 
-        if event::poll(Duration::from_millis(100))? {
-            if let Event::Key(key) = event::read()? {
-                match app.state {
+        if event::poll(Duration::from_millis(100))?
+            && let Event::Key(key) = event::read()?
+        {
+            match app.state {
                     AppState::Intro => {
                         if key.code == KeyCode::Char('h') {
                             app.toggle_help();
@@ -202,7 +201,6 @@ fn run_app(
                         }
                     }
                 }
-            }
         }
 
         if app.state == AppState::Typing {

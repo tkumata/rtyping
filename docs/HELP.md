@@ -1,5 +1,14 @@
 # R-Typing Help
 
+## CLI Options
+
+```
+-t, --timeout <SECONDS>  Timer duration (default: 60)
+-l, --level <WORDS>      Number of words (default: 30)
+    --freq <FREQUENCY>   Sound frequency in Hz (default: 300.0)
+-s, --sound              Enable background music
+```
+
 ## Keyboard Shortcuts
 
 ### Title Screen
@@ -16,15 +25,6 @@
 ### Result Screen
 
 - **Enter** : Quit
-
-## CLI Options
-
-```
--t, --timeout <SECONDS>  Timer duration (default: 60)
--l, --level <WORDS>      Number of words (default: 30)
-    --freq <FREQUENCY>   Sound frequency in Hz (default: 300.0)
--s, --sound              Enable background music
-```
 
 ## Tips
 

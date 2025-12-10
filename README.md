@@ -6,11 +6,10 @@ R-Typing is a terminal-based typing practice application created as a learning p
 
 I\’m still learning Rust, so feedback and corrections are very welcome!
 
-![sample1](./docs/Screenshot1.png)
-
-![sample2](./docs/Screenshot2.png)
-
-![sample3](./docs/Screenshot3.png)
+![sample1](./docs/screenshot-01.png)
+![sample2](./docs/screenshot-02.png)
+![sample3](./docs/screenshot-03.png)
+![sample4](./docs/screenshot-04.png)
 
 ## ⚙️ How to Run in VSCode
 
@@ -63,15 +62,15 @@ Options:
 - [x] Display a countdown timer in the top-left corner.
 - [x] Resolve Backspace handling issues in raw mode.
 - [x] Avoid bugs with `termion::clear::All` by using alternative methods.
-- [x] ⌨️ Calculate WPM (Words Per Minute).
-- [x] 🎶 Add background music (BGM).
-- [x] 🔊 Include sound effects for typing.
+- [x] Calculate WPM (Words Per Minute).
+- [x] Add background music (BGM).
+- [x] Include sound effects for typing.
 - [x] Handle external asset files during build.
 - [x] Restore terminal state after exiting raw mode.
 - [x] Add command-line options for customization.
 - [x] Validate command-line arguments.
 - [x] Change cursor style when user input.
-- [x] ✨ Generate sentence with Markov Chain.⛓
+- [x] Generate sentence with Markov Chain.
 
 ## 🔖 Appendix
 

@@ -11,6 +11,9 @@ use crate::usecase::wpm;
 
 const HELP_TEXT: &str = include_str!("../../../docs/HELP.md");
 
+/// 右下に表示するUnicodeブロック要素
+const DECORATION_BLOCK: &str = "▗ ████████ ▖\n ▚█▙████▟█▞\n  ████████\n   ▛    ▜";
+
 /// ヘルプテキストの行数を返す
 pub fn help_line_count() -> u16 {
     HELP_TEXT.lines().count() as u16
@@ -120,8 +123,8 @@ fn render_intro(frame: &mut Frame, app: &App) {
 fn render_typing(frame: &mut Frame, app: &App) {
     let area = frame.area();
 
-    // ヘッダー(3行) + タイピングエリア(最小5行) + フッター(3行) = 11行
-    let content_height = 11_u16;
+    // ヘッダー(3行) + タイピングエリア(最小11行: 上下3行パディング+ボーダー2行+内容3行) + フッター(3行) = 17行
+    let content_height = 17_u16;
     let vertical_padding = area.height.saturating_sub(content_height) / 2;
 
     let chunks = Layout::default()
@@ -129,7 +132,7 @@ fn render_typing(frame: &mut Frame, app: &App) {
         .constraints([
             Constraint::Length(vertical_padding),
             Constraint::Length(3),
-            Constraint::Min(5),
+            Constraint::Min(11),
             Constraint::Length(3),
             Constraint::Length(vertical_padding),
         ])
@@ -138,6 +141,9 @@ fn render_typing(frame: &mut Frame, app: &App) {
     render_header(frame, chunks[1], app);
     render_typing_area(frame, chunks[2], app);
     render_footer(frame, chunks[3], app);
+
+    // 右下余白にブロック要素を表示
+    render_decoration_block(frame, chunks[4]);
 }
 
 fn render_header(frame: &mut Frame, area: Rect, app: &App) {
@@ -254,7 +260,16 @@ fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
         }
     }
 
-    let typing_text = vec![Line::from(text_spans)];
+    // 上下に3行の空行を追加してテキストを中央に配置
+    let typing_text = vec![
+        Line::from(""),
+        Line::from(""),
+        Line::from(""),
+        Line::from(text_spans),
+        Line::from(""),
+        Line::from(""),
+        Line::from(""),
+    ];
 
     let typing_block = Block::default()
         .borders(Borders::ALL)
@@ -481,4 +496,31 @@ fn centered_rect(width: u16, height: u16, area: Rect) -> Rect {
     let x = area.x + (area.width.saturating_sub(width)) / 2;
     let y = area.y + (area.height.saturating_sub(height)) / 2;
     Rect::new(x, y, width.min(area.width), height.min(area.height))
+}
+
+/// 右下余白にデコレーションブロックを表示
+fn render_decoration_block(frame: &mut Frame, area: Rect) {
+    // ブロックの高さは4行
+    let block_height = 4_u16;
+    // ブロックの幅は13文字（最長行の"▖ ████████ ▖"が13文字）
+    let block_width = 13_u16;
+
+    // 余白の高さと幅が十分にある場合のみ表示
+    if area.height >= block_height && area.width >= block_width {
+        // 右下に配置するための位置を計算
+        let x = area.x + area.width.saturating_sub(block_width);
+        let y = area.y + area.height.saturating_sub(block_height);
+
+        let block_area = Rect::new(x, y, block_width, block_height);
+
+        let block_lines: Vec<Line> = DECORATION_BLOCK
+            .lines()
+            .map(|line| Line::from(Span::styled(line, Style::default().fg(Color::DarkGray))))
+            .collect();
+
+        let block_paragraph = Paragraph::new(block_lines)
+            .alignment(Alignment::Left);
+
+        frame.render_widget(block_paragraph, block_area);
+    }
 }
