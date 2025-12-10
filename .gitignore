@@ -4,5 +4,4 @@ CLAUDE.md
 GEMINI.md
 /target
 .idea
-Cargo.lock
 core
