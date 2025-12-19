@@ -1,4 +1,4 @@
-use clap::{arg, Command};
+use clap::{Command, arg};
 
 pub struct CliArgs {
     pub timeout: i32,
@@ -40,5 +40,4 @@ impl UiHandler {
             sound: matches.get_flag("sound"),
         }
     }
-
 }

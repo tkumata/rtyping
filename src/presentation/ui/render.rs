@@ -1,9 +1,9 @@
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph, Wrap},
-    Frame,
 };
 
 use super::app::{App, AppState};
@@ -149,7 +149,11 @@ fn render_typing(frame: &mut Frame, app: &App) {
 fn render_header(frame: &mut Frame, area: Rect, app: &App) {
     let header_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(33), Constraint::Percentage(34), Constraint::Percentage(33)])
+        .constraints([
+            Constraint::Percentage(33),
+            Constraint::Percentage(34),
+            Constraint::Percentage(33),
+        ])
         .split(area);
 
     let time_remaining = app.timeout - app.timer;
@@ -165,9 +169,7 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
         Span::styled("Time: ", Style::default().fg(Color::Gray)),
         Span::styled(
             format!("{:03}", time_remaining),
-            Style::default()
-                .fg(time_color)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(time_color).add_modifier(Modifier::BOLD),
         ),
         Span::styled(" s", Style::default().fg(Color::Gray)),
     ])];
@@ -316,9 +318,7 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
         Span::styled("Misses: ", Style::default().fg(Color::Gray)),
         Span::styled(
             format!("{:03}", app.incorrects),
-            Style::default()
-                .fg(Color::Red)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
         ),
         Span::styled(" chars", Style::default().fg(Color::Gray)),
     ])];
@@ -518,8 +518,7 @@ fn render_decoration_block(frame: &mut Frame, area: Rect) {
             .map(|line| Line::from(Span::styled(line, Style::default().fg(Color::DarkGray))))
             .collect();
 
-        let block_paragraph = Paragraph::new(block_lines)
-            .alignment(Alignment::Left);
+        let block_paragraph = Paragraph::new(block_lines).alignment(Alignment::Left);
 
         frame.render_widget(block_paragraph, block_area);
     }
