@@ -1,5 +1,5 @@
-use rand::seq::SliceRandom;
-use rand::thread_rng;
+use rand::prelude::{IndexedRandom, Rng};
+use rand::rng;
 use std::collections::HashMap;
 use std::io::{self};
 
@@ -34,8 +34,8 @@ fn generate_markov_chain(text: &str, n: usize, level: usize) -> String {
     }
 
     // 初期状態としてランダムな開始単語を選ぶ
-    let mut rng = thread_rng();
-    let start_index = rand::Rng::gen_range(&mut rng, 0..words.len() - n);
+    let mut rng = rng();
+    let start_index = rng.random_range(0..words.len() - n);
     let mut current_state = words[start_index..start_index + n].to_vec();
 
     // 次の単語をランダムに選びながら生成

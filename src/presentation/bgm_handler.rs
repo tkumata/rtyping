@@ -12,11 +12,13 @@ impl BgmHandler {
     }
 
     pub fn start(self) {
-        thread::spawn(move || loop {
-            match self.receiver.try_recv() {
-                Ok(_) | Err(TryRecvError::Disconnected) => break,
-                Err(TryRecvError::Empty) => {
-                    play_audio();
+        thread::spawn(move || {
+            loop {
+                match self.receiver.try_recv() {
+                    Ok(_) | Err(TryRecvError::Disconnected) => break,
+                    Err(TryRecvError::Empty) => {
+                        play_audio();
+                    }
                 }
             }
         });
@@ -24,8 +26,8 @@ impl BgmHandler {
 }
 
 fn play_audio() {
-    let (_stream, handle) = rodio::OutputStream::try_default().unwrap();
-    let sink = rodio::Sink::try_new(&handle).unwrap();
+    let stream = rodio::OutputStreamBuilder::open_default_stream().unwrap();
+    let sink = rodio::Sink::connect_new(stream.mixer());
     let bytes = include_bytes!("../../src/assets/audio/BGM.mp3");
     let cursor = Cursor::new(bytes);
 

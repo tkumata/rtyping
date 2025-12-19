@@ -11,12 +11,12 @@ mod usecase;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{backend::CrosstermBackend, Terminal};
-use rodio::{source::SineWave, OutputStream, Source};
+use ratatui::{Terminal, backend::CrosstermBackend};
+use rodio::{OutputStreamBuilder, Source, source::SineWave};
 use std::io::{self, stdout};
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 use std::time::Duration;
 
@@ -29,7 +29,7 @@ use presentation::ui::ui_handler::UiHandler;
 fn main() -> io::Result<()> {
     let args = UiHandler::parse_args();
 
-    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+    let stream = OutputStreamBuilder::open_default_stream().unwrap();
 
     let (snd_sender, snd_receiver) = mpsc::channel();
 
@@ -78,7 +78,15 @@ fn main() -> io::Result<()> {
         }
     });
 
-    let res = run_app(&mut terminal, &mut app, &timer, &stream_handle, timer_stop_tx, timeout_rx, timer_start_tx);
+    let res = run_app(
+        &mut terminal,
+        &mut app,
+        &timer,
+        &stream,
+        timer_stop_tx,
+        timeout_rx,
+        timer_start_tx,
+    );
 
     disable_raw_mode()?;
     execute!(
@@ -104,7 +112,7 @@ fn run_app(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
     app: &mut App,
     timer: &Arc<Mutex<i32>>,
-    stream_handle: &rodio::OutputStreamHandle,
+    stream: &rodio::OutputStream,
     timer_stop_tx: mpsc::Sender<()>,
     timeout_rx: mpsc::Receiver<()>,
     timer_start_tx: mpsc::Sender<()>,
@@ -127,80 +135,80 @@ fn run_app(
             && let Event::Key(key) = event::read()?
         {
             match app.state {
-                    AppState::Intro => {
-                        if key.code == KeyCode::Char('h') {
-                            app.toggle_help();
-                        } else if app.show_help {
-                            // ヘルプ表示中のキー操作
-                            match key.code {
-                                KeyCode::Up => app.scroll_help_up(),
-                                KeyCode::Down => {
-                                    let max_scroll = render::help_line_count().saturating_sub(5);
-                                    app.scroll_help_down(max_scroll);
-                                }
-                                KeyCode::Esc => app.show_help = false,
-                                KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                                    app.quit();
-                                }
-                                _ => {}
+                AppState::Intro => {
+                    if key.code == KeyCode::Char('h') {
+                        app.toggle_help();
+                    } else if app.show_help {
+                        // ヘルプ表示中のキー操作
+                        match key.code {
+                            KeyCode::Up => app.scroll_help_up(),
+                            KeyCode::Down => {
+                                let max_scroll = render::help_line_count().saturating_sub(5);
+                                app.scroll_help_down(max_scroll);
                             }
-                        } else if key.code == KeyCode::Enter {
-                            match SentenceHandler::print_sentence(app.level) {
-                                Ok(contents) => {
-                                    app.set_target_string(contents);
-                                    app.start_typing();
-                                    timer_start_tx.send(()).ok();
-                                }
-                                Err(err) => {
-                                    return Err(err);
-                                }
+                            KeyCode::Esc => app.show_help = false,
+                            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                                app.quit();
                             }
-                        } else if key.code == KeyCode::Esc
-                            || (key.code == KeyCode::Char('c')
-                                && key.modifiers.contains(KeyModifiers::CONTROL))
-                        {
+                            _ => {}
+                        }
+                    } else if key.code == KeyCode::Enter {
+                        match SentenceHandler::print_sentence(app.level) {
+                            Ok(contents) => {
+                                app.set_target_string(contents);
+                                app.start_typing();
+                                timer_start_tx.send(()).ok();
+                            }
+                            Err(err) => {
+                                return Err(err);
+                            }
+                        }
+                    } else if key.code == KeyCode::Esc
+                        || (key.code == KeyCode::Char('c')
+                            && key.modifiers.contains(KeyModifiers::CONTROL))
+                    {
+                        app.quit();
+                    }
+                }
+                AppState::Typing => {
+                    match key.code {
+                        KeyCode::Esc => {
+                            timer_stop_tx.send(()).ok();
+                            app.update_timer(*timer.lock().unwrap());
+                            app.finish_typing();
+                        }
+                        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                            timer_stop_tx.send(()).ok();
                             app.quit();
                         }
-                    }
-                    AppState::Typing => {
-                        match key.code {
-                            KeyCode::Esc => {
+                        KeyCode::Backspace => {
+                            app.pop_char();
+                        }
+                        KeyCode::Char(c) => {
+                            let is_correct = app.push_char(c);
+
+                            // Play feedback sound on correct input
+                            if is_correct {
+                                let source = SineWave::new(app.freq)
+                                    .take_duration(Duration::from_millis(100));
+                                stream.mixer().add(source);
+                            }
+
+                            if app.is_complete() {
                                 timer_stop_tx.send(()).ok();
                                 app.update_timer(*timer.lock().unwrap());
                                 app.finish_typing();
                             }
-                            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                                timer_stop_tx.send(()).ok();
-                                app.quit();
-                            }
-                            KeyCode::Backspace => {
-                                app.pop_char();
-                            }
-                            KeyCode::Char(c) => {
-                                let is_correct = app.push_char(c);
-
-                                // Play feedback sound on correct input
-                                if is_correct {
-                                    let source = SineWave::new(app.freq)
-                                        .take_duration(Duration::from_millis(100));
-                                    stream_handle.play_raw(source.convert_samples()).unwrap();
-                                }
-
-                                if app.is_complete() {
-                                    timer_stop_tx.send(()).ok();
-                                    app.update_timer(*timer.lock().unwrap());
-                                    app.finish_typing();
-                                }
-                            }
-                            _ => {}
                         }
-                    }
-                    AppState::Result => {
-                        if key.code == KeyCode::Enter {
-                            app.quit();
-                        }
+                        _ => {}
                     }
                 }
+                AppState::Result => {
+                    if key.code == KeyCode::Enter {
+                        app.quit();
+                    }
+                }
+            }
         }
 
         if app.state == AppState::Typing {
