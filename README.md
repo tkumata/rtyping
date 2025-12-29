@@ -38,19 +38,19 @@ cargo install --path .
 ## 💻 Usage
 
 ```text
-R-Typing: A terminal-based typing practice app.
+R-Typing: A terminal-based typing app.
 
 Usage: rtyping [OPTIONS]
 
 Options:
   -t, --timeout <TIMEOUT>  Seconds [default: 60]
   -l, --level <LEVEL>      Number of words [default: 30]
-  --freq <FREQUENCY>       Frequency e.g, 800.0 or 480.0
-  -s, --sound              Turn BGM on
+      --freq <FREQUENCY>   Frequency e.g, 880.0 or 480.0 [default: 80.0]
+  -s, --sound              Enable BGM
   -h, --help               Print help
 ```
 
-## ✅ Features and To-Do List
+## ✅ Features
 
 ### Completed Features
 
@@ -59,18 +59,18 @@ Options:
 - [x] Display words on the screen.
 - [x] Use Rust's basic random functions.
 - [x] Add decorative strings to enhance visuals.
-- [x] Display a countdown timer in the top-left corner.
+- [x] Display a countdown timer.
 - [x] Resolve Backspace handling issues in raw mode.
-- [x] Avoid bugs with `termion::clear::All` by using alternative methods.
 - [x] Calculate WPM (Words Per Minute).
-- [x] Add background music (BGM).
+- [x] Add background music (BGM) using `rodio`.
 - [x] Include sound effects for typing.
 - [x] Handle external asset files during build.
 - [x] Restore terminal state after exiting raw mode.
-- [x] Add command-line options for customization.
+- [x] Add command-line options for customization (`clap`).
 - [x] Validate command-line arguments.
 - [x] Change cursor style when user input.
-- [x] Generate sentence with Markov Chain.
+- [x] Generate sentence with Markov Chain (n-gram).
+- [x] TUI implementation with `ratatui`.
 
 ## 🔖 Appendix
 

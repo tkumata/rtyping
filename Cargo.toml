@@ -1,6 +1,6 @@
 [package]
 name = "rtyping"
-version = "1.0.16"
+version = "1.0.17"
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -15,7 +15,7 @@ opt-level = 3
 rand = "0.9"
 rodio = "0.21"
 clap = "4"
-ratatui = "0.29"
+ratatui = "0.30"
 crossterm = { version = "0.29", features = ["event-stream"] }
 
 [[bin]]
