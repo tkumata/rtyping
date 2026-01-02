@@ -15,7 +15,8 @@
 
 - **Enter** : Start typing
 - **h** : Show/Hide this help
-- **Esc** : Quit
+- **Up / Down** : Scroll help text (when visible)
+- **Esc** : Quit (or close help)
 - **Ctrl+c** : Quit
 
 ### Typing Screen
