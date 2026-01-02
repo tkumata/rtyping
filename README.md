@@ -51,7 +51,7 @@ Options:
 
 - **TUI (Text User Interface)**: Rich terminal interface built with `ratatui` and `crossterm`.
 - **Procedural Sentence Generation**: Uses a 4-gram Markov Chain to generate natural-feeling English sentences from a sample text.
-- **Real-time Feedback**: 
+- **Real-time Feedback**:
   - Visual indicators for correct (green) and incorrect (red background) characters.
   - Real-time WPM (Words Per Minute) calculation.
   - Interactive countdown timer with color-coded urgency.
@@ -66,12 +66,14 @@ Options:
 ### 🛠 Cross-Compilation Instructions
 
 For Apple silicon (macOS):
+
 ```shell
 rustup target add aarch64-apple-darwin
 cargo build --release --target=aarch64-apple-darwin
 ```
 
 For Windows (x86_64):
+
 ```shell
 rustup target add x86_64-pc-windows-gnu
 cargo build --release --target=x86_64-pc-windows-gnu
