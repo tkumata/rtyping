@@ -15,7 +15,7 @@ opt-level = 3
 rand = "0.9"
 rodio = "0.21"
 clap = "4"
-ratatui = "0.29"
+ratatui = "0.30"
 crossterm = { version = "0.29", features = ["event-stream"] }
 
 [[bin]]
