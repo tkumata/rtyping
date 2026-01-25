@@ -4,21 +4,21 @@
 
 ### `src/usecase/wpm.rs`
 
-| ID | テストケース名 | 入力 (len, sec, miss) | 期待値 (approx) | 備考 |
+| ID | Test case name | Input (len, sec, miss) | Expected value (approx) | Remarks |
 | ---- | ---- | ---- | ---- | ---- |
-| WPM-001 | 正常系: 標準的な入力 | 50, 60.0, 0 | 10.0 | (50 - 0) / (5 * 60/60) = 50 / 5 = 10 |
-| WPM-002 | 正常系: ミスあり | 50, 60.0, 5 | 9.0 | (50 - 5) / 5 = 9 |
-| WPM-003 | 境界値: 短時間 | 10, 10.0, 0 | 12.0 | 10 / (5 * 10/60) = 10 / (50/60) = 10 / 0.833... = 12 |
-| WPM-004 | 異常値: 時間0 | 10, 0.0, 0 | INFINITY | ゼロ除算 |
+| WPM-001 | Normal: Standard input | 50, 60.0, 0 | 10.0 | (50 - 0) / (5 * 60/60) = 50 / 5 = 10 |
+| WPM-002 | Normal: With miss | 50, 60.0, 5 | 9.0 | (50 - 5) / 5 = 9 |
+| WPM-003 | Boundary: Short time | 10, 10.0, 0 | 12.0 | 10 / (5 * 10/60) = 10 / (50/60) = 10 / 0.833... = 12 |
+| WPM-004 | Abnormal: Zero time | 10, 0.0, 0 | INFINITY | Division by zero |
 
 ### `src/domain/entity.rs`
 
-| ID | テストケース名 | 期待動作 | 備考 |
+| ID | Test case name | Expected behavior | Remarks |
 | ---- | ---- | ---- | ---- |
-| ENT-001 | サンプル取得成功 | `Ok` を返し、中身が空でないこと | `include_str!` の動作確認 |
+| ENT-001 | Sample text retrieval success | Returns `Ok` and ensures the content is not empty | Confirmation of `include_str!` behavior |
 
 ### `src/usecase/generate_sentence.rs`
 
-| ID | テストケース名 | 入力 (level) | 期待動作 | 備考 |
+| ID | Test case name | Input (level) | Expected behavior | Remarks |
 | ---- | ---- | ---- | ---- | ---- |
-| GEN-001 | 生成成功 | 10 | `Ok` を返し、文字列長 > 0 | 内容はランダム |
+| GEN-001 | Generation success | 10 | Returns `Ok` and ensures the content is not empty | Content is random |
