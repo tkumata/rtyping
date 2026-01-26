@@ -54,3 +54,31 @@ fn generate_markov_chain(text: &str, n: usize, level: usize) -> String {
     // 結果を結合して文を返す
     result.join(" ")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_sentence_success() {
+        // ID: GEN-001
+        // レベル10指定でエラーなく生成されるか
+        match generate_sentence(10) {
+            Ok(sentence) => {
+                assert!(
+                    !sentence.is_empty(),
+                    "Generated sentence should not be empty"
+                );
+                // 4-gram なので少なくとも最初の4単語はあるはず
+                let words: Vec<&str> = sentence.split_whitespace().collect();
+                assert!(
+                    words.len() >= 4,
+                    "Sentence should have at least 4 words context"
+                );
+            }
+            Err(e) => {
+                panic!("Failed to generate sentence: {}", e);
+            }
+        }
+    }
+}
