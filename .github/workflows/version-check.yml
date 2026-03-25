@@ -1,4 +1,4 @@
-name: Version Check and Release
+name: バージョン確認とリリース
 
 on:
   push:
@@ -18,39 +18,91 @@ jobs:
       new-version: ${{ steps.version-check.outputs.version }}
 
     steps:
-      - name: Checkout repository
+      - name: リポジトリを取得
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      - name: Check version change
+      - name: バージョン変更を確認
         id: version-check
         run: |
-          # Get current version from Cargo.toml
+          # 現在のバージョンを取得
           CURRENT_VERSION=$(grep -E '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
-          echo "Current version: $CURRENT_VERSION"
+          echo "現在のバージョン: $CURRENT_VERSION"
 
-          # Get previous version from Cargo.toml (previous commit)
-          git checkout HEAD~1 -- Cargo.toml 2>/dev/null || echo "First commit"
+          # 直前コミットのバージョンを取得
+          git checkout HEAD~1 -- Cargo.toml 2>/dev/null || echo "初回コミット"
           PREVIOUS_VERSION=$(grep -E '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/' || echo "0.0.0")
-          echo "Previous version: $PREVIOUS_VERSION"
+          echo "前回のバージョン: $PREVIOUS_VERSION"
 
-          # Restore current Cargo.toml
+          # 現在の Cargo.toml に戻す
           git checkout HEAD -- Cargo.toml
 
-          # Compare versions
+          # バージョン差分を判定
           if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
-            echo "Version changed from $PREVIOUS_VERSION to $CURRENT_VERSION"
+            echo "バージョン変更あり: $PREVIOUS_VERSION -> $CURRENT_VERSION"
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           else
-            echo "Version unchanged"
+            echo "バージョン変更なし"
             echo "changed=false" >> $GITHUB_OUTPUT
             echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           fi
 
-  build-and-release:
+  test:
+    name: リリース前テスト
     needs: check-version
+    if: needs.check-version.outputs.version-changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: リポジトリを取得
+        uses: actions/checkout@v4
+
+      - name: Rust ツールチェーンを設定
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cargo レジストリをキャッシュ
+        uses: actions/cache@v4
+        continue-on-error: true
+        with:
+          path: ~/.cargo/registry/cache
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry-
+
+      - name: Cargo Git をキャッシュ
+        uses: actions/cache@v4
+        continue-on-error: true
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-git-
+
+      - name: target をキャッシュ
+        uses: actions/cache@v4
+        continue-on-error: true
+        with:
+          path: target
+          key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-target-
+
+      - name: Linux 依存ライブラリを導入
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libasound2-dev libudev-dev
+
+      - name: テストを実行
+        run: cargo test
+
+  build-and-release:
+    needs:
+      - check-version
+      - test
     if: needs.check-version.outputs.version-changed == 'true'
     runs-on: ${{ matrix.os }}
 
@@ -71,16 +123,16 @@ jobs:
             build_deps: ""
 
     steps:
-      - name: Checkout repository
+      - name: リポジトリを取得
         uses: actions/checkout@v4
 
-      - name: Setup Rust toolchain
+      - name: Rust ツールチェーンを設定
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           targets: ${{ matrix.target }}
 
-      - name: Cache cargo registry
+      - name: Cargo レジストリをキャッシュ
         uses: actions/cache@v4
         continue-on-error: true
         with:
@@ -89,7 +141,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-registry-
 
-      - name: Cache cargo index
+      - name: Cargo Git をキャッシュ
         uses: actions/cache@v4
         continue-on-error: true
         with:
@@ -98,7 +150,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-git-
 
-      - name: Cache target directory
+      - name: target をキャッシュ
         uses: actions/cache@v4
         continue-on-error: true
         with:
@@ -107,24 +159,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ matrix.target }}-target-
 
-      - name: Install build dependencies
+      - name: ビルド依存ライブラリを導入
         if: matrix.build_deps != ''
         run: ${{ matrix.build_deps }}
 
-      - name: Build release binary
+      - name: リリースビルドを実行
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Prepare artifact
+      - name: 成果物を準備
         run: |
           mkdir -p dist
           cp target/${{ matrix.target }}/release/rtyping dist/${{ matrix.artifact_name }}
           chmod +x dist/${{ matrix.artifact_name }}
 
-      - name: Create release
+      - name: リリースを作成
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.check-version.outputs.new-version }}
-          name: Release v${{ needs.check-version.outputs.new-version }}
+          name: リリース v${{ needs.check-version.outputs.new-version }}
           draft: false
           prerelease: false
           files: dist/${{ matrix.artifact_name }}
