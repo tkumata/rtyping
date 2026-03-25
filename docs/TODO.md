@@ -5,3 +5,5 @@
 - [x] `src/domain/entity.rs` へのユニットテスト実装
 - [x] `src/usecase/generate_sentence.rs` へのユニットテスト実装
 - [x] 全テスト実行と合格確認
+- [x] GitHub Actions による自動テスト実行の追加
+- [x] リリース前テストの組み込み

@@ -22,3 +22,11 @@
 | ID | Test case name | Input (level) | Expected behavior | Remarks |
 | ---- | ---- | ---- | ---- | ---- |
 | GEN-001 | Generation success | 10 | Returns `Ok` and ensures the content is not empty | Content is random |
+
+### `GitHub Actions`
+
+| ID | Test case name | Trigger | Expected behavior | Remarks |
+| ---- | ---- | ---- | ---- | ---- |
+| CI-001 | Push test execution | push to `main` | `test.yml` runs `cargo test` on Ubuntu and macOS | Stops on failure |
+| CI-002 | Pull request test execution | pull_request | `test.yml` runs `cargo test` on Ubuntu and macOS | Prevents unverified merge |
+| CI-003 | Release guard | push changing `Cargo.toml` on `main` | `version-check.yml` executes tests before release build | Release job depends on test job |
