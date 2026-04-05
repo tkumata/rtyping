@@ -1,123 +1,84 @@
 # 設計 (DESIGN)
 
-## テスト構成
+## モジュール責務
 
-Rust の標準的な慣習に従い、各ソースファイル内に `#[cfg(test)]` 属性を持つテストモジュール `tests` を配置する。
-
-## 自動実行構成
-
-GitHub Actions を用いて、テストコードを継続的に実行する。
-
-### ワークフロー構成
-
-- `.github/workflows/test.yml`
-  - `push` と `pull_request` を契機に起動する。
-  - `ubuntu-latest` と `macos-latest` の 2 環境で `cargo test` を実行する。
-- `.github/workflows/version-check.yml`
-  - `Cargo.toml` のバージョン更新を検知した場合のみ起動する。
-  - リリースビルドの前段で `cargo test` を実行し、失敗時はリリース処理を停止する。
-
-### 依存ライブラリ
-
-- Linux 上では `rodio` 依存のビルドのために `pkg-config`, `libasound2-dev`, `libudev-dev` を導入する。
-
-### ディレクトリ構成とテスト配置
-
-- `src/usecase/wpm.rs` -> 同ファイル内 `mod tests`
-- `src/usecase/generate_sentence.rs` -> 同ファイル内 `mod tests`
-- `src/domain/entity.rs` -> 同ファイル内 `mod tests`
-
-## テスト戦略
-
-### 1. WPM 計算 (`wpm.rs`)
-
-- 純粋関数であるため、入力値に対する期待値を検証する。
-- **正常系**: 通常の入力での計算結果。
-- **境界値**: 入力文字数0、経過時間0、ミス数0など。
-  - *注意*: 経過時間 0 の場合のゼロ除算挙動を確認する（Rust では `f64` のゼロ除算は `inf` になる）。
-
-### 2. 文生成 (`generate_sentence.rs`)
-
-- 内部で乱数を使用しているため、出力結果の完全一致はテストしない。
-- 以下の特性を検証する：
-  - エラーにならず `Ok` が返ること。
-  - 返された文字列が空でないこと。
-  - 指定したレベル（長さ）に応じた出力が得られるか（目安）。
-
-### 3. エンティティ (`entity.rs`)
-
-- `include_str!` を使用しているため、データは静的。
-- 読み込んだデータが空でないことを確認する。
-
-## 将来的な拡張
-
-- 現状、乱数生成器が注入できない設計になっているため、厳密なロジックテスト（特定のシードでの出力固定など）は行わない。将来的に RNG を DI するリファクタリングを行う際にテストを強化する。
-- 将来的に `cargo fmt --check` や `cargo clippy` を同じワークフローへ段階的に追加できる。
-
-## 2026-04-05 CLI デフォルト値見直し設計
-
-### 変更対象
-
-- `src/presentation/ui/ui_handler.rs`
-  - `clap` の既定値とヘルプ文言を現行仕様に合わせる。
 - `src/main.rs`
-  - 正答時のタイプ音再生を `args.sound` 有効時のみに制限する。
-- `docs/HELP.md`
-  - `--sound` の説明を BGM とタイプ音の両方を有効化する意味に更新する。
-
-### 設計方針
-
-- 音の有効化フラグは増やさず、既存の `--sound` を音関連全体のマスター切り替えとして扱う。
-- BGM の起動条件とタイプ音の再生条件を同一フラグに揃え、引数未指定時の挙動を静音に統一する。
-- `--timeout` の既定値は実装上すでに 60 秒のため、今回の変更では仕様と文言の整合確認を含める。
-
-## 2026-04-05 API 文字列生成と設定画面の設計
-
-### 変更対象
-
-- `src/presentation/ui/ui_handler.rs`
-  - `--google` と `--groq` の排他的フラグを追加する。
+  - CLI 引数解析、設定読み込み、端末初期化、終了処理を担当する。
+- `src/runtime/mod.rs`
+  - ランタイム構成要素を束ねる。
+- `src/runtime/session.rs`
+  - イベントループと画面更新の進行を担当する。
+- `src/runtime/input/mod.rs`
+  - 状態別入力処理を束ねる。
+- `src/runtime/input/menu.rs`
+  - Menu 状態の入力処理を担当する。
+- `src/runtime/input/config_screen.rs`
+  - Config 状態の入力処理を担当する。
+- `src/runtime/input/gameplay.rs`
+  - Loading、Typing、Result の入力処理と生成ジョブ反映を担当する。
+- `src/runtime/timer.rs`
+  - タイマースレッドとタイマー補助処理を担当する。
+- `src/domain/config.rs`
+  - 設定モデルを保持し、UI と永続化の共有境界を担う。
 - `src/presentation/ui/app.rs`
-  - `Menu`、`Config`、`Loading` を含む状態管理、メニュー選択、Config 入力欄、メッセージ表示を追加する。
-- `src/presentation/ui/render.rs`
-  - タイトルメニュー、Config 画面、生成中表示、エラーメッセージ表示を描画する。
-- `src/main.rs`
-  - メニュー遷移、Config 保存、API/ローカル生成開始、非同期生成結果の反映を制御する。
-- `src/config.rs`
-  - 設定の読み書き、暗号化・復号、保存パス管理を実装する。
+  - TUI 状態、選択中メニュー、入力中文字列、設定編集対象などの画面状態を保持する。
+- `src/presentation/ui/render/mod.rs`
+  - 画面描画の入口を束ねる。
+- `src/presentation/ui/render/menu.rs`
+  - Menu 画面を描画する。
+- `src/presentation/ui/render/config_screen.rs`
+  - Config 画面を描画する。
+- `src/presentation/ui/render/loading.rs`
+  - Loading 画面を描画する。
+- `src/presentation/ui/render/typing.rs`
+  - Typing 画面を描画する。
+- `src/presentation/ui/render/result.rs`
+  - Result 画面を描画する。
+- `src/config/mod.rs`
+  - 設定永続化の入口を提供する。
+- `src/config/paths.rs`
+  - 設定ファイルと鍵ファイルの探索を担当する。
+- `src/config/crypto.rs`
+  - API key の暗号化・復号を担当する。
+- `src/config/storage.rs`
+  - 設定の保存形式変換、互換復元、ファイル入出力を担当する。
 - `src/usecase/generate_sentence.rs`
-  - ローカル生成と外部 API 生成を統合する生成ユースケースへ拡張する。
+  - ローカル生成と外部 API 生成の統一入口を提供する。
 
-### 設定設計
+## 実行フロー
 
-- 設定ファイルは `~/.config/rtyping/config.json` とする。
-- 読み込み時は `~/.config/rtyping/config.json` を優先し、存在しない場合のみ OS 既定の config ディレクトリ配下の旧保存先をフォールバックとして読む。
-- JSON には `google` と `groq` の各設定を保持し、各設定は `api_url`、`model`、`api_key_ciphertext`、`api_key_nonce` を持つ。
-- 復号鍵は OS 標準の config ディレクトリ配下の `rtyping/config.key` に分離して保持し、存在しない場合は初回保存時に生成する。
-- `API key` の暗号化は AEAD を用い、復号時に改ざん検知を行う。
-- Config 画面は平文 API key を編集できるが、保存時のみ暗号化し、画面再表示時は復号して入力欄へ戻す。
-- `config.key` 欠損や破損時でも `api_url` と `model` は復元し、復号できない `API key` のみ空欄にして警告を表示する。
-- 起動時の復号は優先保存先と旧保存先の鍵候補を順に試し、さらに互換性のため旧 AEAD ラベルでも復号を試みる。
-- さらに AEAD 導入前の旧 XOR 方式で保存された `API key` も起動時に互換復号し、ユーザーに再入力を要求しない。
+1. `main` が CLI 引数と設定を読み込む。
+2. `main` が端末と音声、タイマースレッドを初期化する。
+3. `runtime` がイベントループを実行し、`AppState` ごとの入力処理を分岐する。
+4. `Start Game` 選択時は別スレッドで文字列生成を開始し、結果をチャネルで受け取る。
+5. `Typing` 中はタイマースレッドの経過秒数を参照し、完了またはタイムアウトで `Result` へ遷移する。
+6. 終了時は raw mode、画面、スレッド、BGM を順に停止する。
 
-### 文字列生成設計
+## 設定保存
 
-- 生成元は `Local`、`Google`、`Groq` の 3 種類とする。
-- CLI で選択したプロバイダを起動時の生成元として `App` に保持する。
-- 外部 API 利用時は `--level * 5` を目標文字数とし、プロンプトで「指定文字数前後の英数字中心テキスト」を要求する。
-- API 応答は改行や過剰な空白を整形し、目標文字数を大きく超える場合は切り詰める。
-- API 設定不足や通信失敗時は Result ではなく Menu へ戻し、エラーメッセージを表示する。
+- 保存先は優先パスの `~/.config/rtyping/` 配下を使う。
+- `config.json` には URL、モデル、暗号化済み API key を保存する。
+- `config.key` は別ファイルで管理し、起動時は優先パスと互換パスの候補を順に試す。
+- 旧 AEAD ラベルと旧 XOR 形式の API key も復元対象に含める。
 
-### UI 状態遷移
+## テスト方針
 
-- `Menu`
-  - `Start Game` 選択時に文字列生成を開始する。
-  - `Config` 選択時に Config 画面へ遷移する。
-- `Config`
-  - `↑↓` で入力欄移動、文字入力と `Backspace` で編集、`Enter` で保存、`Esc` で Menu に戻る。
-- `Loading`
-  - API 生成中はローディング画面を表示し、別スレッドの結果を待つ。
-- `Typing`
-  - 既存どおりタイピングを行う。
-- `Result`
-  - 既存どおり結果を表示する。
+- `src/usecase/wpm.rs`
+  - 計算式の正常系と境界値を固定する。
+- `src/usecase/generate_sentence.rs`
+  - ローカル生成、URL 組み立て、設定不足時の失敗、正規化処理を確認する。
+- `src/config/mod.rs`
+  - 公開入口の設定ロード・保存を確認する。
+- `src/config/storage.rs`
+  - 保存往復、鍵欠損、鍵破損、旧形式互換、壊れた JSON を確認する。
+- `src/runtime/input/config_screen.rs`
+  - Config 入力受理ルールを固定する。
+- `src/runtime/input/gameplay.rs`
+  - プロバイダ設定選択、生成結果反映、ゲーム進行中の状態遷移を固定する。
+- `src/runtime/session.rs`
+  - イベントループと状態更新の接続点を固定する。
+
+## 保守メモ
+
+- UI 仕様変更を伴わない内部整理では、まず `runtime/session` と `runtime/input` の責務境界を確認する。
+- 新しい生成元や設定項目を追加する場合は、`domain::config::AppConfig`、`ConfigField`、`provider_config_for_source`、描画処理の順に追うと全体を把握しやすい。
