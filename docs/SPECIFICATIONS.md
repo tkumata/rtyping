@@ -30,3 +30,11 @@
 | CI-001 | Push test execution | push to `main` | `test.yml` runs `cargo test` on Ubuntu and macOS | Stops on failure |
 | CI-002 | Pull request test execution | pull_request | `test.yml` runs `cargo test` on Ubuntu and macOS | Prevents unverified merge |
 | CI-003 | Release guard | push changing `Cargo.toml` on `main` | `version-check.yml` executes tests before release build | Release job depends on test job |
+
+## CLI Default Behavior
+
+| ID | Test case name | Input | Expected behavior | Remarks |
+| ---- | ---- | ---- | ---- | ---- |
+| CLI-001 | Default launch is silent | no args | BGM does not start and typing feedback sound does not play | `sound` flag is false |
+| CLI-002 | Sound flag enables all sound output | `--sound` | BGM starts and typing feedback sound plays on correct input | Uses existing `freq` value for feedback tone |
+| CLI-003 | Default timeout | no args | Timer limit is 60 seconds | Value exposed through help and runtime |

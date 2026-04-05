@@ -30,7 +30,7 @@ impl UiHandler {
                     .default_value("80.0")
                     .value_parser(clap::value_parser!(f32)),
             )
-            .arg(arg!(-s --sound "Enable BGM"))
+            .arg(arg!(-s --sound "Enable BGM and typing sound"))
             .get_matches();
 
         CliArgs {
