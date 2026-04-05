@@ -35,8 +35,7 @@ pub fn render_menu(frame: &mut Frame, app: &App) {
     let title = Paragraph::new(title_text)
         .block(
             Block::default()
-                .borders(Borders::ALL)
-                .title(" R-Typing ")
+                .borders(Borders::NONE)
                 .border_style(Style::default().fg(Color::Cyan)),
         )
         .alignment(Alignment::Center);
