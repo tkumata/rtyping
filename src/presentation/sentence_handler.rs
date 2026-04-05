@@ -8,10 +8,10 @@ pub struct SentenceHandler;
 
 impl SentenceHandler {
     pub fn print_sentence(
-        level: usize,
+        text_scale: usize,
         source: GenerationSource,
         provider_config: Option<ProviderConfig>,
     ) -> Result<String, io::Error> {
-        generate_sentence::generate_sentence(level, source, provider_config)
+        generate_sentence::generate_sentence(text_scale, source, provider_config)
     }
 }

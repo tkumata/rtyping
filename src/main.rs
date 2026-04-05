@@ -27,6 +27,11 @@ use presentation::ui::app::{App, AppState, MenuItem};
 use presentation::ui::render;
 use presentation::ui::ui_handler::UiHandler;
 
+struct GenerationJobResult {
+    request_id: u64,
+    result: Result<String, String>,
+}
+
 fn main() -> io::Result<()> {
     let args = UiHandler::parse_args();
     let (loaded_config, config_message) = match config::load_config() {
@@ -54,7 +59,7 @@ fn main() -> io::Result<()> {
 
     let mut app = App::new(
         args.timeout,
-        args.level,
+        args.text_scale,
         args.freq,
         args.sound,
         args.source,
@@ -128,8 +133,10 @@ fn run_app(
     timeout_rx: mpsc::Receiver<()>,
     timer_start_tx: mpsc::Sender<()>,
 ) -> io::Result<()> {
-    let (generation_tx, generation_rx) = mpsc::channel::<Result<String, String>>();
+    let (generation_tx, generation_rx) = mpsc::channel::<GenerationJobResult>();
     let mut timer_started = false;
+    let mut next_request_id = 1_u64;
+    let mut active_request_id: Option<u64> = None;
 
     loop {
         terminal.draw(|f| render::render(f, app))?;
@@ -138,26 +145,41 @@ fn run_app(
             break;
         }
 
-        if app.state == AppState::Loading {
+        loop {
             match generation_rx.try_recv() {
-                Ok(Ok(contents)) => {
-                    *timer.lock().unwrap() = 0;
-                    app.prepare_new_game(contents);
-                    app.start_typing();
-                    if !timer_started {
-                        timer_start_tx.send(()).ok();
-                        timer_started = true;
+                Ok(job) => {
+                    if Some(job.request_id) != active_request_id {
+                        continue;
+                    }
+
+                    active_request_id = None;
+                    match job.result {
+                        Ok(contents) if app.state == AppState::Loading => {
+                            *timer.lock().unwrap() = 0;
+                            app.prepare_new_game(contents);
+                            app.start_typing();
+                            if !timer_started {
+                                timer_start_tx.send(()).ok();
+                                timer_started = true;
+                            }
+                        }
+                        Ok(_) => {}
+                        Err(message) if app.state == AppState::Loading => {
+                            app.return_to_menu();
+                            app.set_status_message(message);
+                        }
+                        Err(_) => {}
                     }
                 }
-                Ok(Err(message)) => {
-                    app.return_to_menu();
-                    app.set_status_message(message);
-                }
+                Err(mpsc::TryRecvError::Empty) => break,
                 Err(mpsc::TryRecvError::Disconnected) => {
-                    app.return_to_menu();
-                    app.set_status_message("Generation worker disconnected");
+                    if app.state == AppState::Loading {
+                        active_request_id = None;
+                        app.return_to_menu();
+                        app.set_status_message("Generation worker disconnected");
+                    }
+                    break;
                 }
-                Err(mpsc::TryRecvError::Empty) => {}
             }
         }
 
@@ -171,9 +193,16 @@ fn run_app(
             && let Event::Key(key) = event::read()?
         {
             match app.state {
-                AppState::Menu => handle_menu_input(key, app, timer, &generation_tx),
-                AppState::Config => handle_config_input(key, app)?,
-                AppState::Loading => handle_loading_input(key, app),
+                AppState::Menu => handle_menu_input(
+                    key,
+                    app,
+                    timer,
+                    &generation_tx,
+                    &mut next_request_id,
+                    &mut active_request_id,
+                ),
+                AppState::Config => handle_config_input(key, app),
+                AppState::Loading => handle_loading_input(key, app, &mut active_request_id),
                 AppState::Typing => {
                     handle_typing_input(key, app, timer, audio_sink, &timer_stop_tx)
                 }
@@ -198,7 +227,9 @@ fn handle_menu_input(
     key: crossterm::event::KeyEvent,
     app: &mut App,
     timer: &Arc<Mutex<i32>>,
-    generation_tx: &mpsc::Sender<Result<String, String>>,
+    generation_tx: &mpsc::Sender<GenerationJobResult>,
+    next_request_id: &mut u64,
+    active_request_id: &mut Option<u64>,
 ) {
     if app.status_message.is_some() && !app.show_help {
         match key.code {
@@ -244,7 +275,7 @@ fn handle_menu_input(
                 app.enter_loading();
                 let sender = generation_tx.clone();
                 let source = app.generation_source;
-                let level = app.level;
+                let text_scale = app.text_scale;
                 let provider = match source {
                     usecase::generate_sentence::GenerationSource::Google => {
                         Some(app.config.google.clone())
@@ -254,11 +285,14 @@ fn handle_menu_input(
                     }
                     usecase::generate_sentence::GenerationSource::Local => None,
                 };
+                let request_id = *next_request_id;
+                *next_request_id += 1;
+                *active_request_id = Some(request_id);
 
                 thread::spawn(move || {
-                    let result = SentenceHandler::print_sentence(level, source, provider)
+                    let result = SentenceHandler::print_sentence(text_scale, source, provider)
                         .map_err(|err| err.to_string());
-                    sender.send(result).ok();
+                    sender.send(GenerationJobResult { request_id, result }).ok();
                 });
             }
             MenuItem::Config => {
@@ -272,17 +306,21 @@ fn handle_menu_input(
     }
 }
 
-fn handle_config_input(key: crossterm::event::KeyEvent, app: &mut App) -> io::Result<()> {
+fn handle_config_input(key: crossterm::event::KeyEvent, app: &mut App) {
     match key.code {
         KeyCode::Up => app.move_config_up(),
         KeyCode::Down | KeyCode::Tab => app.move_config_down(),
         KeyCode::Backspace => app.pop_config_char(),
-        KeyCode::Enter => {
-            config::save_config(&app.config)?;
-            app.return_to_menu();
-            app.select_start_game();
-            app.set_status_message("Configuration saved");
-        }
+        KeyCode::Enter => match config::save_config(&app.config) {
+            Ok(()) => {
+                app.return_to_menu();
+                app.select_start_game();
+                app.set_status_message("Configuration saved");
+            }
+            Err(err) => {
+                app.set_status_message(format!("Failed to save configuration: {err}"));
+            }
+        },
         KeyCode::Esc => {
             app.return_to_menu();
             app.set_status_message("Configuration changes discarded");
@@ -295,15 +333,18 @@ fn handle_config_input(key: crossterm::event::KeyEvent, app: &mut App) -> io::Re
         }
         _ => {}
     }
-
-    Ok(())
 }
 
-fn handle_loading_input(key: crossterm::event::KeyEvent, app: &mut App) {
+fn handle_loading_input(
+    key: crossterm::event::KeyEvent,
+    app: &mut App,
+    active_request_id: &mut Option<u64>,
+) {
     match key.code {
         KeyCode::Esc => {
+            *active_request_id = None;
             app.return_to_menu();
-            app.set_status_message("Generation continues in background until completion");
+            app.set_status_message("Generation canceled");
         }
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => app.quit(),
         _ => {}

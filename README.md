@@ -46,7 +46,7 @@ cargo install --path .
 
 ```text
 -t, --timeout <SECONDS>  Timer duration (default: 60)
--l, --level <WORDS>      Number of words (default: 30)
+-l, --level <LEVEL>      Target text length scale (default: 30)
     --freq <FREQUENCY>   Sound frequency in Hz (default: 80.0)
 -s, --sound              Enable BGM and typing sound
     --google             Use Google AI Studio for text generation
@@ -110,7 +110,7 @@ Final URL: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-fl
 
 ## Text Length
 
-The generated target text length follows `--level`. The current implementation uses roughly `level * 5` characters for both local and remote generation.
+The generated target text length follows `--level`. The current implementation uses roughly `level * 5` characters for both local and remote generation, so `--level` is a text-length scale rather than a literal word count.
 
 ## Development
 

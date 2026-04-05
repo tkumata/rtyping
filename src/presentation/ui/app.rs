@@ -44,7 +44,7 @@ pub struct App {
     pub incorrects: usize,
     pub timer: i32,
     pub timeout: i32,
-    pub level: usize,
+    pub text_scale: usize,
     pub should_quit: bool,
     pub freq: f32,
     pub sound_enabled: bool,
@@ -61,7 +61,7 @@ pub struct App {
 impl App {
     pub fn new(
         timeout: i32,
-        level: usize,
+        text_scale: usize,
         freq: f32,
         sound_enabled: bool,
         generation_source: GenerationSource,
@@ -74,7 +74,7 @@ impl App {
             incorrects: 0,
             timer: 0,
             timeout,
-            level,
+            text_scale,
             should_quit: false,
             freq,
             sound_enabled,

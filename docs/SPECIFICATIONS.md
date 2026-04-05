@@ -56,7 +56,7 @@
 | API-002 | Groq generation | `--groq` with valid config | Text is generated from Groq | Uses configured URL, model, and API key |
 | API-003 | Missing config handling | `--google` or `--groq` without saved config | App returns to menu with error message | No panic |
 | API-004 | Network failure handling | Provider request fails | App returns to menu with error message | No panic |
-| LEN-001 | Level based generation length | `--level 20` | Generated text length is trimmed to about `level * 5` chars | Same rule for local and remote generation |
+| LEN-001 | Level based generation length | `--level 20` | Generated text length is trimmed to about `level * 5` chars | `level` is a text-length scale |
 | LEN-002 | Local fallback behavior | no provider flag | Existing local generator still works | Backward compatibility |
 
 Google request URL rule:

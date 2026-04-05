@@ -1,7 +1,7 @@
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use rand::Rng;
-use sha2::{Digest, Sha256};
-use std::env;
+use ring::aead::{Aad, CHACHA20_POLY1305, LessSafeKey, Nonce, UnboundKey};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -30,6 +30,20 @@ pub struct AppConfig {
     pub groq: ProviderConfig,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+struct StoredProviderConfig {
+    api_url: String,
+    api_key_ciphertext: String,
+    api_key_nonce: String,
+    model: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+struct StoredAppConfig {
+    google: StoredProviderConfig,
+    groq: StoredProviderConfig,
+}
+
 pub fn load_config() -> io::Result<AppConfig> {
     let paths = config_paths()?;
     load_config_from_paths(&paths.config_path, &paths.key_path)
@@ -46,8 +60,9 @@ struct ConfigPaths {
 }
 
 fn config_paths() -> io::Result<ConfigPaths> {
-    let home = env::var("HOME").map_err(|_| io::Error::other("HOME is not set"))?;
-    let base_dir = Path::new(&home).join(".config").join("rtyping");
+    let base_dir = dirs::config_dir()
+        .ok_or_else(|| io::Error::other("failed to resolve OS config directory"))?
+        .join("rtyping");
     Ok(ConfigPaths {
         config_path: base_dir.join("config.json"),
         key_path: base_dir.join("config.key"),
@@ -60,15 +75,19 @@ fn load_config_from_paths(config_path: &Path, key_path: &Path) -> io::Result<App
     }
 
     let contents = fs::read_to_string(config_path)?;
+    let stored: StoredAppConfig = serde_json::from_str(&contents)
+        .map_err(|err| io::Error::other(format!("failed to parse config.json: {err}")))?;
     let key = if key_path.exists() {
-        Some(read_key(key_path)?)
+        read_key(key_path)?
+    } else if has_encrypted_values(&stored) {
+        return Err(io::Error::other("config.key is missing"));
     } else {
-        None
+        Vec::new()
     };
 
     Ok(AppConfig {
-        google: parse_provider_section(&contents, "google", key.as_deref())?,
-        groq: parse_provider_section(&contents, "groq", key.as_deref())?,
+        google: restore_provider_config(&stored.google, &key, "google")?,
+        groq: restore_provider_config(&stored.groq, &key, "groq")?,
     })
 }
 
@@ -78,15 +97,15 @@ fn save_config_to_paths(config: &AppConfig, config_path: &Path, key_path: &Path)
     }
 
     let key = ensure_key(key_path)?;
-    let google = serialize_provider(&config.google, &key)?;
-    let groq = serialize_provider(&config.groq, &key)?;
-
-    let body = format!(
-        concat!("{{\n", "  \"google\": {},\n", "  \"groq\": {}\n", "}}\n"),
-        google, groq
-    );
+    let stored = StoredAppConfig {
+        google: store_provider_config(&config.google, &key, "google")?,
+        groq: store_provider_config(&config.groq, &key, "groq")?,
+    };
+    let body = serde_json::to_string_pretty(&stored)
+        .map_err(|err| io::Error::other(format!("failed to serialize config: {err}")))?;
 
     fs::write(config_path, body)?;
+    set_private_permissions(config_path)?;
     Ok(())
 }
 
@@ -109,9 +128,15 @@ fn ensure_key(key_path: &Path) -> io::Result<Vec<u8>> {
 
 fn read_key(key_path: &Path) -> io::Result<Vec<u8>> {
     let encoded = fs::read_to_string(key_path)?;
-    STANDARD
+    let key = STANDARD
         .decode(encoded.trim())
-        .map_err(|err| io::Error::other(format!("failed to decode key: {err}")))
+        .map_err(|err| io::Error::other(format!("failed to decode key: {err}")))?;
+
+    if key.len() != 32 {
+        return Err(io::Error::other("config.key has invalid length"));
+    }
+
+    Ok(key)
 }
 
 fn set_private_permissions(path: &Path) -> io::Result<()> {
@@ -129,182 +154,107 @@ fn set_private_permissions(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
-fn serialize_provider(provider: &ProviderConfig, key: &[u8]) -> io::Result<String> {
-    let (ciphertext, nonce) = encrypt_value(&provider.api_key, key)?;
-    Ok(format!(
-        concat!(
-            "{{",
-            "\"api_url\":\"{}\",",
-            "\"api_key_ciphertext\":\"{}\",",
-            "\"api_key_nonce\":\"{}\",",
-            "\"model\":\"{}\"",
-            "}}"
-        ),
-        escape_json(&provider.api_url),
-        escape_json(&ciphertext),
-        escape_json(&nonce),
-        escape_json(&provider.model),
-    ))
+fn has_encrypted_values(config: &StoredAppConfig) -> bool {
+    !config.google.api_key_ciphertext.is_empty() || !config.groq.api_key_ciphertext.is_empty()
 }
 
-fn parse_provider_section(
-    contents: &str,
-    section_name: &str,
-    key: Option<&[u8]>,
-) -> io::Result<ProviderConfig> {
-    let Some(section) = extract_object(contents, section_name) else {
-        return Ok(ProviderConfig::default());
-    };
-
-    let api_url = extract_string_field(section, "api_url").unwrap_or_default();
-    let ciphertext = extract_string_field(section, "api_key_ciphertext").unwrap_or_default();
-    let nonce = extract_string_field(section, "api_key_nonce").unwrap_or_default();
-    let model = extract_string_field(section, "model").unwrap_or_default();
-
-    let api_key = if ciphertext.is_empty() {
-        String::new()
-    } else if let Some(key) = key {
-        decrypt_value(&ciphertext, &nonce, key)?
+fn store_provider_config(
+    provider: &ProviderConfig,
+    key: &[u8],
+    aad_label: &str,
+) -> io::Result<StoredProviderConfig> {
+    let (ciphertext, nonce) = if provider.api_key.is_empty() {
+        (String::new(), String::new())
     } else {
-        String::new()
+        encrypt_value(&provider.api_key, key, aad_label)?
     };
 
-    Ok(ProviderConfig {
-        api_url,
-        api_key,
-        model,
+    Ok(StoredProviderConfig {
+        api_url: provider.api_url.clone(),
+        api_key_ciphertext: ciphertext,
+        api_key_nonce: nonce,
+        model: provider.model.clone(),
     })
 }
 
-fn encrypt_value(value: &str, key: &[u8]) -> io::Result<(String, String)> {
-    let mut nonce = [0u8; 16];
-    rand::rng().fill_bytes(&mut nonce);
-    let ciphertext = xor_with_keystream(value.as_bytes(), key, &nonce);
-    Ok((STANDARD.encode(ciphertext), STANDARD.encode(nonce)))
+fn restore_provider_config(
+    stored: &StoredProviderConfig,
+    key: &[u8],
+    aad_label: &str,
+) -> io::Result<ProviderConfig> {
+    let api_key = if stored.api_key_ciphertext.is_empty() {
+        String::new()
+    } else {
+        decrypt_value(
+            &stored.api_key_ciphertext,
+            &stored.api_key_nonce,
+            key,
+            aad_label,
+        )?
+    };
+
+    Ok(ProviderConfig {
+        api_url: stored.api_url.clone(),
+        api_key,
+        model: stored.model.clone(),
+    })
 }
 
-fn decrypt_value(ciphertext_b64: &str, nonce_b64: &str, key: &[u8]) -> io::Result<String> {
-    let ciphertext = STANDARD
+fn encrypt_value(value: &str, key: &[u8], aad_label: &str) -> io::Result<(String, String)> {
+    let cipher = build_cipher(key)?;
+    let mut nonce_bytes = [0u8; 12];
+    rand::rng().fill_bytes(&mut nonce_bytes);
+    let nonce_text = STANDARD.encode(nonce_bytes);
+    let nonce = Nonce::assume_unique_for_key(nonce_bytes);
+    let aad = Aad::from(aad_label.as_bytes());
+    let mut buffer = value.as_bytes().to_vec();
+
+    cipher
+        .seal_in_place_append_tag(nonce, aad, &mut buffer)
+        .map_err(|_| io::Error::other("failed to encrypt API key"))?;
+
+    Ok((STANDARD.encode(buffer), nonce_text))
+}
+
+fn decrypt_value(
+    ciphertext_b64: &str,
+    nonce_b64: &str,
+    key: &[u8],
+    aad_label: &str,
+) -> io::Result<String> {
+    let cipher = build_cipher(key)?;
+    let nonce_bytes = decode_array::<12>(nonce_b64, "nonce")?;
+    let nonce = Nonce::assume_unique_for_key(nonce_bytes);
+    let aad = Aad::from(aad_label.as_bytes());
+    let mut buffer = STANDARD
         .decode(ciphertext_b64)
         .map_err(|err| io::Error::other(format!("failed to decode ciphertext: {err}")))?;
-    let nonce = STANDARD
-        .decode(nonce_b64)
-        .map_err(|err| io::Error::other(format!("failed to decode nonce: {err}")))?;
-    let plaintext = xor_with_keystream(&ciphertext, key, &nonce);
-    String::from_utf8(plaintext)
+
+    let plaintext = cipher
+        .open_in_place(nonce, aad, &mut buffer)
+        .map_err(|_| io::Error::other("failed to decrypt API key"))?;
+
+    String::from_utf8(plaintext.to_vec())
         .map_err(|err| io::Error::other(format!("failed to decode plaintext: {err}")))
 }
 
-fn xor_with_keystream(input: &[u8], key: &[u8], nonce: &[u8]) -> Vec<u8> {
-    let mut output = Vec::with_capacity(input.len());
-    let mut counter = 0u64;
-
-    while output.len() < input.len() {
-        let mut hasher = Sha256::new();
-        hasher.update(key);
-        hasher.update(nonce);
-        hasher.update(counter.to_be_bytes());
-        let block = hasher.finalize();
-        let remaining = input.len() - output.len();
-        let block_len = remaining.min(block.len());
-        let start = output.len();
-
-        for idx in 0..block_len {
-            output.push(input[start + idx] ^ block[idx]);
-        }
-
-        counter += 1;
-    }
-
-    output
+fn build_cipher(key: &[u8]) -> io::Result<LessSafeKey> {
+    let unbound = UnboundKey::new(&CHACHA20_POLY1305, key)
+        .map_err(|_| io::Error::other("failed to initialize cipher"))?;
+    Ok(LessSafeKey::new(unbound))
 }
 
-fn escape_json(value: &str) -> String {
-    let mut escaped = String::with_capacity(value.len());
-    for ch in value.chars() {
-        match ch {
-            '\\' => escaped.push_str("\\\\"),
-            '"' => escaped.push_str("\\\""),
-            '\n' => escaped.push_str("\\n"),
-            '\r' => escaped.push_str("\\r"),
-            '\t' => escaped.push_str("\\t"),
-            _ => escaped.push(ch),
-        }
-    }
-    escaped
-}
-
-fn extract_object<'a>(contents: &'a str, key: &str) -> Option<&'a str> {
-    let needle = format!("\"{key}\"");
-    let key_pos = contents.find(&needle)?;
-    let after_key = &contents[key_pos + needle.len()..];
-    let brace_offset = after_key.find('{')?;
-    let mut depth = 0usize;
-    let mut in_string = false;
-    let mut escaped = false;
-    let object = &after_key[brace_offset..];
-
-    for (idx, ch) in object.char_indices() {
-        if in_string {
-            if escaped {
-                escaped = false;
-            } else if ch == '\\' {
-                escaped = true;
-            } else if ch == '"' {
-                in_string = false;
-            }
-            continue;
-        }
-
-        match ch {
-            '"' => in_string = true,
-            '{' => depth += 1,
-            '}' => {
-                depth = depth.saturating_sub(1);
-                if depth == 0 {
-                    return Some(&object[..=idx]);
-                }
-            }
-            _ => {}
-        }
-    }
-
-    None
-}
-
-fn extract_string_field(contents: &str, key: &str) -> Option<String> {
-    let needle = format!("\"{key}\"");
-    let key_pos = contents.find(&needle)?;
-    let after_key = &contents[key_pos + needle.len()..];
-    let colon_pos = after_key.find(':')?;
-    let after_colon = after_key[colon_pos + 1..].trim_start();
-    let quoted = after_colon.strip_prefix('"')?;
-    let mut escaped = false;
-    let mut value = String::new();
-
-    for ch in quoted.chars() {
-        if escaped {
-            let actual = match ch {
-                'n' => '\n',
-                'r' => '\r',
-                't' => '\t',
-                '\\' => '\\',
-                '"' => '"',
-                other => other,
-            };
-            value.push(actual);
-            escaped = false;
-            continue;
-        }
-
-        match ch {
-            '\\' => escaped = true,
-            '"' => return Some(value),
-            other => value.push(other),
-        }
-    }
-
-    None
+fn decode_array<const N: usize>(input: &str, label: &str) -> io::Result<[u8; N]> {
+    let decoded = STANDARD
+        .decode(input)
+        .map_err(|err| io::Error::other(format!("failed to decode {label}: {err}")))?;
+    let len = decoded.len();
+    decoded.try_into().map_err(|_| {
+        io::Error::other(format!(
+            "{label} has invalid length: expected {N}, got {}",
+            len
+        ))
+    })
 }
 
 #[cfg(test)]
@@ -317,7 +267,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .expect("time should be valid")
             .as_nanos();
-        env::temp_dir().join(format!("rtyping-config-test-{nanos}"))
+        std::env::temp_dir().join(format!("rtyping-config-test-{nanos}"))
     }
 
     #[test]

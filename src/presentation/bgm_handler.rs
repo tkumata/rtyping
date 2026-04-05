@@ -15,11 +15,19 @@ impl BgmHandler {
 
     pub fn start(self) {
         thread::spawn(move || {
+            let Ok(handle) = DeviceSinkBuilder::open_default_sink() else {
+                return;
+            };
+            let sink = Player::connect_new(handle.mixer());
+
             loop {
                 match self.receiver.try_recv() {
                     Ok(_) | Err(TryRecvError::Disconnected) => break,
                     Err(TryRecvError::Empty) => {
-                        play_audio();
+                        if append_audio(&sink).is_err() {
+                            break;
+                        }
+                        sink.sleep_until_end();
                     }
                 }
             }
@@ -27,13 +35,11 @@ impl BgmHandler {
     }
 }
 
-fn play_audio() {
-    let handle = DeviceSinkBuilder::open_default_sink().unwrap();
-    let sink = Player::connect_new(handle.mixer());
+fn append_audio(sink: &Player) -> Result<(), rodio::decoder::DecoderError> {
     let bytes = include_bytes!("../../src/assets/audio/BGM.mp3");
     let cursor = Cursor::new(bytes);
-
-    sink.append(rodio::Decoder::try_from(BufReader::new(cursor)).unwrap());
+    let decoder = rodio::Decoder::try_from(BufReader::new(cursor))?;
+    sink.append(decoder);
     sink.set_volume(0.4);
-    sink.sleep_until_end();
+    Ok(())
 }

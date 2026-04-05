@@ -4,7 +4,7 @@ use crate::usecase::generate_sentence::GenerationSource;
 
 pub struct CliArgs {
     pub timeout: i32,
-    pub level: usize,
+    pub text_scale: usize,
     pub freq: f32,
     pub sound: bool,
     pub source: GenerationSource,
@@ -32,7 +32,7 @@ impl UiHandler {
                     .value_parser(clap::value_parser!(i32)),
             )
             .arg(
-                arg!(-l --level <LEVEL> "Number of words")
+                arg!(-l --level <LEVEL> "Target text length scale")
                     .default_value("30")
                     .value_parser(clap::value_parser!(usize)),
             )
@@ -64,7 +64,7 @@ impl UiHandler {
 
         CliArgs {
             timeout: *matches.get_one::<i32>("timeout").expect("expect number"),
-            level: *matches.get_one::<usize>("level").expect("expect number"),
+            text_scale: *matches.get_one::<usize>("level").expect("expect number"),
             freq: *matches.get_one::<f32>("freq").expect("expect frequency"),
             sound: matches.get_flag("sound"),
             source,

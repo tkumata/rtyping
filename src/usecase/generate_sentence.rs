@@ -1,9 +1,12 @@
 use rand::RngExt;
 use rand::prelude::IndexedRandom;
 use rand::rng;
+use reqwest::StatusCode;
+use reqwest::blocking::Client;
+use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::io;
-use std::process::Command;
+use std::time::Duration;
 
 use crate::config::ProviderConfig;
 use crate::domain::entity;
@@ -16,11 +19,11 @@ pub enum GenerationSource {
 }
 
 pub fn generate_sentence(
-    level: usize,
+    text_scale: usize,
     source: GenerationSource,
     provider_config: Option<ProviderConfig>,
 ) -> Result<String, io::Error> {
-    let target_chars = target_character_count(level);
+    let target_chars = target_character_count(text_scale);
     let sentence = match source {
         GenerationSource::Local => generate_local_sentence(target_chars)?,
         GenerationSource::Google => generate_google_sentence(target_chars, provider_config)?,
@@ -30,8 +33,8 @@ pub fn generate_sentence(
     Ok(normalize_sentence(&sentence, target_chars))
 }
 
-pub fn target_character_count(level: usize) -> usize {
-    (level.max(4)) * 5
+pub fn target_character_count(text_scale: usize) -> usize {
+    (text_scale.max(4)) * 5
 }
 
 fn generate_local_sentence(target_chars: usize) -> Result<String, io::Error> {
@@ -53,22 +56,32 @@ fn generate_google_sentence(
 
     let prompt = build_prompt(target_chars);
     let url = build_google_url(&config);
-    let body = format!(
-        "{{\"contents\":[{{\"parts\":[{{\"text\":\"{}\"}}]}}]}}",
-        escape_json(&prompt)
-    );
-    let output = run_curl(&[
-        "-sS",
-        "-X",
-        "POST",
-        url.as_str(),
-        "-H",
-        "Content-Type: application/json",
-        "-d",
-        body.as_str(),
-    ])?;
+    let body = json!({
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": prompt
+                    }
+                ]
+            }
+        ]
+    });
 
-    extract_string_after_marker(&output, "\"candidates\"", "\"text\"")
+    let response = build_http_client()?
+        .post(format!("{url}?key={}", config.api_key.trim()))
+        .json(&body)
+        .send()
+        .map_err(|err| io::Error::other(format!("Google request failed: {err}")))?;
+
+    let status = response.status();
+    let response_text = response
+        .text()
+        .map_err(|err| io::Error::other(format!("Failed to read Google response body: {err}")))?;
+    let payload = parse_json_response("Google AI Studio", status, response_text)?;
+    payload["candidates"][0]["content"]["parts"][0]["text"]
+        .as_str()
+        .map(ToOwned::to_owned)
         .ok_or_else(|| io::Error::other("Failed to parse Google AI Studio response"))
 }
 
@@ -80,36 +93,38 @@ fn generate_groq_sentence(
     validate_provider_config("Groq", &config)?;
 
     let prompt = build_prompt(target_chars);
-    let auth_header = format!("Authorization: Bearer {}", config.api_key.trim());
-    let body = format!(
-        "{{\"model\":\"{}\",\"messages\":[{{\"role\":\"user\",\"content\":\"{}\"}}]}}",
-        escape_json(config.model.trim()),
-        escape_json(&prompt)
-    );
-    let output = run_curl(&[
-        "-sS",
-        "-X",
-        "POST",
-        config.api_url.trim(),
-        "-H",
-        "Content-Type: application/json",
-        "-H",
-        auth_header.as_str(),
-        "-d",
-        body.as_str(),
-    ])?;
+    let body = json!({
+        "model": config.model.trim(),
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    });
 
-    extract_string_after_marker(&output, "\"message\"", "\"content\"")
+    let response = build_http_client()?
+        .post(config.api_url.trim())
+        .bearer_auth(config.api_key.trim())
+        .json(&body)
+        .send()
+        .map_err(|err| io::Error::other(format!("Groq request failed: {err}")))?;
+
+    let status = response.status();
+    let response_text = response
+        .text()
+        .map_err(|err| io::Error::other(format!("Failed to read Groq response body: {err}")))?;
+    let payload = parse_json_response("Groq", status, response_text)?;
+    payload["choices"][0]["message"]["content"]
+        .as_str()
+        .map(ToOwned::to_owned)
         .ok_or_else(|| io::Error::other("Failed to parse Groq response"))
 }
 
 fn build_google_url(config: &ProviderConfig) -> String {
     let base = config.api_url.trim().trim_end_matches('/');
     let model = config.model.trim().trim_matches('/');
-    format!(
-        "{base}/{model}:generateContent?key={}",
-        config.api_key.trim()
-    )
+    format!("{base}/{model}:generateContent")
 }
 
 fn validate_provider_config(provider_name: &str, config: &ProviderConfig) -> Result<(), io::Error> {
@@ -122,15 +137,33 @@ fn validate_provider_config(provider_name: &str, config: &ProviderConfig) -> Res
     }
 }
 
-fn run_curl(args: &[&str]) -> Result<String, io::Error> {
-    let output = Command::new("curl").args(args).output()?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(io::Error::other(format!("curl failed: {stderr}")));
+fn build_http_client() -> Result<Client, io::Error> {
+    Client::builder()
+        .connect_timeout(Duration::from_secs(5))
+        .timeout(Duration::from_secs(20))
+        .build()
+        .map_err(|err| io::Error::other(format!("Failed to build HTTP client: {err}")))
+}
+
+fn parse_json_response(
+    provider_name: &str,
+    status: StatusCode,
+    response_text: String,
+) -> Result<Value, io::Error> {
+    if !status.is_success() {
+        let summary = response_text.replace('\n', " ");
+        return Err(io::Error::other(format!(
+            "{provider_name} returned HTTP {}: {}",
+            status.as_u16(),
+            summary
+        )));
     }
 
-    String::from_utf8(output.stdout)
-        .map_err(|err| io::Error::other(format!("invalid response encoding: {err}")))
+    serde_json::from_str(&response_text).map_err(|err| {
+        io::Error::other(format!(
+            "{provider_name} returned invalid JSON: {err}; body={response_text}"
+        ))
+    })
 }
 
 fn build_prompt(target_chars: usize) -> String {
@@ -176,11 +209,17 @@ fn generate_markov_chain(text: &str, n: usize, target_chars: usize) -> String {
     let start_index = rng.random_range(0..words.len() - n);
     let mut current_state = words[start_index..start_index + n].to_vec();
     let mut result = current_state.clone();
+    let mut current_len = result
+        .iter()
+        .map(|word| word.chars().count())
+        .sum::<usize>()
+        + result.len().saturating_sub(1);
 
-    while result.join(" ").chars().count() < target_chars {
+    while current_len < target_chars {
         if let Some(next_words) = markov_chain.get(&current_state) {
             let next_word = next_words.choose(&mut rng).expect("next word should exist");
             result.push(*next_word);
+            current_len += next_word.chars().count() + 1;
             current_state.push(*next_word);
             current_state.remove(0);
         } else {
@@ -189,56 +228,6 @@ fn generate_markov_chain(text: &str, n: usize, target_chars: usize) -> String {
     }
 
     result.join(" ")
-}
-
-fn extract_string_after_marker(contents: &str, marker: &str, key: &str) -> Option<String> {
-    let section_start = contents.find(marker)?;
-    let section = &contents[section_start..];
-    extract_string_field(section, key)
-}
-
-fn extract_string_field(contents: &str, key: &str) -> Option<String> {
-    let key_pos = contents.find(key)?;
-    let after_key = &contents[key_pos + key.len()..];
-    let colon_pos = after_key.find(':')?;
-    let after_colon = after_key[colon_pos + 1..].trim_start();
-    let quoted = after_colon.strip_prefix('"')?;
-    let mut escaped = false;
-    let mut value = String::new();
-
-    for ch in quoted.chars() {
-        if escaped {
-            let actual = match ch {
-                'n' => '\n',
-                'r' => '\r',
-                't' => '\t',
-                '\\' => '\\',
-                '"' => '"',
-                'u' => return Some(value),
-                other => other,
-            };
-            value.push(actual);
-            escaped = false;
-            continue;
-        }
-
-        match ch {
-            '\\' => escaped = true,
-            '"' => return Some(value),
-            other => value.push(other),
-        }
-    }
-
-    None
-}
-
-fn escape_json(value: &str) -> String {
-    value
-        .replace('\\', "\\\\")
-        .replace('"', "\\\"")
-        .replace('\n', "\\n")
-        .replace('\r', "\\r")
-        .replace('\t', "\\t")
 }
 
 #[cfg(test)]
@@ -271,7 +260,7 @@ mod tests {
 
         assert_eq!(
             build_google_url(&config),
-            "https://example.com/v1beta/models/gemini-2.0-flash:generateContent?key=secret"
+            "https://example.com/v1beta/models/gemini-2.0-flash:generateContent"
         );
     }
 }
