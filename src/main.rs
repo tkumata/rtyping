@@ -14,23 +14,50 @@ use crossterm::{
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{Terminal, backend::CrosstermBackend};
-use rodio::{OutputStreamBuilder, Source, source::SineWave};
+use rodio::{DeviceSinkBuilder, MixerDeviceSink, Source, source::SineWave};
 use std::io::{self, stdout};
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 use std::time::Duration;
 
+use config::AppConfig;
 use presentation::bgm_handler::BgmHandler;
-use presentation::sentence_handler::SentenceHandler;
-use presentation::ui::app::{App, AppState};
+use presentation::ui::app::{App, AppState, MenuItem};
 use presentation::ui::render;
 use presentation::ui::ui_handler::UiHandler;
+use usecase::generate_sentence::{self, GenerationSource};
+
+struct GenerationJobResult {
+    request_id: u64,
+    result: Result<String, String>,
+}
+
+enum TimerCommand {
+    Start,
+    Stop,
+    Shutdown,
+}
 
 fn main() -> io::Result<()> {
     let args = UiHandler::parse_args();
+    let (loaded_config, config_message) = match config::load_config() {
+        Ok(report) => {
+            let message = if report.warnings.is_empty() {
+                None
+            } else {
+                Some(format!("Config warning: {}", report.warnings.join(" / ")))
+            };
+            (report.config, message)
+        }
+        Err(err) => (
+            AppConfig::default(),
+            Some(format!("Failed to load config: {err}")),
+        ),
+    };
 
-    let stream = OutputStreamBuilder::open_default_stream().unwrap();
-
+    let mut audio_sink = DeviceSinkBuilder::open_default_sink()
+        .map_err(|err| io::Error::other(format!("failed to open audio device: {err}")))?;
+    audio_sink.log_on_drop(false);
     let (snd_sender, snd_receiver) = mpsc::channel();
 
     if args.sound {
@@ -44,36 +71,61 @@ fn main() -> io::Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let mut app = App::new(args.timeout, args.level, args.freq, args.sound);
+    let mut app = App::new(
+        args.timeout,
+        args.text_scale,
+        args.freq,
+        args.sound,
+        args.source,
+        loaded_config,
+    );
+    if let Some(message) = config_message {
+        app.set_status_message(message);
+    }
 
-    // Timer thread communication channels:
-    // - timer_start: signals the timer thread to begin counting
-    // - timer_stop: signals the timer thread to stop (on completion or early exit)
-    // - timeout: notifies the main thread when time runs out
     let timer = Arc::new(Mutex::new(0i32));
     let timeout = args.timeout;
 
-    let (timer_stop_tx, timer_stop_rx) = mpsc::channel::<()>();
+    let (timer_command_tx, timer_command_rx) = mpsc::channel::<TimerCommand>();
     let (timeout_tx, timeout_rx) = mpsc::channel::<()>();
-    let (timer_start_tx, timer_start_rx) = mpsc::channel::<()>();
 
     let timer_clone = Arc::clone(&timer);
     let timer_thread = thread::spawn(move || {
-        // Wait for game start signal
-        if timer_start_rx.recv().is_err() {
-            return;
-        }
+        let mut running = false;
 
         loop {
-            if timer_stop_rx.try_recv().is_ok() {
-                break;
-            }
-            thread::sleep(Duration::from_secs(1));
-            let mut t = timer_clone.lock().unwrap();
-            *t += 1;
-            if *t >= timeout {
-                timeout_tx.send(()).ok();
-                break;
+            if running {
+                match timer_command_rx.recv_timeout(Duration::from_secs(1)) {
+                    Ok(TimerCommand::Start) => {
+                        *timer_clone.lock().unwrap() = 0;
+                        running = true;
+                    }
+                    Ok(TimerCommand::Stop) => {
+                        running = false;
+                    }
+                    Ok(TimerCommand::Shutdown) | Err(mpsc::RecvTimeoutError::Disconnected) => {
+                        break;
+                    }
+                    Err(mpsc::RecvTimeoutError::Timeout) => {
+                        let mut t = timer_clone.lock().unwrap();
+                        *t += 1;
+                        if *t >= timeout {
+                            running = false;
+                            timeout_tx.send(()).ok();
+                        }
+                    }
+                }
+            } else {
+                match timer_command_rx.recv() {
+                    Ok(TimerCommand::Start) => {
+                        *timer_clone.lock().unwrap() = 0;
+                        running = true;
+                    }
+                    Ok(TimerCommand::Stop) => {
+                        running = false;
+                    }
+                    Ok(TimerCommand::Shutdown) | Err(_) => break,
+                }
             }
         }
     });
@@ -82,10 +134,9 @@ fn main() -> io::Result<()> {
         &mut terminal,
         &mut app,
         &timer,
-        &stream,
-        timer_stop_tx,
+        &audio_sink,
+        timer_command_tx.clone(),
         timeout_rx,
-        timer_start_tx,
     );
 
     disable_raw_mode()?;
@@ -96,8 +147,8 @@ fn main() -> io::Result<()> {
     )?;
     terminal.show_cursor()?;
 
+    timer_command_tx.send(TimerCommand::Shutdown).ok();
     timer_thread.join().unwrap();
-
     snd_sender.send(()).ok();
 
     if let Err(err) = res {
@@ -107,16 +158,18 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-/// Runs the main event loop, handling user input and screen transitions.
 fn run_app(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
     app: &mut App,
     timer: &Arc<Mutex<i32>>,
-    stream: &rodio::OutputStream,
-    timer_stop_tx: mpsc::Sender<()>,
+    audio_sink: &MixerDeviceSink,
+    timer_command_tx: mpsc::Sender<TimerCommand>,
     timeout_rx: mpsc::Receiver<()>,
-    timer_start_tx: mpsc::Sender<()>,
 ) -> io::Result<()> {
+    let (generation_tx, generation_rx) = mpsc::channel::<GenerationJobResult>();
+    let mut next_request_id = 1_u64;
+    let mut active_request_id: Option<u64> = None;
+
     loop {
         terminal.draw(|f| render::render(f, app))?;
 
@@ -124,7 +177,40 @@ fn run_app(
             break;
         }
 
-        // Check for timeout notification from timer thread
+        loop {
+            match generation_rx.try_recv() {
+                Ok(job) => {
+                    if Some(job.request_id) != active_request_id {
+                        continue;
+                    }
+
+                    active_request_id = None;
+                    match job.result {
+                        Ok(contents) if app.state == AppState::Loading => {
+                            app.prepare_new_game(contents);
+                            app.start_typing();
+                            timer_command_tx.send(TimerCommand::Start).ok();
+                        }
+                        Ok(_) => {}
+                        Err(message) if app.state == AppState::Loading => {
+                            app.return_to_menu();
+                            app.set_status_message(message);
+                        }
+                        Err(_) => {}
+                    }
+                }
+                Err(mpsc::TryRecvError::Empty) => break,
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    if app.state == AppState::Loading {
+                        active_request_id = None;
+                        app.return_to_menu();
+                        app.set_status_message("Generation worker disconnected");
+                    }
+                    break;
+                }
+            }
+        }
+
         if app.state == AppState::Typing && timeout_rx.try_recv().is_ok() {
             let current_timer = *timer.lock().unwrap();
             app.update_timer(current_timer);
@@ -135,77 +221,24 @@ fn run_app(
             && let Event::Key(key) = event::read()?
         {
             match app.state {
-                AppState::Intro => {
-                    if key.code == KeyCode::Char('h') {
-                        app.toggle_help();
-                    } else if app.show_help {
-                        // ヘルプ表示中のキー操作
-                        match key.code {
-                            KeyCode::Up => app.scroll_help_up(),
-                            KeyCode::Down => {
-                                let max_scroll = render::help_line_count().saturating_sub(5);
-                                app.scroll_help_down(max_scroll);
-                            }
-                            KeyCode::Esc => app.show_help = false,
-                            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                                app.quit();
-                            }
-                            _ => {}
-                        }
-                    } else if key.code == KeyCode::Enter {
-                        match SentenceHandler::print_sentence(app.level) {
-                            Ok(contents) => {
-                                app.set_target_string(contents);
-                                app.start_typing();
-                                timer_start_tx.send(()).ok();
-                            }
-                            Err(err) => {
-                                return Err(err);
-                            }
-                        }
-                    } else if key.code == KeyCode::Esc
-                        || (key.code == KeyCode::Char('c')
-                            && key.modifiers.contains(KeyModifiers::CONTROL))
-                    {
-                        app.quit();
-                    }
-                }
+                AppState::Menu => handle_menu_input(
+                    key,
+                    app,
+                    timer,
+                    &generation_tx,
+                    &mut next_request_id,
+                    &mut active_request_id,
+                ),
+                AppState::Config => handle_config_input(key, app),
+                AppState::Loading => handle_loading_input(key, app, &mut active_request_id),
                 AppState::Typing => {
-                    match key.code {
-                        KeyCode::Esc => {
-                            timer_stop_tx.send(()).ok();
-                            app.update_timer(*timer.lock().unwrap());
-                            app.finish_typing();
-                        }
-                        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                            timer_stop_tx.send(()).ok();
-                            app.quit();
-                        }
-                        KeyCode::Backspace => {
-                            app.pop_char();
-                        }
-                        KeyCode::Char(c) => {
-                            let is_correct = app.push_char(c);
-
-                            // Play feedback sound on correct input
-                            if is_correct && app.sound_enabled {
-                                let source = SineWave::new(app.freq)
-                                    .take_duration(Duration::from_millis(100));
-                                stream.mixer().add(source);
-                            }
-
-                            if app.is_complete() {
-                                timer_stop_tx.send(()).ok();
-                                app.update_timer(*timer.lock().unwrap());
-                                app.finish_typing();
-                            }
-                        }
-                        _ => {}
-                    }
+                    handle_typing_input(key, app, timer, audio_sink, &timer_command_tx)
                 }
                 AppState::Result => {
                     if key.code == KeyCode::Enter {
-                        app.quit();
+                        *timer.lock().unwrap() = 0;
+                        app.return_to_menu();
+                        app.select_start_game();
                     }
                 }
             }
@@ -218,4 +251,166 @@ fn run_app(
     }
 
     Ok(())
+}
+
+fn handle_menu_input(
+    key: crossterm::event::KeyEvent,
+    app: &mut App,
+    timer: &Arc<Mutex<i32>>,
+    generation_tx: &mpsc::Sender<GenerationJobResult>,
+    next_request_id: &mut u64,
+    active_request_id: &mut Option<u64>,
+) {
+    if app.status_message.is_some() && !app.show_help {
+        match key.code {
+            KeyCode::Enter
+            | KeyCode::Esc
+            | KeyCode::Up
+            | KeyCode::Down
+            | KeyCode::Tab
+            | KeyCode::Backspace
+            | KeyCode::Char(_) => {
+                app.clear_status_message();
+            }
+            _ => {}
+        }
+        return;
+    }
+
+    if key.code == KeyCode::Char('h') {
+        app.toggle_help();
+        return;
+    }
+
+    if app.show_help {
+        match key.code {
+            KeyCode::Up => app.scroll_help_up(),
+            KeyCode::Down => {
+                let max_scroll = render::help_line_count().saturating_sub(5);
+                app.scroll_help_down(max_scroll);
+            }
+            KeyCode::Esc => app.show_help = false,
+            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => app.quit(),
+            _ => {}
+        }
+        return;
+    }
+
+    match key.code {
+        KeyCode::Up => app.move_menu_up(),
+        KeyCode::Down => app.move_menu_down(),
+        KeyCode::Enter => match app.menu_selected {
+            MenuItem::StartGame => {
+                *timer.lock().unwrap() = 0;
+                app.enter_loading();
+                let sender = generation_tx.clone();
+                let source = app.generation_source;
+                let text_scale = app.text_scale;
+                let provider = match source {
+                    GenerationSource::Google => Some(app.config.google.clone()),
+                    GenerationSource::Groq => Some(app.config.groq.clone()),
+                    GenerationSource::Local => None,
+                };
+                let request_id = *next_request_id;
+                *next_request_id += 1;
+                *active_request_id = Some(request_id);
+
+                thread::spawn(move || {
+                    let result = generate_sentence::generate(text_scale, source, provider)
+                        .map_err(|err| err.to_string());
+                    sender.send(GenerationJobResult { request_id, result }).ok();
+                });
+            }
+            MenuItem::Config => {
+                app.clear_status_message();
+                app.open_config();
+            }
+        },
+        KeyCode::Esc => app.quit(),
+        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => app.quit(),
+        _ => {}
+    }
+}
+
+fn handle_config_input(key: crossterm::event::KeyEvent, app: &mut App) {
+    match key.code {
+        KeyCode::Up => app.move_config_up(),
+        KeyCode::Down | KeyCode::Tab => app.move_config_down(),
+        KeyCode::Backspace => app.pop_config_char(),
+        KeyCode::Enter => match config::save_config(&app.config) {
+            Ok(()) => {
+                app.return_to_menu();
+                app.select_start_game();
+                app.set_status_message("Configuration saved");
+            }
+            Err(err) => {
+                app.set_status_message(format!("Failed to save configuration: {err}"));
+            }
+        },
+        KeyCode::Esc => {
+            app.return_to_menu();
+            app.set_status_message("Configuration changes discarded");
+        }
+        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => app.quit(),
+        KeyCode::Char(ch) => {
+            if key.modifiers.is_empty() || key.modifiers == KeyModifiers::SHIFT {
+                app.edit_config_char(ch);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn handle_loading_input(
+    key: crossterm::event::KeyEvent,
+    app: &mut App,
+    active_request_id: &mut Option<u64>,
+) {
+    match key.code {
+        KeyCode::Esc => {
+            *active_request_id = None;
+            app.return_to_menu();
+            app.set_status_message("Generation canceled");
+        }
+        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => app.quit(),
+        _ => {}
+    }
+}
+
+fn handle_typing_input(
+    key: crossterm::event::KeyEvent,
+    app: &mut App,
+    timer: &Arc<Mutex<i32>>,
+    audio_sink: &MixerDeviceSink,
+    timer_command_tx: &mpsc::Sender<TimerCommand>,
+) {
+    match key.code {
+        KeyCode::Esc => {
+            timer_command_tx.send(TimerCommand::Stop).ok();
+            app.update_timer(*timer.lock().unwrap());
+            app.finish_typing();
+        }
+        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            timer_command_tx.send(TimerCommand::Stop).ok();
+            app.quit();
+        }
+        KeyCode::Backspace => {
+            app.pop_char();
+        }
+        KeyCode::Char(c) => {
+            let is_correct = app.push_char(c);
+
+            if is_correct && app.sound_enabled {
+                let source = SineWave::new(app.freq).take_duration(Duration::from_millis(100));
+                audio_sink.mixer().add(source);
+            }
+
+            if app.is_complete() {
+                timer_command_tx.send(TimerCommand::Stop).ok();
+                app.update_timer(*timer.lock().unwrap());
+                app.finish_typing();
+            }
+        }
+        _ => {}
+    }
 }

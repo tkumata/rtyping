@@ -1,9 +1,11 @@
 # Current Task
 
-- Date: 2026-04-05 10:10
-- Summary: CLI のデフォルト値を静音設定へ揃え、タイムアップ既定値 60 秒をドキュメントと実装で同期する。
+- Date: 2026-04-05 11:06
+- Summary: 外部 API による文字列生成、暗号化設定保存、タイトルメニュー、および Config 画面を追加する。
 - Steps:
-  - Update requirements, ADR, design, and specifications for the CLI default behavior change.
-  - Change runtime so typing feedback sound is disabled unless `--sound` is specified.
-  - Update help text to describe `--sound` as enabling both BGM and typing feedback.
-  - Verify the build succeeds after the default behavior change.
+  - Update requirements, ADR, design, and specifications for API generation and configuration editing.
+  - Implement encrypted config persistence in `~/.config/rtyping/config.json`.
+  - Add CLI provider flags `--google` and `--groq`.
+  - Implement provider-aware sentence generation for local, Google AI Studio, and Groq.
+  - Add title menu navigation and Config form editing in the TUI.
+  - Verify behavior with tests and a successful build.
