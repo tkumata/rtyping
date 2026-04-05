@@ -46,7 +46,7 @@ cargo install --path .
 
 ```text
 -t, --timeout <SECONDS>  Timer duration (default: 60)
--l, --level <LEVEL>      Target text length scale (default: 30)
+-l, --level <LEVEL>      Target text length scale (default: 60)
     --freq <FREQUENCY>   Sound frequency in Hz (default: 80.0)
 -s, --sound              Enable BGM and typing sound
     --google             Use Google AI Studio for text generation

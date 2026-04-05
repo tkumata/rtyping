@@ -74,7 +74,7 @@ mod tests {
     fn test_app() -> App {
         App::new(
             60,
-            30,
+            60,
             80.0,
             false,
             GenerationSource::Local,

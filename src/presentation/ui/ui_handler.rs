@@ -33,7 +33,7 @@ impl UiHandler {
             )
             .arg(
                 arg!(-l --level <LEVEL> "Target text length scale")
-                    .default_value("30")
+                    .default_value("60")
                     .value_parser(clap::value_parser!(usize)),
             )
             .arg(
