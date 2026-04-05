@@ -211,7 +211,11 @@ fn render_provider_block(
         };
         let display_value = if matches!(field, ConfigField::GoogleApiKey | ConfigField::GroqApiKey)
         {
-            "*".repeat(value.chars().count())
+            if value.is_empty() {
+                String::new()
+            } else {
+                "********".to_string()
+            }
         } else {
             value.clone()
         };
@@ -469,7 +473,7 @@ fn render_result(frame: &mut Frame, app: &App) {
         Line::from(format!("Time: {} sec", elapsed)),
         Line::from(format!("WPM: {:.1}", score)),
         Line::from(""),
-        Line::from("Press Enter to quit"),
+        Line::from("Press Enter to return to menu"),
     ];
     frame.render_widget(Clear, area);
     frame.render_widget(

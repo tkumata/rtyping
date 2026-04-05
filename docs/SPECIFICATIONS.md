@@ -47,8 +47,12 @@
 | CLI-005 | Groq provider selection | `--groq` | Startup provider becomes Groq | Local generator is not used |
 | CLI-006 | Exclusive provider flags | `--google --groq` | Startup fails with argument error | Mutually exclusive |
 | CFG-001 | Config file save | Save from Config screen | `~/.config/rtyping/config.json` is created | Stores provider entries |
+| CFG-001a | Legacy path fallback | Preferred config file is absent and legacy OS config file exists | Legacy file is loaded on startup | Backward compatibility for older saves |
 | CFG-002 | API key encryption | Save API key | Config file does not contain the plain API key | Ciphertext and nonce are stored |
 | CFG-003 | Config restore | Restart after save | URL, model, and decrypted API key return to the form | Requires `config.key` |
+| CFG-004 | Config restore without key file | Restart with missing or invalid `config.key` | URL and model remain visible, API key is blank, warning is shown | Avoids perceived full reset |
+| CFG-005 | Legacy API key restore | Restart with old AEAD label or legacy key location | Stored API key is restored without manual re-entry | Backward compatibility |
+| CFG-006 | Pre-AEAD API key restore | Restart with pre-AEAD XOR encrypted config | Stored API key is restored without manual re-entry | Migration compatibility |
 | UI-001 | Menu navigation | `Up`, `Down`, `Enter` on title screen | `Start Game` and `Config` can be selected | Initial focus is `Start Game` |
 | UI-002 | Config input edit | Character input and `Backspace` | Focused field value changes | Supports both Google and Groq sections |
 | UI-003 | Config save action | `Enter` on Config screen | Current values are persisted and success message is shown | `Esc` returns without saving |

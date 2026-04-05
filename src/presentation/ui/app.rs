@@ -185,7 +185,10 @@ impl App {
     }
 
     pub fn move_menu_down(&mut self) {
-        self.move_menu_up();
+        self.menu_selected = match self.menu_selected {
+            MenuItem::StartGame => MenuItem::Config,
+            MenuItem::Config => MenuItem::StartGame,
+        };
     }
 
     pub fn select_start_game(&mut self) {
@@ -231,6 +234,6 @@ impl App {
         ConfigField::ALL
             .iter()
             .position(|field| *field == self.config_field)
-            .unwrap_or(0)
+            .expect("ConfigField::ALL must contain all variants")
     }
 }

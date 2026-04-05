@@ -37,7 +37,7 @@
 
 ### Result Screen
 
-- **Enter**: Quit
+- **Enter**: Return to title screen
 
 ## Tips
 

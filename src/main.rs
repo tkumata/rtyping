@@ -22,28 +22,42 @@ use std::time::Duration;
 
 use config::AppConfig;
 use presentation::bgm_handler::BgmHandler;
-use presentation::sentence_handler::SentenceHandler;
 use presentation::ui::app::{App, AppState, MenuItem};
 use presentation::ui::render;
 use presentation::ui::ui_handler::UiHandler;
+use usecase::generate_sentence::{self, GenerationSource};
 
 struct GenerationJobResult {
     request_id: u64,
     result: Result<String, String>,
 }
 
+enum TimerCommand {
+    Start,
+    Stop,
+    Shutdown,
+}
+
 fn main() -> io::Result<()> {
     let args = UiHandler::parse_args();
     let (loaded_config, config_message) = match config::load_config() {
-        Ok(config) => (config, None),
+        Ok(report) => {
+            let message = if report.warnings.is_empty() {
+                None
+            } else {
+                Some(format!("Config warning: {}", report.warnings.join(" / ")))
+            };
+            (report.config, message)
+        }
         Err(err) => (
             AppConfig::default(),
             Some(format!("Failed to load config: {err}")),
         ),
     };
 
-    let audio_sink = DeviceSinkBuilder::open_default_sink()
+    let mut audio_sink = DeviceSinkBuilder::open_default_sink()
         .map_err(|err| io::Error::other(format!("failed to open audio device: {err}")))?;
+    audio_sink.log_on_drop(false);
     let (snd_sender, snd_receiver) = mpsc::channel();
 
     if args.sound {
@@ -72,26 +86,46 @@ fn main() -> io::Result<()> {
     let timer = Arc::new(Mutex::new(0i32));
     let timeout = args.timeout;
 
-    let (timer_stop_tx, timer_stop_rx) = mpsc::channel::<()>();
+    let (timer_command_tx, timer_command_rx) = mpsc::channel::<TimerCommand>();
     let (timeout_tx, timeout_rx) = mpsc::channel::<()>();
-    let (timer_start_tx, timer_start_rx) = mpsc::channel::<()>();
 
     let timer_clone = Arc::clone(&timer);
     let timer_thread = thread::spawn(move || {
-        if timer_start_rx.recv().is_err() {
-            return;
-        }
+        let mut running = false;
 
         loop {
-            if timer_stop_rx.try_recv().is_ok() {
-                break;
-            }
-            thread::sleep(Duration::from_secs(1));
-            let mut t = timer_clone.lock().unwrap();
-            *t += 1;
-            if *t >= timeout {
-                timeout_tx.send(()).ok();
-                break;
+            if running {
+                match timer_command_rx.recv_timeout(Duration::from_secs(1)) {
+                    Ok(TimerCommand::Start) => {
+                        *timer_clone.lock().unwrap() = 0;
+                        running = true;
+                    }
+                    Ok(TimerCommand::Stop) => {
+                        running = false;
+                    }
+                    Ok(TimerCommand::Shutdown) | Err(mpsc::RecvTimeoutError::Disconnected) => {
+                        break;
+                    }
+                    Err(mpsc::RecvTimeoutError::Timeout) => {
+                        let mut t = timer_clone.lock().unwrap();
+                        *t += 1;
+                        if *t >= timeout {
+                            running = false;
+                            timeout_tx.send(()).ok();
+                        }
+                    }
+                }
+            } else {
+                match timer_command_rx.recv() {
+                    Ok(TimerCommand::Start) => {
+                        *timer_clone.lock().unwrap() = 0;
+                        running = true;
+                    }
+                    Ok(TimerCommand::Stop) => {
+                        running = false;
+                    }
+                    Ok(TimerCommand::Shutdown) | Err(_) => break,
+                }
             }
         }
     });
@@ -101,9 +135,8 @@ fn main() -> io::Result<()> {
         &mut app,
         &timer,
         &audio_sink,
-        timer_stop_tx,
+        timer_command_tx.clone(),
         timeout_rx,
-        timer_start_tx,
     );
 
     disable_raw_mode()?;
@@ -114,6 +147,7 @@ fn main() -> io::Result<()> {
     )?;
     terminal.show_cursor()?;
 
+    timer_command_tx.send(TimerCommand::Shutdown).ok();
     timer_thread.join().unwrap();
     snd_sender.send(()).ok();
 
@@ -129,12 +163,10 @@ fn run_app(
     app: &mut App,
     timer: &Arc<Mutex<i32>>,
     audio_sink: &MixerDeviceSink,
-    timer_stop_tx: mpsc::Sender<()>,
+    timer_command_tx: mpsc::Sender<TimerCommand>,
     timeout_rx: mpsc::Receiver<()>,
-    timer_start_tx: mpsc::Sender<()>,
 ) -> io::Result<()> {
     let (generation_tx, generation_rx) = mpsc::channel::<GenerationJobResult>();
-    let mut timer_started = false;
     let mut next_request_id = 1_u64;
     let mut active_request_id: Option<u64> = None;
 
@@ -155,13 +187,9 @@ fn run_app(
                     active_request_id = None;
                     match job.result {
                         Ok(contents) if app.state == AppState::Loading => {
-                            *timer.lock().unwrap() = 0;
                             app.prepare_new_game(contents);
                             app.start_typing();
-                            if !timer_started {
-                                timer_start_tx.send(()).ok();
-                                timer_started = true;
-                            }
+                            timer_command_tx.send(TimerCommand::Start).ok();
                         }
                         Ok(_) => {}
                         Err(message) if app.state == AppState::Loading => {
@@ -204,11 +232,13 @@ fn run_app(
                 AppState::Config => handle_config_input(key, app),
                 AppState::Loading => handle_loading_input(key, app, &mut active_request_id),
                 AppState::Typing => {
-                    handle_typing_input(key, app, timer, audio_sink, &timer_stop_tx)
+                    handle_typing_input(key, app, timer, audio_sink, &timer_command_tx)
                 }
                 AppState::Result => {
                     if key.code == KeyCode::Enter {
-                        app.quit();
+                        *timer.lock().unwrap() = 0;
+                        app.return_to_menu();
+                        app.select_start_game();
                     }
                 }
             }
@@ -277,20 +307,16 @@ fn handle_menu_input(
                 let source = app.generation_source;
                 let text_scale = app.text_scale;
                 let provider = match source {
-                    usecase::generate_sentence::GenerationSource::Google => {
-                        Some(app.config.google.clone())
-                    }
-                    usecase::generate_sentence::GenerationSource::Groq => {
-                        Some(app.config.groq.clone())
-                    }
-                    usecase::generate_sentence::GenerationSource::Local => None,
+                    GenerationSource::Google => Some(app.config.google.clone()),
+                    GenerationSource::Groq => Some(app.config.groq.clone()),
+                    GenerationSource::Local => None,
                 };
                 let request_id = *next_request_id;
                 *next_request_id += 1;
                 *active_request_id = Some(request_id);
 
                 thread::spawn(move || {
-                    let result = SentenceHandler::print_sentence(text_scale, source, provider)
+                    let result = generate_sentence::generate(text_scale, source, provider)
                         .map_err(|err| err.to_string());
                     sender.send(GenerationJobResult { request_id, result }).ok();
                 });
@@ -356,16 +382,16 @@ fn handle_typing_input(
     app: &mut App,
     timer: &Arc<Mutex<i32>>,
     audio_sink: &MixerDeviceSink,
-    timer_stop_tx: &mpsc::Sender<()>,
+    timer_command_tx: &mpsc::Sender<TimerCommand>,
 ) {
     match key.code {
         KeyCode::Esc => {
-            timer_stop_tx.send(()).ok();
+            timer_command_tx.send(TimerCommand::Stop).ok();
             app.update_timer(*timer.lock().unwrap());
             app.finish_typing();
         }
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            timer_stop_tx.send(()).ok();
+            timer_command_tx.send(TimerCommand::Stop).ok();
             app.quit();
         }
         KeyCode::Backspace => {
@@ -380,7 +406,7 @@ fn handle_typing_input(
             }
 
             if app.is_complete() {
-                timer_stop_tx.send(()).ok();
+                timer_command_tx.send(TimerCommand::Stop).ok();
                 app.update_timer(*timer.lock().unwrap());
                 app.finish_typing();
             }

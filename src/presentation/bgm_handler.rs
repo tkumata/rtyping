@@ -15,9 +15,10 @@ impl BgmHandler {
 
     pub fn start(self) {
         thread::spawn(move || {
-            let Ok(handle) = DeviceSinkBuilder::open_default_sink() else {
+            let Ok(mut handle) = DeviceSinkBuilder::open_default_sink() else {
                 return;
             };
+            handle.log_on_drop(false);
             let sink = Player::connect_new(handle.mixer());
 
             loop {

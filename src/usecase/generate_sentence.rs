@@ -18,7 +18,7 @@ pub enum GenerationSource {
     Groq,
 }
 
-pub fn generate_sentence(
+pub fn generate(
     text_scale: usize,
     source: GenerationSource,
     provider_config: Option<ProviderConfig>,
@@ -159,11 +159,8 @@ fn parse_json_response(
         )));
     }
 
-    serde_json::from_str(&response_text).map_err(|err| {
-        io::Error::other(format!(
-            "{provider_name} returned invalid JSON: {err}; body={response_text}"
-        ))
-    })
+    serde_json::from_str(&response_text)
+        .map_err(|err| io::Error::other(format!("{provider_name} returned invalid JSON: {err}")))
 }
 
 fn build_prompt(target_chars: usize) -> String {
@@ -236,8 +233,8 @@ mod tests {
 
     #[test]
     fn test_generate_sentence_success() {
-        let sentence = generate_sentence(10, GenerationSource::Local, None)
-            .expect("local generation should succeed");
+        let sentence =
+            generate(10, GenerationSource::Local, None).expect("local generation should succeed");
         assert!(
             !sentence.is_empty(),
             "Generated sentence should not be empty"

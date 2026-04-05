@@ -91,10 +91,14 @@ GitHub Actions を用いて、テストコードを継続的に実行する。
 ### 設定設計
 
 - 設定ファイルは `~/.config/rtyping/config.json` とする。
+- 読み込み時は `~/.config/rtyping/config.json` を優先し、存在しない場合のみ OS 既定の config ディレクトリ配下の旧保存先をフォールバックとして読む。
 - JSON には `google` と `groq` の各設定を保持し、各設定は `api_url`、`model`、`api_key_ciphertext`、`api_key_nonce` を持つ。
 - 復号鍵は OS 標準の config ディレクトリ配下の `rtyping/config.key` に分離して保持し、存在しない場合は初回保存時に生成する。
 - `API key` の暗号化は AEAD を用い、復号時に改ざん検知を行う。
 - Config 画面は平文 API key を編集できるが、保存時のみ暗号化し、画面再表示時は復号して入力欄へ戻す。
+- `config.key` 欠損や破損時でも `api_url` と `model` は復元し、復号できない `API key` のみ空欄にして警告を表示する。
+- 起動時の復号は優先保存先と旧保存先の鍵候補を順に試し、さらに互換性のため旧 AEAD ラベルでも復号を試みる。
+- さらに AEAD 導入前の旧 XOR 方式で保存された `API key` も起動時に互換復号し、ユーザーに再入力を要求しない。
 
 ### 文字列生成設計
 
