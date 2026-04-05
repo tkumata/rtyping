@@ -188,7 +188,7 @@ fn run_app(
                             let is_correct = app.push_char(c);
 
                             // Play feedback sound on correct input
-                            if is_correct {
+                            if is_correct && app.sound_enabled {
                                 let source = SineWave::new(app.freq)
                                     .take_duration(Duration::from_millis(100));
                                 stream.mixer().add(source);
