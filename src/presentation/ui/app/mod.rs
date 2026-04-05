@@ -17,6 +17,8 @@ pub enum AppState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MenuItem {
     StartGame,
+    StartGameGoogle,
+    StartGameGroq,
     Config,
 }
 
@@ -179,6 +181,10 @@ impl App {
 
     pub fn generation_source(&self) -> GenerationSource {
         self.generation_source
+    }
+
+    pub fn set_generation_source(&mut self, source: GenerationSource) {
+        self.generation_source = source;
     }
 
     pub fn generation_settings(&self) -> (usize, GenerationSource, AppConfig) {

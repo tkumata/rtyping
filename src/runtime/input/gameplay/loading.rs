@@ -2,7 +2,11 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use crate::presentation::ui::app::App;
 
-pub(in crate::runtime::input) fn handle_loading_input(key: KeyEvent, app: &mut App, active_request_id: &mut Option<u64>) {
+pub(in crate::runtime::input) fn handle_loading_input(
+    key: KeyEvent,
+    app: &mut App,
+    active_request_id: &mut Option<u64>,
+) {
     match key.code {
         KeyCode::Esc => {
             *active_request_id = None;
@@ -33,7 +37,14 @@ mod tests {
 
     #[test]
     fn escape_on_loading_cancels_request() {
-        let mut app = App::new(60, 30, 80.0, false, GenerationSource::Local, AppConfig::default());
+        let mut app = App::new(
+            60,
+            30,
+            80.0,
+            false,
+            GenerationSource::Local,
+            AppConfig::default(),
+        );
         let mut active_request_id = Some(8);
 
         app.enter_loading();

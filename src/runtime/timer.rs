@@ -72,4 +72,3 @@ pub(super) fn finish_typing_session(
     app.update_timer(current_timer(timer));
     app.finish_typing();
 }
-

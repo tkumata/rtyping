@@ -35,16 +35,20 @@
 ## Runtime
 
 - `RUN-001`
-  - タイトル画面では `Start Game` と `Config` を上下キーで切り替える。
+  - タイトル画面では `Start Game`、`Start Game via Google AI Studio`、`Start Game via Groq`、`Config` を上下キーで巡回選択できる。
 - `RUN-002`
-  - `Start Game` 選択時は `Loading` に遷移し、生成完了で `Typing` に進む。
+  - `Start Game` 選択時は `Local` 生成で `Loading` に遷移し、生成完了で `Typing` に進む。
 - `RUN-003`
-  - 生成失敗時は `Menu` に戻り、失敗理由を表示する。
+  - `Start Game via Google AI Studio` 選択時は `Google AI Studio` 生成で `Loading` に遷移し、生成完了で `Typing` に進む。
 - `RUN-004`
-  - `Loading` 中に `Esc` を押すと生成要求を破棄して `Menu` に戻る。
+  - `Start Game via Groq` 選択時は `Groq` 生成で `Loading` に遷移し、生成完了で `Typing` に進む。
 - `RUN-005`
-  - `Config` 画面で `Enter` は保存、`Esc` は破棄、`Backspace` は文字削除として扱う。
+  - 生成失敗時は `Menu` に戻り、失敗理由を表示する。
 - `RUN-006`
+  - `Loading` 中に `Esc` を押すと生成要求を破棄して `Menu` に戻る。
+- `RUN-007`
+  - `Config` 画面で `Enter` は保存、`Esc` は破棄、`Backspace` は文字削除として扱う。
+- `RUN-008`
   - `Typing` 中に全文入力またはタイムアウトで `Result` に遷移する。
 
 ## Sentence Generation

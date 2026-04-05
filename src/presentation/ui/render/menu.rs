@@ -17,7 +17,7 @@ pub fn render_menu(frame: &mut Frame, app: &App) {
         .constraints([
             Constraint::Percentage(20),
             Constraint::Length(11),
-            Constraint::Length(4),
+            Constraint::Length(6),
             Constraint::Length(3),
             Constraint::Min(0),
         ])
@@ -43,6 +43,12 @@ pub fn render_menu(frame: &mut Frame, app: &App) {
 
     let menu_lines = vec![
         menu_line(app, MenuItem::StartGame, "Start Game"),
+        menu_line(
+            app,
+            MenuItem::StartGameGoogle,
+            "Start Game via Google AI Studio",
+        ),
+        menu_line(app, MenuItem::StartGameGroq, "Start Game via Groq"),
         menu_line(app, MenuItem::Config, "Config"),
     ];
     let menu = Paragraph::new(menu_lines)

@@ -21,7 +21,9 @@ pub fn generate(
     let target_chars = target_character_count(text_scale);
     let sentence = match source {
         GenerationSource::Local => local::generate_local_sentence(target_chars)?,
-        GenerationSource::Google => providers::generate_google_sentence(target_chars, provider_config)?,
+        GenerationSource::Google => {
+            providers::generate_google_sentence(target_chars, provider_config)?
+        }
         GenerationSource::Groq => providers::generate_groq_sentence(target_chars, provider_config)?,
     };
 
@@ -68,7 +70,8 @@ mod tests {
 
     #[test]
     fn google_generation_requires_complete_config() {
-        let err = generate(10, GenerationSource::Google, None).expect_err("config should be required");
+        let err =
+            generate(10, GenerationSource::Google, None).expect_err("config should be required");
         assert!(err.to_string().contains("Google config is missing"));
 
         let incomplete = ProviderConfig {
@@ -78,12 +81,16 @@ mod tests {
         };
         let err = generate(10, GenerationSource::Google, Some(incomplete))
             .expect_err("incomplete config should fail");
-        assert!(err.to_string().contains("Google AI Studio config is incomplete"));
+        assert!(
+            err.to_string()
+                .contains("Google AI Studio config is incomplete")
+        );
     }
 
     #[test]
     fn groq_generation_requires_complete_config() {
-        let err = generate(10, GenerationSource::Groq, None).expect_err("config should be required");
+        let err =
+            generate(10, GenerationSource::Groq, None).expect_err("config should be required");
         assert!(err.to_string().contains("Groq config is missing"));
 
         let incomplete = ProviderConfig {

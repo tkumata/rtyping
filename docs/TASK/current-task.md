@@ -1,11 +1,9 @@
 # Current Task
 
-- Date: 2026-04-05 11:06
-- Summary: 外部 API による文字列生成、暗号化設定保存、タイトルメニュー、および Config 画面を追加する。
+- Date: 2026-04-05 20:01
+- Summary: タイトル画面の開始メニューを生成元別に 3 項目へ分割し、Config を含む 4 項目構成へ変更する。
 - Steps:
-  - Update requirements, ADR, design, and specifications for API generation and configuration editing.
-  - Implement encrypted config persistence in `~/.config/rtyping/config.json`.
-  - Add CLI provider flags `--google` and `--groq`.
-  - Implement provider-aware sentence generation for local, Google AI Studio, and Groq.
-  - Add title menu navigation and Config form editing in the TUI.
-  - Verify behavior with tests and a successful build.
+  - Update requirements, ADR, design, and specifications for the title menu provider selection.
+  - Implement menu selection state and provider switching for local, Google AI Studio, and Groq starts.
+  - Update title menu rendering to show the four entries.
+  - Verify behavior with tests.

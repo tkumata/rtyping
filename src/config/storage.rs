@@ -5,7 +5,9 @@ use std::path::{Path, PathBuf};
 
 use crate::domain::config::{AppConfig, ConfigLoadReport, ProviderConfig};
 
-use super::crypto::{decrypt_with_candidates, encrypt_value, ensure_key, read_key, set_private_permissions};
+use super::crypto::{
+    decrypt_with_candidates, encrypt_value, ensure_key, read_key, set_private_permissions,
+};
 use super::paths::alternate_config_paths;
 
 struct ProviderRestoreSpec<'a> {
@@ -28,7 +30,10 @@ struct StoredAppConfig {
     groq: StoredProviderConfig,
 }
 
-pub(super) fn load_config_from_paths(config_path: &Path, key_path: &Path) -> io::Result<ConfigLoadReport> {
+pub(super) fn load_config_from_paths(
+    config_path: &Path,
+    key_path: &Path,
+) -> io::Result<ConfigLoadReport> {
     if !config_path.exists() {
         return Ok(ConfigLoadReport {
             config: AppConfig::default(),
@@ -69,7 +74,11 @@ pub(super) fn load_config_from_paths(config_path: &Path, key_path: &Path) -> io:
     })
 }
 
-pub(super) fn save_config_to_paths(config: &AppConfig, config_path: &Path, key_path: &Path) -> io::Result<()> {
+pub(super) fn save_config_to_paths(
+    config: &AppConfig,
+    config_path: &Path,
+    key_path: &Path,
+) -> io::Result<()> {
     if let Some(parent) = config_path.parent() {
         fs::create_dir_all(parent)?;
     }
@@ -200,10 +209,7 @@ pub(super) mod test_support {
     use super::StoredProviderConfig;
     use crate::config::crypto::{encrypt_value, ensure_key, xor_with_keystream};
 
-    pub(crate) fn write_legacy_aad_config(
-        config_path: &Path,
-        key_path: &Path,
-    ) -> (String, String) {
+    pub(crate) fn write_legacy_aad_config(config_path: &Path, key_path: &Path) -> (String, String) {
         let key = ensure_key(key_path).expect("key should be created");
         let google_cipher = encrypt_value("google-secret", &key, "Google").expect("encrypt");
         let groq_cipher = encrypt_value("groq-secret", &key, "Groq").expect("encrypt");
@@ -226,10 +232,7 @@ pub(super) mod test_support {
         ("google-secret".into(), "groq-secret".into())
     }
 
-    pub(crate) fn write_legacy_xor_config(
-        config_path: &Path,
-        key_path: &Path,
-    ) -> (String, String) {
+    pub(crate) fn write_legacy_xor_config(config_path: &Path, key_path: &Path) -> (String, String) {
         let key = ensure_key(key_path).expect("key should be created");
         let google_cipher = legacy_encrypt_value("google-secret", &key);
         let groq_cipher = legacy_encrypt_value("groq-secret", &key);
