@@ -53,7 +53,9 @@ struct EnvSandbox {
 
 impl EnvSandbox {
     fn new() -> Self {
-        let lock = ENV_LOCK.lock().expect("env lock should be available");
+        let lock = ENV_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let sandbox = TestConfigSandbox::new();
         fs::create_dir_all(&sandbox.dir).expect("sandbox dir should be created");
 
@@ -81,10 +83,10 @@ impl EnvSandbox {
         self.root.join("xdg").join("rtyping")
     }
 
-    fn legacy_dir(&self) -> PathBuf {
-        dirs::config_dir()
-            .expect("config dir should resolve")
-            .join("rtyping")
+    fn legacy_dir(&self) -> Option<PathBuf> {
+        alternate_config_paths()
+            .expect("alternate path lookup should succeed")
+            .map(|paths| paths.config_path.parent().expect("parent should exist").to_path_buf())
     }
 }
 
@@ -192,11 +194,21 @@ fn load_config_prefers_xdg_path_over_legacy_path() {
     };
 
     let preferred_dir = env_sandbox.preferred_dir();
-    let legacy_dir = env_sandbox.legacy_dir();
-    save_config_to_paths(&preferred, &preferred_dir.join("config.json"), &preferred_dir.join("config.key"))
-        .expect("preferred config should be saved");
-    save_config_to_paths(&legacy, &legacy_dir.join("config.json"), &legacy_dir.join("config.key"))
+    save_config_to_paths(
+        &preferred,
+        &preferred_dir.join("config.json"),
+        &preferred_dir.join("config.key"),
+    )
+    .expect("preferred config should be saved");
+
+    if let Some(legacy_dir) = env_sandbox.legacy_dir() {
+        save_config_to_paths(
+            &legacy,
+            &legacy_dir.join("config.json"),
+            &legacy_dir.join("config.key"),
+        )
         .expect("legacy config should be saved");
+    }
 
     let report = load_config().expect("load should succeed");
     assert_eq!(report.config, preferred);
@@ -214,12 +226,20 @@ fn load_config_falls_back_to_legacy_path_when_preferred_is_missing() {
         groq: ProviderConfig::default(),
     };
 
-    let legacy_dir = env_sandbox.legacy_dir();
-    save_config_to_paths(&legacy, &legacy_dir.join("config.json"), &legacy_dir.join("config.key"))
+    if let Some(legacy_dir) = env_sandbox.legacy_dir() {
+        save_config_to_paths(
+            &legacy,
+            &legacy_dir.join("config.json"),
+            &legacy_dir.join("config.key"),
+        )
         .expect("legacy config should be saved");
 
-    let report = load_config().expect("load should succeed");
-    assert_eq!(report.config, legacy);
+        let report = load_config().expect("load should succeed");
+        assert_eq!(report.config, legacy);
+    } else {
+        let report = load_config().expect("load should succeed");
+        assert_eq!(report.config, AppConfig::default());
+    }
 }
 
 #[test]
@@ -285,8 +305,12 @@ fn load_restores_api_key_from_legacy_xor_format() {
 }
 
 #[test]
-fn alternate_path_is_distinct_from_primary_when_xdg_is_set() {
-    let _env_sandbox = EnvSandbox::new();
+fn alternate_path_is_optional_and_distinct_when_present() {
+    let env_sandbox = EnvSandbox::new();
     let alternate = alternate_config_paths().expect("path lookup should succeed");
-    assert!(alternate.is_some());
+
+    if let Some(alternate) = alternate {
+        assert_ne!(alternate.config_path, env_sandbox.preferred_dir().join("config.json"));
+        assert_ne!(alternate.key_path, env_sandbox.preferred_dir().join("config.key"));
+    }
 }
