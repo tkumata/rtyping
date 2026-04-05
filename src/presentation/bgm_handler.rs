@@ -2,6 +2,8 @@ use std::io::{BufReader, Cursor};
 use std::sync::mpsc::{Receiver, TryRecvError};
 use std::thread;
 
+use rodio::{DeviceSinkBuilder, Player};
+
 pub struct BgmHandler {
     receiver: Receiver<()>,
 }
@@ -26,12 +28,12 @@ impl BgmHandler {
 }
 
 fn play_audio() {
-    let stream = rodio::OutputStreamBuilder::open_default_stream().unwrap();
-    let sink = rodio::Sink::connect_new(stream.mixer());
+    let handle = DeviceSinkBuilder::open_default_sink().unwrap();
+    let sink = Player::connect_new(handle.mixer());
     let bytes = include_bytes!("../../src/assets/audio/BGM.mp3");
     let cursor = Cursor::new(bytes);
 
-    sink.append(rodio::Decoder::new(BufReader::new(cursor)).unwrap());
+    sink.append(rodio::Decoder::try_from(BufReader::new(cursor)).unwrap());
     sink.set_volume(0.4);
     sink.sleep_until_end();
 }
