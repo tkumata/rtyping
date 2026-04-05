@@ -1,6 +1,6 @@
-use super::{load_config, save_config};
 use super::paths::alternate_config_paths;
 use super::storage::{load_config_from_paths, save_config_to_paths, test_support};
+use super::{load_config, save_config};
 use crate::domain::config::{AppConfig, ProviderConfig};
 use rand::RngExt;
 use std::env;
@@ -86,7 +86,13 @@ impl EnvSandbox {
     fn legacy_dir(&self) -> Option<PathBuf> {
         alternate_config_paths()
             .expect("alternate path lookup should succeed")
-            .map(|paths| paths.config_path.parent().expect("parent should exist").to_path_buf())
+            .map(|paths| {
+                paths
+                    .config_path
+                    .parent()
+                    .expect("parent should exist")
+                    .to_path_buf()
+            })
     }
 }
 
@@ -126,13 +132,15 @@ fn save_and_load_config_round_trip() {
     let sandbox = TestConfigSandbox::new();
     let config = sample_config();
 
-    save_config_to_paths(&config, &sandbox.config_path, &sandbox.key_path).expect("save should succeed");
+    save_config_to_paths(&config, &sandbox.config_path, &sandbox.key_path)
+        .expect("save should succeed");
     let raw = fs::read_to_string(&sandbox.config_path).expect("config should exist");
 
     assert!(!raw.contains("google-secret"));
     assert!(!raw.contains("groq-secret"));
 
-    let report = load_config_from_paths(&sandbox.config_path, &sandbox.key_path).expect("load should succeed");
+    let report = load_config_from_paths(&sandbox.config_path, &sandbox.key_path)
+        .expect("load should succeed");
     assert!(report.warnings.is_empty(), "{:?}", report.warnings);
     assert_eq!(report.config, config);
 }
@@ -140,7 +148,8 @@ fn save_and_load_config_round_trip() {
 #[test]
 fn load_missing_config_returns_default_without_warnings() {
     let sandbox = TestConfigSandbox::new();
-    let report = load_config_from_paths(&sandbox.config_path, &sandbox.key_path).expect("load should succeed");
+    let report = load_config_from_paths(&sandbox.config_path, &sandbox.key_path)
+        .expect("load should succeed");
     assert_eq!(report.config, AppConfig::default());
     assert!(report.warnings.is_empty());
 }
@@ -151,7 +160,8 @@ fn load_invalid_json_returns_parse_error() {
     fs::create_dir_all(&sandbox.dir).expect("dir should be created");
     fs::write(&sandbox.config_path, "{not-json").expect("broken config should be written");
 
-    let err = load_config_from_paths(&sandbox.config_path, &sandbox.key_path).expect_err("load should fail");
+    let err = load_config_from_paths(&sandbox.config_path, &sandbox.key_path)
+        .expect_err("load should fail");
     assert!(err.to_string().contains("failed to parse config.json"));
 }
 
@@ -247,10 +257,12 @@ fn load_keeps_non_secret_fields_when_key_is_missing() {
     let sandbox = TestConfigSandbox::new();
     let config = sample_config();
 
-    save_config_to_paths(&config, &sandbox.config_path, &sandbox.key_path).expect("save should succeed");
+    save_config_to_paths(&config, &sandbox.config_path, &sandbox.key_path)
+        .expect("save should succeed");
     fs::remove_file(&sandbox.key_path).expect("key should be removable");
 
-    let report = load_config_from_paths(&sandbox.config_path, &sandbox.key_path).expect("load should succeed");
+    let report = load_config_from_paths(&sandbox.config_path, &sandbox.key_path)
+        .expect("load should succeed");
 
     assert_eq!(report.config.google.api_url, config.google.api_url);
     assert_eq!(report.config.google.model, config.google.model);
@@ -266,10 +278,12 @@ fn load_keeps_non_secret_fields_when_key_is_invalid() {
     let sandbox = TestConfigSandbox::new();
     let config = sample_config();
 
-    save_config_to_paths(&config, &sandbox.config_path, &sandbox.key_path).expect("save should succeed");
+    save_config_to_paths(&config, &sandbox.config_path, &sandbox.key_path)
+        .expect("save should succeed");
     fs::write(&sandbox.key_path, "broken-key").expect("broken key should be written");
 
-    let report = load_config_from_paths(&sandbox.config_path, &sandbox.key_path).expect("load should succeed");
+    let report = load_config_from_paths(&sandbox.config_path, &sandbox.key_path)
+        .expect("load should succeed");
 
     assert_eq!(report.config.google.api_url, config.google.api_url);
     assert_eq!(report.config.google.model, config.google.model);
@@ -283,9 +297,11 @@ fn load_keeps_non_secret_fields_when_key_is_invalid() {
 #[test]
 fn load_restores_api_key_from_legacy_aad_label() {
     let sandbox = TestConfigSandbox::new();
-    let (google_secret, groq_secret) = test_support::write_legacy_aad_config(&sandbox.config_path, &sandbox.key_path);
+    let (google_secret, groq_secret) =
+        test_support::write_legacy_aad_config(&sandbox.config_path, &sandbox.key_path);
 
-    let report = load_config_from_paths(&sandbox.config_path, &sandbox.key_path).expect("load should succeed");
+    let report = load_config_from_paths(&sandbox.config_path, &sandbox.key_path)
+        .expect("load should succeed");
 
     assert!(report.warnings.is_empty());
     assert_eq!(report.config.google.api_key, google_secret);
@@ -295,9 +311,11 @@ fn load_restores_api_key_from_legacy_aad_label() {
 #[test]
 fn load_restores_api_key_from_legacy_xor_format() {
     let sandbox = TestConfigSandbox::new();
-    let (google_secret, groq_secret) = test_support::write_legacy_xor_config(&sandbox.config_path, &sandbox.key_path);
+    let (google_secret, groq_secret) =
+        test_support::write_legacy_xor_config(&sandbox.config_path, &sandbox.key_path);
 
-    let report = load_config_from_paths(&sandbox.config_path, &sandbox.key_path).expect("load should succeed");
+    let report = load_config_from_paths(&sandbox.config_path, &sandbox.key_path)
+        .expect("load should succeed");
 
     assert!(report.warnings.is_empty(), "{:?}", report.warnings);
     assert_eq!(report.config.google.api_key, google_secret);
@@ -310,7 +328,13 @@ fn alternate_path_is_optional_and_distinct_when_present() {
     let alternate = alternate_config_paths().expect("path lookup should succeed");
 
     if let Some(alternate) = alternate {
-        assert_ne!(alternate.config_path, env_sandbox.preferred_dir().join("config.json"));
-        assert_ne!(alternate.key_path, env_sandbox.preferred_dir().join("config.key"));
+        assert_ne!(
+            alternate.config_path,
+            env_sandbox.preferred_dir().join("config.json")
+        );
+        assert_ne!(
+            alternate.key_path,
+            env_sandbox.preferred_dir().join("config.key")
+        );
     }
 }

@@ -8,9 +8,9 @@ use std::time::Duration;
 use crate::presentation::ui::app::{App, AppState};
 use crate::presentation::ui::render;
 
-use super::{GenerationJobResult, RuntimeContext, TimerCommand};
 use super::input::{drain_generation_results, handle_key_event};
 use super::timer::current_timer;
+use super::{GenerationJobResult, RuntimeContext, TimerCommand};
 
 pub fn run_app(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
@@ -64,4 +64,3 @@ pub fn run_app(
 
     Ok(())
 }
-

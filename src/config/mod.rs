@@ -18,7 +18,10 @@ pub fn load_config() -> io::Result<ConfigLoadReport> {
     if let Some(alternate_paths) = paths::alternate_config_paths()?
         && alternate_paths.config_path.exists()
     {
-        return storage::load_config_from_paths(&alternate_paths.config_path, &alternate_paths.key_path);
+        return storage::load_config_from_paths(
+            &alternate_paths.config_path,
+            &alternate_paths.key_path,
+        );
     }
 
     storage::load_config_from_paths(&paths.config_path, &paths.key_path)

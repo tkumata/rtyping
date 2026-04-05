@@ -46,4 +46,3 @@ mod tests {
         assert!(!accepts_config_char(KeyModifiers::CONTROL));
     }
 }
-

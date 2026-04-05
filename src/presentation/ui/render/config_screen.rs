@@ -46,7 +46,11 @@ pub fn render_config(frame: &mut Frame, app: &App) {
                 "API Key",
                 &app.config().google.api_key,
             ),
-            (ConfigField::GoogleModel, "Model", &app.config().google.model),
+            (
+                ConfigField::GoogleModel,
+                "Model",
+                &app.config().google.model,
+            ),
         ],
         app.config_field(),
     );
@@ -56,8 +60,16 @@ pub fn render_config(frame: &mut Frame, app: &App) {
         chunks[2],
         "Groq",
         [
-            (ConfigField::GroqApiUrl, "API URL", &app.config().groq.api_url),
-            (ConfigField::GroqApiKey, "API Key", &app.config().groq.api_key),
+            (
+                ConfigField::GroqApiUrl,
+                "API URL",
+                &app.config().groq.api_url,
+            ),
+            (
+                ConfigField::GroqApiKey,
+                "API Key",
+                &app.config().groq.api_key,
+            ),
             (ConfigField::GroqModel, "Model", &app.config().groq.model),
         ],
         app.config_field(),

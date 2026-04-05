@@ -77,7 +77,11 @@ pub(super) fn decrypt_with_candidates(
     Err(last_error)
 }
 
-pub(super) fn encrypt_value(value: &str, key: &[u8], aad_label: &str) -> io::Result<(String, String)> {
+pub(super) fn encrypt_value(
+    value: &str,
+    key: &[u8],
+    aad_label: &str,
+) -> io::Result<(String, String)> {
     let cipher = build_cipher(key)?;
     let mut nonce_bytes = [0u8; 12];
     rand::rng().fill_bytes(&mut nonce_bytes);

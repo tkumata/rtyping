@@ -2,7 +2,7 @@
 
 R-Typing is a terminal-based typing game built with Rust. It provides a TUI powered by `ratatui` and `crossterm`, real-time WPM feedback, optional audio, and multiple text generation sources.
 
-By default, the game generates practice text locally. It can also generate text through Google AI Studio or Groq when enabled with CLI flags.
+By default, the game starts from a title menu where you can choose local generation, Google AI Studio, or Groq for the next game. CLI flags can still preselect the generation source at launch.
 
 ![sample1](./docs/screenshot-01.png)
 ![sample2](./docs/screenshot-02.png)
@@ -21,13 +21,13 @@ By default, the game generates practice text locally. It can also generate text 
 ## Run
 
 ```shell
-# Default: local text generation
+# Start normally and choose a provider from the title menu
 cargo run
 
-# Enable Google AI Studio
+# Start with Google AI Studio preselected as the generation source
 cargo run -- --google
 
-# Enable Groq
+# Start with Groq preselected as the generation source
 cargo run -- --groq
 
 # Custom game settings
@@ -46,7 +46,7 @@ cargo install --path .
 
 ```text
 -t, --timeout <SECONDS>  Timer duration (default: 60)
--l, --level <LEVEL>      Target text length scale (default: 30)
+-l, --level <LEVEL>      Target text length scale (default: 60)
     --freq <FREQUENCY>   Sound frequency in Hz (default: 80.0)
 -s, --sound              Enable BGM and typing sound
     --google             Use Google AI Studio for text generation
@@ -57,7 +57,12 @@ cargo install --path .
 
 ## Title Menu
 
-- `Up / Down`: select `Start Game` or `Config`
+- Menu entries:
+  - `Start Game`
+  - `Start Game via Google AI Studio`
+  - `Start Game via Groq`
+  - `Config`
+- `Up / Down`: move between the four menu entries
 - `Enter`: confirm selection
 - `h`: open or close help
 - `Esc`: quit
