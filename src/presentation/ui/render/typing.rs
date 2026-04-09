@@ -43,19 +43,24 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
         ])
         .split(area);
 
-    let time_remaining = app.timeout() - app.timer();
-    let time_color = if time_remaining <= 10 {
-        Color::Red
-    } else if time_remaining <= 30 {
-        Color::Yellow
+    let (time_label, time_text, time_color) = if app.timeout() <= 0 {
+        ("Elapsed: ", format!("{:03}", app.timer()), Color::Cyan)
     } else {
-        Color::Green
+        let time_remaining = app.timeout().saturating_sub(app.timer());
+        let color = if time_remaining <= 10 {
+            Color::Red
+        } else if time_remaining <= 30 {
+            Color::Yellow
+        } else {
+            Color::Green
+        };
+        ("Time: ", format!("{:03}", time_remaining), color)
     };
 
     let timer_text = vec![Line::from(vec![
-        Span::styled("Time: ", Style::default().fg(Color::Gray)),
+        Span::styled(time_label, Style::default().fg(Color::Gray)),
         Span::styled(
-            format!("{:03}", time_remaining),
+            time_text,
             Style::default().fg(time_color).add_modifier(Modifier::BOLD),
         ),
         Span::styled(" s", Style::default().fg(Color::Gray)),
@@ -93,11 +98,7 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(title, header_chunks[1]);
 
     let wpm_current = if app.timer() > 0 {
-        wpm::calc_wpm(
-            app.current_input_count(),
-            app.timer(),
-            app.incorrects() as i32,
-        )
+        wpm::calc_wpm(app.typed_count(), app.timer(), app.incorrects() as i32)
     } else {
         0.0
     };
@@ -184,7 +185,7 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
         Paragraph::new(Line::from(vec![
             Span::styled("Types: ", Style::default().fg(Color::Gray)),
             Span::styled(
-                format!("{:03}", app.current_input_count()),
+                format!("{:03}", app.typed_count()),
                 Style::default()
                     .fg(Color::LightBlue)
                     .add_modifier(Modifier::BOLD),

@@ -3,7 +3,7 @@
 ## CLI Options
 
 ```text
--t, --timeout <SECONDS>  Timer duration (default: 60)
+-t, --timeout <SECONDS>  Timer duration (default: 60, 0 = practice mode)
 -l, --level <LEVEL>      Target text length scale (default: 30)
     --freq <FREQUENCY>   Sound frequency in Hz (default: 80.0)
 -s, --sound              Enable BGM and typing sound
@@ -15,7 +15,7 @@
 
 ### Title Screen
 
-- **Up / Down**: Select `Start Game` or `Config`
+- **Up / Down**: Select `Start Game`, `Practice Mode`, `Start Game via Google AI Studio`, `Start Game via Groq`, or `Config`
 - **Enter**: Confirm selection
 - **h**: Show/Hide this help
 - **Up / Down**: Scroll help text (when visible)
@@ -32,7 +32,7 @@
 ### Typing Screen
 
 - **Backspace**: Delete last character
-- **Esc**: End typing and show results
+- **Esc**: Return to title screen
 - **Ctrl+c**: Quit
 
 ### Result Screen

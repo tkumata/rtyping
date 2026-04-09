@@ -44,7 +44,7 @@ pub(in crate::runtime::input) fn apply_generation_result(
         Ok(contents) if app.state() == AppState::Loading => {
             app.prepare_new_game(contents);
             app.start_typing();
-            timer_command_tx.send(TimerCommand::Start).ok();
+            timer_command_tx.send(TimerCommand::Start(app.timeout())).ok();
         }
         Ok(_) => {}
         Err(message) if app.state() == AppState::Loading => {
@@ -143,7 +143,7 @@ mod tests {
         assert_eq!(app.state(), AppState::Typing);
         assert_eq!(app.target_string(), "typing text");
         assert_eq!(active_request_id, None);
-        assert!(matches!(timer_rx.try_recv(), Ok(TimerCommand::Start)));
+        assert!(matches!(timer_rx.try_recv(), Ok(TimerCommand::Start(60))));
     }
 
     #[test]

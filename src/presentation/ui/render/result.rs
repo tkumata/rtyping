@@ -15,7 +15,7 @@ use super::common::centered_rect;
 pub fn render_result(frame: &mut Frame, app: &App) {
     let area = centered_rect(60, 35, frame.area());
     let elapsed = app.timer().max(1);
-    let score = wpm::calc_wpm(app.current_input_count(), elapsed, app.incorrects() as i32);
+    let score = wpm::calc_wpm(app.typed_count(), elapsed, app.incorrects() as i32);
     let accuracy = accuracy::calc_accuracy(app.typed_count(), app.incorrects());
     let lines = vec![
         Line::from("Typing Finished"),

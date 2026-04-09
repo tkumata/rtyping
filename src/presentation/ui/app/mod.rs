@@ -17,6 +17,7 @@ pub enum AppState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MenuItem {
     StartGame,
+    PracticeMode,
     StartGameGoogle,
     StartGameGroq,
     Config,
@@ -51,6 +52,7 @@ pub struct App {
     incorrects: usize,
     timer: i32,
     timeout: i32,
+    practice_mode: bool,
     text_scale: usize,
     should_quit: bool,
     freq: f32,
@@ -82,6 +84,7 @@ impl App {
             incorrects: 0,
             timer: 0,
             timeout,
+            practice_mode: false,
             text_scale,
             should_quit: false,
             freq,
@@ -138,6 +141,7 @@ impl App {
 
     pub fn return_to_menu_with_start_selected(&mut self) {
         self.return_to_menu();
+        self.set_practice_mode(false);
         self.select_start_game();
     }
 
@@ -166,7 +170,20 @@ impl App {
     }
 
     pub fn timeout(&self) -> i32 {
-        self.timeout
+        if self.practice_mode {
+            0
+        } else {
+            self.timeout
+        }
+    }
+
+    pub fn set_practice_mode(&mut self, practice_mode: bool) {
+        self.practice_mode = practice_mode;
+    }
+
+    #[cfg(test)]
+    pub fn is_practice_mode(&self) -> bool {
+        self.practice_mode
     }
 
     pub fn is_quit_requested(&self) -> bool {

@@ -49,16 +49,25 @@ pub(super) fn handle_menu_input(
         KeyCode::Enter => match app.menu_selected() {
             MenuItem::StartGame => {
                 app.set_generation_source(GenerationSource::Local);
+                app.set_practice_mode(false);
+                reset_timer(timer);
+                spawn_generation_job(app, generation_tx, next_request_id, active_request_id);
+            }
+            MenuItem::PracticeMode => {
+                app.set_generation_source(GenerationSource::Local);
+                app.set_practice_mode(true);
                 reset_timer(timer);
                 spawn_generation_job(app, generation_tx, next_request_id, active_request_id);
             }
             MenuItem::StartGameGoogle => {
                 app.set_generation_source(GenerationSource::Google);
+                app.set_practice_mode(false);
                 reset_timer(timer);
                 spawn_generation_job(app, generation_tx, next_request_id, active_request_id);
             }
             MenuItem::StartGameGroq => {
                 app.set_generation_source(GenerationSource::Groq);
+                app.set_practice_mode(false);
                 reset_timer(timer);
                 spawn_generation_job(app, generation_tx, next_request_id, active_request_id);
             }
@@ -71,6 +80,19 @@ pub(super) fn handle_menu_input(
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => app.quit(),
         _ => {}
     }
+}
+
+fn should_clear_status_message(key: &KeyEvent) -> bool {
+    matches!(
+        key.code,
+        KeyCode::Enter
+            | KeyCode::Esc
+            | KeyCode::Up
+            | KeyCode::Down
+            | KeyCode::Tab
+            | KeyCode::Backspace
+            | KeyCode::Char(_)
+    )
 }
 
 #[cfg(test)]
@@ -109,6 +131,7 @@ mod tests {
         let mut active_request_id = None;
 
         app.move_menu_down();
+        app.move_menu_down();
         handle_menu_input(
             key(KeyCode::Enter),
             &mut app,
@@ -124,6 +147,30 @@ mod tests {
     }
 
     #[test]
+    fn enter_on_practice_mode_sets_local_source_and_practice_mode() {
+        let mut app = test_app();
+        let timer = Arc::new(Mutex::new(0));
+        let (generation_tx, _generation_rx) = mpsc::channel();
+        let mut next_request_id = 10;
+        let mut active_request_id = None;
+
+        app.move_menu_down();
+        handle_menu_input(
+            key(KeyCode::Enter),
+            &mut app,
+            &timer,
+            &generation_tx,
+            &mut next_request_id,
+            &mut active_request_id,
+        );
+
+        assert_eq!(app.generation_source(), GenerationSource::Local);
+        assert!(app.is_practice_mode());
+        assert_eq!(app.state(), AppState::Loading);
+        assert_eq!(active_request_id, Some(10));
+    }
+
+    #[test]
     fn enter_on_groq_menu_sets_groq_source_and_loading() {
         let mut app = test_app();
         let timer = Arc::new(Mutex::new(0));
@@ -131,6 +178,7 @@ mod tests {
         let mut next_request_id = 3;
         let mut active_request_id = None;
 
+        app.move_menu_down();
         app.move_menu_down();
         app.move_menu_down();
         handle_menu_input(
@@ -146,17 +194,4 @@ mod tests {
         assert_eq!(app.state(), AppState::Loading);
         assert_eq!(active_request_id, Some(3));
     }
-}
-
-fn should_clear_status_message(key: &KeyEvent) -> bool {
-    matches!(
-        key.code,
-        KeyCode::Enter
-            | KeyCode::Esc
-            | KeyCode::Up
-            | KeyCode::Down
-            | KeyCode::Tab
-            | KeyCode::Backspace
-            | KeyCode::Char(_)
-    )
 }

@@ -11,13 +11,13 @@
 - `src/runtime/input/mod.rs`
   - 状態別入力処理を束ねる。
 - `src/runtime/input/menu.rs`
-  - Menu 状態の入力処理を担当する。
+  - Menu 状態の入力処理を担当する。`Practice Mode` 選択時の開始条件切り替えもここで扱う。
 - `src/runtime/input/config_screen.rs`
   - Config 状態の入力処理を担当する。
 - `src/runtime/input/gameplay.rs`
-  - Loading、Typing、Result の入力処理と生成ジョブ反映を担当する。
+  - Loading、Typing、Result の入力処理と生成ジョブ反映を担当する。Typing では strict 判定、`Esc` のメニュー復帰、練習モード時の遷移制御を扱う。
 - `src/runtime/timer.rs`
-  - タイマースレッドとタイマー補助処理を担当する。
+  - タイマースレッドとタイマー補助処理を担当する。`timeout=0` の場合はタイムアウト通知を送らず、経過時間の計測のみを維持する。
 - `src/domain/config.rs`
   - 設定モデルを保持し、UI と永続化の共有境界を担う。
 - `src/presentation/ui/app.rs`
@@ -25,7 +25,7 @@
 - `src/presentation/ui/render/mod.rs`
   - 画面描画の入口を束ねる。
 - `src/presentation/ui/render/menu.rs`
-  - Menu 画面を描画する。
+  - Menu 画面を描画する。`Practice Mode` を含む 5 項目のタイトルメニューを描画する。
 - `src/presentation/ui/render/config_screen.rs`
   - Config 画面を描画する。
 - `src/presentation/ui/render/loading.rs`
@@ -52,11 +52,13 @@
 1. `main` が CLI 引数と設定を読み込む。
 2. `main` が端末と音声、タイマースレッドを初期化する。
 3. `runtime` がイベントループを実行し、`AppState` ごとの入力処理を分岐する。
-4. タイトルメニューの開始系項目を選択した場合は、選択項目に対応する生成元を `App` に反映したうえで別スレッドの文字列生成を開始し、結果をチャネルで受け取る。
+4. タイトルメニューの開始系項目を選択した場合は、選択項目に対応する生成元と制限時間モードを `App` に反映したうえで別スレッドの文字列生成を開始し、結果をチャネルで受け取る。`Practice Mode` は `Local` 生成と `timeout=0` を組み合わせる。
 5. `Typing` 中はタイマースレッドの経過秒数を参照し、完了またはタイムアウトで `Result` へ遷移する。
-6. `Typing` 中は現在入力中文字列と総入力数を分けて保持し、`Backspace` では前者だけを減らす。
-7. `Result` 描画時は総入力数と `incorrects` から正確率を算出し、未入力終了時は `0.0%` を表示する。
-8. 終了時は raw mode、画面、スレッド、BGM を順に停止する。
+6. `timeout=0` の場合はタイムアウト遷移を行わず、全文入力完了まで `Typing` を維持する。
+7. `Typing` 中は strict 判定を行い、誤入力では入力位置を進めず、`Backspace` では現在入力中文字列だけを減らす。
+8. `Typing` 中に `Esc` を押した場合は `Menu` に戻り、進行中のセッションを破棄する。
+9. `Result` 描画時は総入力数と `incorrects` から正確率を算出し、未入力終了時は `0.0%` を表示する。
+10. 終了時は raw mode、画面、スレッド、BGM を順に停止する。
 
 ## 設定保存
 
@@ -82,7 +84,7 @@
 - `src/runtime/input/config_screen.rs`
   - Config 入力受理ルールを固定する。
 - `src/runtime/input/gameplay.rs`
-  - プロバイダ設定選択、生成結果反映、ゲーム進行中の状態遷移を固定する。
+  - プロバイダ設定選択、生成結果反映、ゲーム進行中の状態遷移を固定する。`Practice Mode`、`timeout=0`、strict 判定、`Esc` 復帰の挙動もここで固定する。
 - `src/runtime/session.rs`
   - イベントループと状態更新の接続点を固定する。
 
@@ -91,4 +93,6 @@
 - UI 仕様変更を伴わない内部整理では、まず `runtime/session` と `runtime/input` の責務境界を確認する。
 - 新しい生成元や設定項目を追加する場合は、`domain::config::AppConfig`、`ConfigField`、`provider_config_for_source`、描画処理の順に追うと全体を把握しやすい。
 - タイトルメニュー項目を変更する場合は、`MenuItem`、`App` の選択遷移、`runtime/input/menu` の確定処理、`render/menu` の表示を同時に更新する。
+- `Practice Mode` を追加する場合は、メニュー項目の並び順と `timeout=0` の一時上書きが結果画面復帰後に通常値へ漏れないように確認する。
 - 詳細なミス統計を追加する場合は `App` のカウンタ追加だけでなく、`Backspace` を含む入力イベント定義と結果画面文言を同時に見直す。
+- タイムアップなしの練習モードを追加する場合は、`timeout=0` の扱いとタイマー停止条件を先に固定する。

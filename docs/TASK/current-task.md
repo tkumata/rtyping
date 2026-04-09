@@ -1,14 +1,14 @@
 # Current Task
 
-- Date: 2026-04-09 21:48
-- Summary: 結果画面に正確率を追加し、総入力数と `incorrects` から安全に算出できるようにする。
+- Date: 2026-04-09 23:00
+- Summary: タイトル画面に `Practice Mode` を追加し、CLI の `-t 0` / `--timeout 0` と同じくタイムアップなしの開始経路を提供する。
 - Scope:
-  - Update requirements, ADR, specifications, and design for result accuracy display.
-  - Add `Accuracy` to the result screen using total typed count and `incorrects`.
-  - Track total typed count independently from the current input buffer so `Backspace` does not distort accuracy.
-  - Define the zero-input behavior as `0.0%` to avoid division by zero.
-  - Keep miss correction count and actual miss count split out of scope for this task.
+  - Update requirements, ADR, specifications, design, help, and product overview docs for `Practice Mode`.
+  - Define `Practice Mode` as a title menu item that starts `Local` generation with `timeout=0`.
+  - Keep `-t 0` / `--timeout 0` as a direct no-timeout practice mode entry point.
+  - Preserve the existing strict typing and `Esc` returning to `Menu` behavior in the same document set.
 - Verification:
-  - Confirm the result screen shows `Typed`, `Misses`, `Accuracy`, `Time`, and `WPM`.
-  - Confirm the accuracy formula matches the documented definition.
-  - Confirm zero-input completion does not panic or show invalid numeric output.
+  - Confirm the title menu explicitly lists `Practice Mode`.
+  - Confirm `Practice Mode` and `timeout=0` share the same no-timeout behavior.
+  - Confirm the help text and product overview no longer describe `Esc` as a result-screen transition.
+  - Confirm the new wording remains aligned with the existing strict typing flow.
