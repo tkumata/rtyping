@@ -12,12 +12,14 @@ pub fn spawn_timer_thread(
 ) -> JoinHandle<()> {
     thread::spawn(move || {
         let mut running = false;
+        let mut current_timeout = timeout;
 
         loop {
             if running {
                 match timer_command_rx.recv_timeout(Duration::from_secs(1)) {
-                    Ok(TimerCommand::Start) => {
+                    Ok(TimerCommand::Start(next_timeout)) => {
                         reset_timer(&timer);
+                        current_timeout = next_timeout;
                         running = true;
                     }
                     Ok(TimerCommand::Stop) => {
@@ -29,7 +31,7 @@ pub fn spawn_timer_thread(
                     Err(mpsc::RecvTimeoutError::Timeout) => {
                         let mut elapsed = timer.lock().unwrap();
                         *elapsed += 1;
-                        if *elapsed >= timeout {
+                        if current_timeout > 0 && *elapsed >= current_timeout {
                             running = false;
                             timeout_tx.send(()).ok();
                         }
@@ -37,8 +39,9 @@ pub fn spawn_timer_thread(
                 }
             } else {
                 match timer_command_rx.recv() {
-                    Ok(TimerCommand::Start) => {
+                    Ok(TimerCommand::Start(next_timeout)) => {
                         reset_timer(&timer);
+                        current_timeout = next_timeout;
                         running = true;
                     }
                     Ok(TimerCommand::Stop) => {
@@ -71,4 +74,35 @@ pub(super) fn finish_typing_session(
     stop_timer(timer_command_tx);
     app.update_timer(current_timer(timer));
     app.finish_typing();
+}
+
+pub(super) fn cancel_typing_session(
+    app: &mut crate::presentation::ui::app::App,
+    timer_command_tx: &mpsc::Sender<TimerCommand>,
+) {
+    stop_timer(timer_command_tx);
+    app.return_to_menu();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::TimerCommand;
+    use std::sync::mpsc;
+
+    #[test]
+    fn timeout_zero_does_not_emit_timeout_signal() {
+        let timer = Arc::new(Mutex::new(0));
+        let (timer_command_tx, timer_command_rx) = mpsc::channel();
+        let (timeout_tx, timeout_rx) = mpsc::channel();
+        let handle = spawn_timer_thread(Arc::clone(&timer), 0, timer_command_rx, timeout_tx);
+
+        timer_command_tx.send(TimerCommand::Start(0)).unwrap();
+        std::thread::sleep(Duration::from_millis(1100));
+
+        assert!(timeout_rx.try_recv().is_err());
+
+        timer_command_tx.send(TimerCommand::Shutdown).unwrap();
+        handle.join().unwrap();
+    }
 }

@@ -6,7 +6,7 @@ use rodio::MixerDeviceSink;
 use std::sync::{Arc, Mutex, mpsc};
 
 pub(crate) enum TimerCommand {
-    Start,
+    Start(i32),
     Stop,
     Shutdown,
 }

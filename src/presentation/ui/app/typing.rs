@@ -28,11 +28,11 @@ impl App {
         let is_correct = self.target_string.chars().nth(position) == Some(c);
         self.typed_count += 1;
 
-        if !is_correct {
+        if is_correct {
+            self.inputs.push(c);
+        } else {
             self.incorrects += 1;
         }
-
-        self.inputs.push(c);
         is_correct
     }
 
@@ -48,6 +48,7 @@ impl App {
         self.typed_count
     }
 
+    #[cfg(test)]
     pub fn current_input_count(&self) -> usize {
         self.inputs.len()
     }
@@ -82,6 +83,18 @@ mod tests {
         assert_eq!(app.input_chars(), &['a']);
         assert_eq!(app.typed_count(), 2);
         assert_eq!(app.incorrects(), 1);
+    }
+
+    #[test]
+    fn strict_mode_does_not_store_incorrect_input() {
+        let mut app = new_app();
+        app.prepare_new_game("ab".to_string());
+
+        assert!(!app.push_char('x'));
+        assert!(app.input_chars().is_empty());
+        assert_eq!(app.typed_count(), 1);
+        assert_eq!(app.incorrects(), 1);
+        assert!(app.pop_char().is_none());
     }
 
     #[test]
