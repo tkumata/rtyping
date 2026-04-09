@@ -50,6 +50,16 @@
   - `Config` 画面で `Enter` は保存、`Esc` は破棄、`Backspace` は文字削除として扱う。
 - `RUN-008`
   - `Typing` 中に全文入力またはタイムアウトで `Result` に遷移する。
+- `RUN-009`
+  - `Result` 画面は `Typed`、`Misses`、`Accuracy`、`Time`、`WPM` を表示する。
+- `RUN-010`
+  - `Typed` は `Backspace` で減らない総入力数 `total_typed_count` を表示する。
+- `RUN-011`
+  - `Accuracy` は `accuracy = (total_typed_count - incorrects) / total_typed_count * 100` で算出し、小数 1 桁で表示する。
+- `RUN-012`
+  - `total_typed_count = 0` のまま `Result` に遷移した場合、`Accuracy` は `0.0%` と表示する。
+- `RUN-013`
+  - `Misses` は既存の `incorrects` をそのまま表示し、ミス修正回数や実ミス数の分離は今回の仕様に含めない。
 
 ## Sentence Generation
 
@@ -70,3 +80,4 @@
   - `usecase::generate_sentence`
   - `usecase::wpm`
   - `domain::entity`
+  - accuracy 計算追加後の指標ロジック

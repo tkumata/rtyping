@@ -93,7 +93,11 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(title, header_chunks[1]);
 
     let wpm_current = if app.timer() > 0 {
-        wpm::calc_wpm(app.typed_count(), app.timer(), app.incorrects() as i32)
+        wpm::calc_wpm(
+            app.current_input_count(),
+            app.timer(),
+            app.incorrects() as i32,
+        )
     } else {
         0.0
     };
@@ -180,7 +184,7 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
         Paragraph::new(Line::from(vec![
             Span::styled("Types: ", Style::default().fg(Color::Gray)),
             Span::styled(
-                format!("{:03}", app.typed_count()),
+                format!("{:03}", app.current_input_count()),
                 Style::default()
                     .fg(Color::LightBlue)
                     .add_modifier(Modifier::BOLD),
