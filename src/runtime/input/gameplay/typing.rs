@@ -69,13 +69,25 @@ mod tests {
     }
 
     #[test]
-    fn incorrect_input_does_not_advance_cursor() {
+    fn incorrect_input_does_not_advance_cursor_in_practice_mode() {
         let mut app = new_app();
         app.prepare_new_game("ab".to_string());
+        app.set_practice_mode(true);
 
         assert!(!app.push_char('x'));
         assert!(app.input_chars().is_empty());
         assert_eq!(app.current_input_count(), 0);
+        assert_eq!(app.typed_count(), 1);
+    }
+
+    #[test]
+    fn incorrect_input_advances_cursor_outside_practice_mode() {
+        let mut app = new_app();
+        app.prepare_new_game("ab".to_string());
+
+        assert!(!app.push_char('x'));
+        assert_eq!(app.input_chars(), &['x']);
+        assert_eq!(app.current_input_count(), 1);
         assert_eq!(app.typed_count(), 1);
     }
 }

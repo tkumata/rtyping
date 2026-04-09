@@ -32,9 +32,11 @@ impl App {
         let is_correct = self.target_string.chars().nth(position) == Some(c);
         self.typed_count += 1;
 
-        if is_correct {
+        if is_correct || !self.practice_mode {
             self.inputs.push(c);
-        } else {
+        }
+
+        if !is_correct {
             self.incorrects += 1;
         }
         self.record_wpm_snapshot();
@@ -95,15 +97,28 @@ mod tests {
     }
 
     #[test]
-    fn strict_mode_does_not_store_incorrect_input() {
+    fn practice_mode_does_not_store_incorrect_input() {
         let mut app = new_app();
         app.prepare_new_game("ab".to_string());
+        app.set_practice_mode(true);
 
         assert!(!app.push_char('x'));
         assert!(app.input_chars().is_empty());
         assert_eq!(app.typed_count(), 1);
         assert_eq!(app.incorrects(), 1);
         assert!(app.pop_char().is_none());
+    }
+
+    #[test]
+    fn normal_mode_stores_incorrect_input_and_advances() {
+        let mut app = new_app();
+        app.prepare_new_game("ab".to_string());
+
+        assert!(!app.push_char('x'));
+        assert_eq!(app.input_chars(), &['x']);
+        assert_eq!(app.current_input_count(), 1);
+        assert_eq!(app.typed_count(), 1);
+        assert_eq!(app.incorrects(), 1);
     }
 
     #[test]
