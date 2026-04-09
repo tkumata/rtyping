@@ -21,7 +21,7 @@
 - `src/domain/config.rs`
   - 設定モデルを保持し、UI と永続化の共有境界を担う。
 - `src/presentation/ui/app.rs`
-  - TUI 状態、選択中メニュー、入力中文字列、設定編集対象などの画面状態を保持する。
+  - TUI 状態、選択中メニュー、現在入力中文字列、総入力数、設定編集対象などの画面状態を保持する。
 - `src/presentation/ui/render/mod.rs`
   - 画面描画の入口を束ねる。
 - `src/presentation/ui/render/menu.rs`
@@ -33,7 +33,9 @@
 - `src/presentation/ui/render/typing.rs`
   - Typing 画面を描画する。
 - `src/presentation/ui/render/result.rs`
-  - Result 画面を描画する。
+  - Result 画面を描画し、入力文字数、ミス数、正確率、経過時間、WPM を表示する。
+- `src/usecase/wpm.rs`
+  - WPM 計算ロジックを提供する。
 - `src/config/mod.rs`
   - 設定永続化の入口を提供する。
 - `src/config/paths.rs`
@@ -52,7 +54,9 @@
 3. `runtime` がイベントループを実行し、`AppState` ごとの入力処理を分岐する。
 4. タイトルメニューの開始系項目を選択した場合は、選択項目に対応する生成元を `App` に反映したうえで別スレッドの文字列生成を開始し、結果をチャネルで受け取る。
 5. `Typing` 中はタイマースレッドの経過秒数を参照し、完了またはタイムアウトで `Result` へ遷移する。
-6. 終了時は raw mode、画面、スレッド、BGM を順に停止する。
+6. `Typing` 中は現在入力中文字列と総入力数を分けて保持し、`Backspace` では前者だけを減らす。
+7. `Result` 描画時は総入力数と `incorrects` から正確率を算出し、未入力終了時は `0.0%` を表示する。
+8. 終了時は raw mode、画面、スレッド、BGM を順に停止する。
 
 ## 設定保存
 
@@ -65,6 +69,10 @@
 
 - `src/usecase/wpm.rs`
   - 計算式の正常系と境界値を固定する。
+- accuracy 計算ロジック
+  - 正常系と `typed_count = 0` の境界値を固定する。
+- `src/presentation/ui/app/typing.rs`
+  - 総入力数が `Backspace` で減らないことを固定する。
 - `src/usecase/generate_sentence.rs`
   - ローカル生成、URL 組み立て、設定不足時の失敗、正規化処理を確認する。
 - `src/config/mod.rs`
@@ -83,3 +91,4 @@
 - UI 仕様変更を伴わない内部整理では、まず `runtime/session` と `runtime/input` の責務境界を確認する。
 - 新しい生成元や設定項目を追加する場合は、`domain::config::AppConfig`、`ConfigField`、`provider_config_for_source`、描画処理の順に追うと全体を把握しやすい。
 - タイトルメニュー項目を変更する場合は、`MenuItem`、`App` の選択遷移、`runtime/input/menu` の確定処理、`render/menu` の表示を同時に更新する。
+- 詳細なミス統計を追加する場合は `App` のカウンタ追加だけでなく、`Backspace` を含む入力イベント定義と結果画面文言を同時に見直す。
