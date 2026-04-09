@@ -1,14 +1,14 @@
 # Current Task
 
-- Date: 2026-04-09 23:00
-- Summary: タイトル画面に `Practice Mode` を追加し、CLI の `-t 0` / `--timeout 0` と同じくタイムアップなしの開始経路を提供する。
+- Date: 2026-04-10 08:23
+- Summary: タイピング中に小さな WPM グラフ領域を追加し、`ratatui` の `Sparkline` で推移をリアルタイム表示する。
 - Scope:
-  - Update requirements, ADR, specifications, design, help, and product overview docs for `Practice Mode`.
-  - Define `Practice Mode` as a title menu item that starts `Local` generation with `timeout=0`.
-  - Keep `-t 0` / `--timeout 0` as a direct no-timeout practice mode entry point.
-  - Preserve the existing strict typing and `Esc` returning to `Menu` behavior in the same document set.
+  - Update requirements, ADR, specifications, and design docs for the WPM sparkline feature.
+  - Add a dedicated graph area to the `Typing` screen without overlapping the target text.
+  - Track WPM history per typing session and reset it between rounds.
+  - Keep the existing numeric WPM display, strict typing flow, and result metrics consistent.
 - Verification:
-  - Confirm the title menu explicitly lists `Practice Mode`.
-  - Confirm `Practice Mode` and `timeout=0` share the same no-timeout behavior.
-  - Confirm the help text and product overview no longer describe `Esc` as a result-screen transition.
-  - Confirm the new wording remains aligned with the existing strict typing flow.
+  - Confirm the `Typing` screen shows a live WPM trend graph.
+  - Confirm the graph never overlaps the target text area.
+  - Confirm narrow terminal layouts still avoid overlap.
+  - Confirm WPM history is reset when a new typing session starts.

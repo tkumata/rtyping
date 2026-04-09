@@ -21,7 +21,7 @@
 - `src/domain/config.rs`
   - 設定モデルを保持し、UI と永続化の共有境界を担う。
 - `src/presentation/ui/app.rs`
-  - TUI 状態、選択中メニュー、現在入力中文字列、総入力数、設定編集対象などの画面状態を保持する。
+  - TUI 状態、選択中メニュー、現在入力中文字列、総入力数、WPM 履歴、設定編集対象などの画面状態を保持する。
 - `src/presentation/ui/render/mod.rs`
   - 画面描画の入口を束ねる。
 - `src/presentation/ui/render/menu.rs`
@@ -31,7 +31,7 @@
 - `src/presentation/ui/render/loading.rs`
   - Loading 画面を描画する。
 - `src/presentation/ui/render/typing.rs`
-  - Typing 画面を描画する。
+  - Typing 画面を描画する。出題文字列領域と WPM Sparkline 領域を分離して配置する。
 - `src/presentation/ui/render/result.rs`
   - Result 画面を描画し、入力文字数、ミス数、正確率、経過時間、WPM を表示する。
 - `src/usecase/wpm.rs`
@@ -53,7 +53,7 @@
 2. `main` が端末と音声、タイマースレッドを初期化する。
 3. `runtime` がイベントループを実行し、`AppState` ごとの入力処理を分岐する。
 4. タイトルメニューの開始系項目を選択した場合は、選択項目に対応する生成元と制限時間モードを `App` に反映したうえで別スレッドの文字列生成を開始し、結果をチャネルで受け取る。`Practice Mode` は `Local` 生成と `timeout=0` を組み合わせる。
-5. `Typing` 中はタイマースレッドの経過秒数を参照し、完了またはタイムアウトで `Result` へ遷移する。
+5. `Typing` 中はタイマースレッドの経過秒数を参照し、WPM を再計算して履歴へ追加しながら、完了またはタイムアウトで `Result` へ遷移する。
 6. `timeout=0` の場合はタイムアウト遷移を行わず、全文入力完了まで `Typing` を維持する。
 7. `Typing` 中は strict 判定を行い、誤入力では入力位置を進めず、`Backspace` では現在入力中文字列だけを減らす。
 8. `Typing` 中に `Esc` を押した場合は `Menu` に戻り、進行中のセッションを破棄する。
@@ -71,6 +71,8 @@
 
 - `src/usecase/wpm.rs`
   - 計算式の正常系と境界値を固定する。
+- `src/presentation/ui/app/typing.rs`
+  - WPM 履歴がセッション開始時に初期化され、入力や経過時間更新に応じて追記されることを固定する。
 - accuracy 計算ロジック
   - 正常系と `typed_count = 0` の境界値を固定する。
 - `src/presentation/ui/app/typing.rs`
@@ -86,7 +88,7 @@
 - `src/runtime/input/gameplay.rs`
   - プロバイダ設定選択、生成結果反映、ゲーム進行中の状態遷移を固定する。`Practice Mode`、`timeout=0`、strict 判定、`Esc` 復帰の挙動もここで固定する。
 - `src/runtime/session.rs`
-  - イベントループと状態更新の接続点を固定する。
+  - イベントループと状態更新の接続点を固定する。タイマー更新に伴う WPM 履歴反映もここで確認する。
 
 ## 保守メモ
 
@@ -96,3 +98,4 @@
 - `Practice Mode` を追加する場合は、メニュー項目の並び順と `timeout=0` の一時上書きが結果画面復帰後に通常値へ漏れないように確認する。
 - 詳細なミス統計を追加する場合は `App` のカウンタ追加だけでなく、`Backspace` を含む入力イベント定義と結果画面文言を同時に見直す。
 - タイムアップなしの練習モードを追加する場合は、`timeout=0` の扱いとタイマー停止条件を先に固定する。
+- Typing 画面のレイアウト変更時は、出題文字列の可読性、Sparkline 領域との非重複、狭い端末での退避挙動を同時に確認する。

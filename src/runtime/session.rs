@@ -38,10 +38,7 @@ pub fn run_app(
             &mut active_request_id,
         );
 
-        if app.state() == AppState::Typing
-            && app.timeout() > 0
-            && timeout_rx.try_recv().is_ok()
-        {
+        if app.state() == AppState::Typing && app.timeout() > 0 && timeout_rx.try_recv().is_ok() {
             app.update_timer(current_timer(timer));
             app.finish_typing();
         }

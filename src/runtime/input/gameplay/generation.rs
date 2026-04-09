@@ -44,7 +44,9 @@ pub(in crate::runtime::input) fn apply_generation_result(
         Ok(contents) if app.state() == AppState::Loading => {
             app.prepare_new_game(contents);
             app.start_typing();
-            timer_command_tx.send(TimerCommand::Start(app.timeout())).ok();
+            timer_command_tx
+                .send(TimerCommand::Start(app.timeout()))
+                .ok();
         }
         Ok(_) => {}
         Err(message) if app.state() == AppState::Loading => {

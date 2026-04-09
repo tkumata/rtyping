@@ -4,6 +4,7 @@ impl App {
     pub fn start_typing(&mut self) {
         self.state = AppState::Typing;
         self.time_started = true;
+        self.record_wpm_snapshot();
     }
 
     pub fn finish_typing(&mut self) {
@@ -15,12 +16,15 @@ impl App {
         self.inputs.clear();
         self.typed_count = 0;
         self.incorrects = 0;
+        self.wpm_history.clear();
+        self.last_wpm_sample = None;
         self.timer = 0;
         self.time_started = false;
     }
 
     pub fn update_timer(&mut self, elapsed: i32) {
         self.timer = elapsed;
+        self.record_wpm_snapshot();
     }
 
     pub fn push_char(&mut self, c: char) -> bool {
@@ -33,11 +37,16 @@ impl App {
         } else {
             self.incorrects += 1;
         }
+        self.record_wpm_snapshot();
         is_correct
     }
 
     pub fn pop_char(&mut self) -> Option<char> {
-        self.inputs.pop()
+        let removed = self.inputs.pop();
+        if removed.is_some() {
+            self.record_wpm_snapshot();
+        }
+        removed
     }
 
     pub fn is_complete(&self) -> bool {
@@ -109,5 +118,38 @@ mod tests {
         assert_eq!(app.typed_count(), 0);
         assert!(app.input_chars().is_empty());
         assert_eq!(app.incorrects(), 0);
+    }
+
+    #[test]
+    fn prepare_new_game_resets_wpm_history() {
+        let mut app = new_app();
+        app.prepare_new_game("ab".to_string());
+        app.start_typing();
+        app.update_timer(1);
+        app.push_char('a');
+
+        assert!(!app.wpm_history().is_empty());
+
+        app.prepare_new_game("cd".to_string());
+
+        assert!(app.wpm_history().is_empty());
+    }
+
+    #[test]
+    fn wpm_history_avoids_duplicate_samples() {
+        let mut app = new_app();
+        app.prepare_new_game("ab".to_string());
+        app.start_typing();
+
+        assert_eq!(app.wpm_history(), &[0]);
+
+        app.update_timer(0);
+        assert_eq!(app.wpm_history(), &[0]);
+
+        app.update_timer(1);
+        assert_eq!(app.wpm_history().len(), 2);
+
+        app.update_timer(1);
+        assert_eq!(app.wpm_history().len(), 2);
     }
 }
