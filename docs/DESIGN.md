@@ -32,6 +32,7 @@
   - Loading 画面を描画する。
 - `src/presentation/ui/render/typing.rs`
   - Typing 画面を描画する。出題文字列領域と WPM Sparkline 領域を分離して配置する。
+  - 補助関数を先に、`#[cfg(test)] mod tests` をファイル末尾に置くことで、Clippy の構造警告を避ける。
 - `src/presentation/ui/render/result.rs`
   - Result 画面を描画し、入力文字数、ミス数、正確率、経過時間、WPM を表示する。
 - `src/usecase/wpm.rs`
@@ -99,3 +100,4 @@
 - 詳細なミス統計を追加する場合は `App` のカウンタ追加だけでなく、`Backspace` を含む入力イベント定義と結果画面文言を同時に見直す。
 - タイムアップなしの練習モードを追加する場合は、`timeout=0` の扱いとタイマー停止条件を先に固定する。
 - Typing 画面のレイアウト変更時は、出題文字列の可読性、Sparkline 領域との非重複、狭い端末での退避挙動を同時に確認する。
+- Rust モジュールでテストを追加する場合は、通常項目の後に `#[cfg(test)] mod tests` を置く配置を維持する。

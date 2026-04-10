@@ -1,14 +1,11 @@
 # Current Task
 
-- Date: 2026-04-10 08:23
-- Summary: タイピング中に小さな WPM グラフ領域を追加し、`ratatui` の `Sparkline` で推移をリアルタイム表示する。
+- Date: 2026-04-10 08:58
+- Summary: `typing.rs` の `clippy::items_after_test_module` 警告を解消する。
 - Scope:
-  - Update requirements, ADR, specifications, and design docs for the WPM sparkline feature.
-  - Add a dedicated graph area to the `Typing` screen without overlapping the target text.
-  - Track WPM history per typing session and reset it between rounds.
-  - Keep the existing numeric WPM display, strict typing flow, and result metrics consistent.
+  - Update requirements, ADR, specifications, and design docs for the lint cleanup.
+  - Reorder items in `src/presentation/ui/render/typing.rs` so the test module is the final item.
+  - Keep rendering behavior unchanged while removing the warning.
 - Verification:
-  - Confirm the `Typing` screen shows a live WPM trend graph.
-  - Confirm the graph never overlaps the target text area.
-  - Confirm narrow terminal layouts still avoid overlap.
-  - Confirm WPM history is reset when a new typing session starts.
+  - Confirm `src/presentation/ui/render/typing.rs` no longer triggers `items_after_test_module`.
+  - Confirm the Typing screen rendering logic remains unchanged.

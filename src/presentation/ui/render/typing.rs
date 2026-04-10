@@ -212,29 +212,6 @@ fn split_typing_area(area: Rect) -> [Rect; 2] {
     [chunks[0], chunks[1]]
 }
 
-#[cfg(test)]
-mod tests {
-    use super::split_typing_area;
-    use ratatui::layout::Rect;
-
-    #[test]
-    fn split_typing_area_separates_graph_and_text_when_height_allows() {
-        let [graph_area, text_area] = split_typing_area(Rect::new(0, 0, 80, 12));
-
-        assert_eq!(graph_area.height, 4);
-        assert_eq!(text_area.y, graph_area.y + graph_area.height);
-        assert!(text_area.height >= 7);
-    }
-
-    #[test]
-    fn split_typing_area_hides_graph_when_height_is_small() {
-        let [graph_area, text_area] = split_typing_area(Rect::new(0, 0, 80, 8));
-
-        assert_eq!(graph_area.height, 0);
-        assert_eq!(text_area.height, 8);
-    }
-}
-
 fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
     let footer_chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -271,4 +248,27 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
         .alignment(Alignment::Center),
         footer_chunks[1],
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::split_typing_area;
+    use ratatui::layout::Rect;
+
+    #[test]
+    fn split_typing_area_separates_graph_and_text_when_height_allows() {
+        let [graph_area, text_area] = split_typing_area(Rect::new(0, 0, 80, 12));
+
+        assert_eq!(graph_area.height, 4);
+        assert_eq!(text_area.y, graph_area.y + graph_area.height);
+        assert!(text_area.height >= 7);
+    }
+
+    #[test]
+    fn split_typing_area_hides_graph_when_height_is_small() {
+        let [graph_area, text_area] = split_typing_area(Rect::new(0, 0, 80, 8));
+
+        assert_eq!(graph_area.height, 0);
+        assert_eq!(text_area.height, 8);
+    }
 }

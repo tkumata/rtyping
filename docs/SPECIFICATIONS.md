@@ -80,6 +80,8 @@
   - WPM 推移サンプルはタイピング開始時に空で初期化し、タイピング中の再描画に合わせて更新する。
 - `RUN-022`
   - 画面サイズが不足する場合でも、出題文字列の可読性を優先し、グラフは縮小または簡略表示しても重なりを起こさない。
+- `RUN-023`
+  - `src/presentation/ui/render/typing.rs` を含む描画モジュールでは、`#[cfg(test)] mod tests` を通常関数より後ろ、すなわちファイル末尾へ配置し、`clippy::items_after_test_module` を発生させない。
 
 ## Sentence Generation
 
@@ -106,3 +108,4 @@
   - strict 入力判定と `Esc` のメニュー復帰
   - WPM 履歴の初期化と更新
   - `Typing` 画面で WPM グラフ領域と出題文字列領域が分離されること
+  - `src/presentation/ui/render/typing.rs` で `cargo clippy` の `items_after_test_module` 警告が発生しないこと
