@@ -34,7 +34,9 @@
   - Typing 画面を描画する。出題文字列領域と WPM Sparkline 領域を分離して配置する。
   - 補助関数を先に、`#[cfg(test)] mod tests` をファイル末尾に置くことで、Clippy の構造警告を避ける。
 - `src/presentation/ui/render/result.rs`
-  - Result 画面を描画し、入力文字数、ミス数、正確率、経過時間、WPM を表示する。
+  - Result 画面を描画し、入力文字数、ミス数、正確率、経過時間、WPM と最終 WPM Sparkline を表示する。
+- `src/presentation/ui/render/wpm_graph.rs`
+  - Typing / Result 両画面で共通利用する WPM グラフ描画補助を担当する。
 - `src/usecase/wpm.rs`
   - WPM 計算ロジックを提供する。
 - `src/config/mod.rs`
@@ -59,7 +61,8 @@
 7. `Typing` 中は strict 判定を行い、誤入力では入力位置を進めず、`Backspace` では現在入力中文字列だけを減らす。
 8. `Typing` 中に `Esc` を押した場合は `Menu` に戻り、進行中のセッションを破棄する。
 9. `Result` 描画時は総入力数と `incorrects` から正確率を算出し、未入力終了時は `0.0%` を表示する。
-10. 終了時は raw mode、画面、スレッド、BGM を順に停止する。
+10. `Result` 描画時は `App` が保持している `wpm_history` をそのまま使い、タイピング終了時点のグラフを固定表示する。
+11. 終了時は raw mode、画面、スレッド、BGM を順に停止する。
 
 ## 設定保存
 
@@ -74,6 +77,8 @@
   - 計算式の正常系と境界値を固定する。
 - `src/presentation/ui/app/typing.rs`
   - WPM 履歴がセッション開始時に初期化され、入力や経過時間更新に応じて追記されることを固定する。
+- `src/presentation/ui/render/result.rs`
+  - 結果画面のレイアウトが指標領域と WPM グラフ領域を両立できることを確認する。
 - accuracy 計算ロジック
   - 正常系と `typed_count = 0` の境界値を固定する。
 - `src/presentation/ui/app/typing.rs`
@@ -99,5 +104,5 @@
 - `Practice Mode` を追加する場合は、メニュー項目の並び順と `timeout=0` の一時上書きが結果画面復帰後に通常値へ漏れないように確認する。
 - 詳細なミス統計を追加する場合は `App` のカウンタ追加だけでなく、`Backspace` を含む入力イベント定義と結果画面文言を同時に見直す。
 - タイムアップなしの練習モードを追加する場合は、`timeout=0` の扱いとタイマー停止条件を先に固定する。
-- Typing 画面のレイアウト変更時は、出題文字列の可読性、Sparkline 領域との非重複、狭い端末での退避挙動を同時に確認する。
+- Typing / Result 画面のレイアウト変更時は、主要テキストの可読性、Sparkline 領域との非重複、狭い端末での退避挙動を同時に確認する。
 - Rust モジュールでテストを追加する場合は、通常項目の後に `#[cfg(test)] mod tests` を置く配置を維持する。

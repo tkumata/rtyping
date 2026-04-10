@@ -4,6 +4,7 @@ mod loading;
 mod menu;
 mod result;
 mod typing;
+mod wpm_graph;
 
 use ratatui::Frame;
 

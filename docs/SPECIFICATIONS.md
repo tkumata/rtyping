@@ -75,13 +75,17 @@
 - `RUN-019`
   - `Typing` 画面は現在 WPM の数値表示に加えて、`ratatui::widgets::Sparkline` による WPM 推移グラフを表示する。
 - `RUN-020`
-  - WPM 推移グラフは出題文字列の描画領域と別座標に配置し、出題文字列と重ならない。
+  - `Result` 画面は `Typed`、`Misses`、`Accuracy`、`Time`、`WPM` に加えて、セッション終了時点の WPM 推移グラフを表示する。
 - `RUN-021`
-  - WPM 推移サンプルはタイピング開始時に空で初期化し、タイピング中の再描画に合わせて更新する。
+  - WPM 推移グラフは各画面の本文領域と別座標に配置し、本文テキストと重ならない。
 - `RUN-022`
-  - 画面サイズが不足する場合でも、出題文字列の可読性を優先し、グラフは縮小または簡略表示しても重なりを起こさない。
+  - WPM 推移サンプルはタイピング開始時に空で初期化し、タイピング中の再描画に合わせて更新する。
 - `RUN-023`
-  - `src/presentation/ui/render/typing.rs` を含む描画モジュールでは、`#[cfg(test)] mod tests` を通常関数より後ろ、すなわちファイル末尾へ配置し、`clippy::items_after_test_module` を発生させない。
+  - `Result` 画面の WPM グラフは、Typing 中に蓄積した `wpm_history` の最終内容をそのまま表示し、結果画面専用の別履歴は持たない。
+- `RUN-024`
+  - 画面サイズが不足する場合でも、各画面の主要情報の可読性を優先し、グラフは縮小または簡略表示しても重なりを起こさない。
+- `RUN-025`
+  - `src/presentation/ui/render/typing.rs` と `src/presentation/ui/render/result.rs` を含む描画モジュールでは、`#[cfg(test)] mod tests` を通常関数より後ろ、すなわちファイル末尾へ配置し、`clippy::items_after_test_module` を発生させない。
 
 ## Sentence Generation
 
@@ -108,4 +112,5 @@
   - strict 入力判定と `Esc` のメニュー復帰
   - WPM 履歴の初期化と更新
   - `Typing` 画面で WPM グラフ領域と出題文字列領域が分離されること
+  - `Result` 画面で最終 WPM グラフが表示されること
   - `src/presentation/ui/render/typing.rs` で `cargo clippy` の `items_after_test_module` 警告が発生しないこと

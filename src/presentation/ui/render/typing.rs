@@ -3,12 +3,13 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, Sparkline, Wrap},
+    widgets::{Block, Borders, Paragraph, Wrap},
 };
 
 use crate::presentation::ui::app::App;
 
 use super::common::render_decoration_block;
+use super::wpm_graph;
 
 pub fn render_typing(frame: &mut Frame, app: &App) {
     let area = frame.area();
@@ -119,7 +120,7 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
 
 fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
     let [graph_area, text_area] = split_typing_area(area);
-    render_wpm_graph(frame, graph_area, app);
+    wpm_graph::render_wpm_graph(frame, graph_area, app.wpm_history(), " WPM Trend ");
 
     let mut text_spans = Vec::new();
     let input_len = app.input_chars().len();
@@ -169,31 +170,6 @@ fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
         )
         .wrap(Wrap { trim: false }),
         text_area,
-    );
-}
-
-fn render_wpm_graph(frame: &mut Frame, area: Rect, app: &App) {
-    if area.height < 3 || area.width < 8 {
-        return;
-    }
-
-    let data = if app.wpm_history().is_empty() {
-        vec![0]
-    } else {
-        app.wpm_history().to_vec()
-    };
-
-    frame.render_widget(
-        Sparkline::default()
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(" WPM Trend ")
-                    .border_style(Style::default().fg(Color::Cyan)),
-            )
-            .data(&data)
-            .style(Style::default().fg(Color::LightGreen)),
-        area,
     );
 }
 
