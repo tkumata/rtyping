@@ -50,6 +50,8 @@ pub struct App {
     inputs: Vec<char>,
     typed_count: usize,
     incorrects: usize,
+    wpm_history: Vec<u64>,
+    last_wpm_sample: Option<(i32, usize, usize)>,
     timer: i32,
     timeout: i32,
     practice_mode: bool,
@@ -82,6 +84,8 @@ impl App {
             inputs: Vec::new(),
             typed_count: 0,
             incorrects: 0,
+            wpm_history: Vec::new(),
+            last_wpm_sample: None,
             timer: 0,
             timeout,
             practice_mode: false,
@@ -165,16 +169,16 @@ impl App {
         self.incorrects
     }
 
+    pub fn wpm_history(&self) -> &[u64] {
+        &self.wpm_history
+    }
+
     pub fn timer(&self) -> i32 {
         self.timer
     }
 
     pub fn timeout(&self) -> i32 {
-        if self.practice_mode {
-            0
-        } else {
-            self.timeout
-        }
+        if self.practice_mode { 0 } else { self.timeout }
     }
 
     pub fn set_practice_mode(&mut self, practice_mode: bool) {
@@ -237,5 +241,31 @@ impl App {
 
     pub fn status_message(&self) -> Option<&str> {
         self.status_message.as_deref()
+    }
+
+    pub fn current_wpm(&self) -> f64 {
+        if self.timer <= 0 {
+            0.0
+        } else {
+            crate::usecase::wpm::calc_wpm(self.typed_count, self.timer, self.incorrects as i32)
+                .max(0.0)
+        }
+    }
+
+    pub fn record_wpm_snapshot(&mut self) {
+        const MAX_WPM_HISTORY: usize = 120;
+
+        let sample_key = (self.timer, self.typed_count, self.incorrects);
+        if self.last_wpm_sample == Some(sample_key) {
+            return;
+        }
+
+        let sample = self.current_wpm().round().clamp(0.0, u64::MAX as f64) as u64;
+        self.wpm_history.push(sample);
+        if self.wpm_history.len() > MAX_WPM_HISTORY {
+            let overflow = self.wpm_history.len() - MAX_WPM_HISTORY;
+            self.wpm_history.drain(0..overflow);
+        }
+        self.last_wpm_sample = Some(sample_key);
     }
 }

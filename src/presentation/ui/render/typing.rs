@@ -7,9 +7,9 @@ use ratatui::{
 };
 
 use crate::presentation::ui::app::App;
-use crate::usecase::wpm;
 
 use super::common::render_decoration_block;
+use super::wpm_graph;
 
 pub fn render_typing(frame: &mut Frame, app: &App) {
     let area = frame.area();
@@ -97,15 +97,10 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
     .alignment(Alignment::Center);
     frame.render_widget(title, header_chunks[1]);
 
-    let wpm_current = if app.timer() > 0 {
-        wpm::calc_wpm(app.typed_count(), app.timer(), app.incorrects() as i32)
-    } else {
-        0.0
-    };
     let wpm_text = vec![Line::from(vec![
         Span::styled("WPM: ", Style::default().fg(Color::Gray)),
         Span::styled(
-            format!("{:05.1}", wpm_current),
+            format!("{:05.1}", app.current_wpm()),
             Style::default()
                 .fg(Color::Green)
                 .add_modifier(Modifier::BOLD),
@@ -124,6 +119,9 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
 }
 
 fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
+    let [graph_area, text_area] = split_typing_area(area);
+    wpm_graph::render_wpm_graph(frame, graph_area, app.wpm_history(), " WPM Trend ");
+
     let mut text_spans = Vec::new();
     let input_len = app.input_chars().len();
 
@@ -171,8 +169,23 @@ fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
                 .border_style(Style::default().fg(Color::Cyan)),
         )
         .wrap(Wrap { trim: false }),
-        area,
+        text_area,
     );
+}
+
+fn split_typing_area(area: Rect) -> [Rect; 2] {
+    let graph_height = if area.height >= 10 { 4 } else { 0 };
+    let constraints = if graph_height > 0 {
+        [Constraint::Length(graph_height), Constraint::Min(7)]
+    } else {
+        [Constraint::Length(0), Constraint::Min(7)]
+    };
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(constraints)
+        .split(area);
+    [chunks[0], chunks[1]]
 }
 
 fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
@@ -211,4 +224,27 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
         .alignment(Alignment::Center),
         footer_chunks[1],
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::split_typing_area;
+    use ratatui::layout::Rect;
+
+    #[test]
+    fn split_typing_area_separates_graph_and_text_when_height_allows() {
+        let [graph_area, text_area] = split_typing_area(Rect::new(0, 0, 80, 12));
+
+        assert_eq!(graph_area.height, 4);
+        assert_eq!(text_area.y, graph_area.y + graph_area.height);
+        assert!(text_area.height >= 7);
+    }
+
+    #[test]
+    fn split_typing_area_hides_graph_when_height_is_small() {
+        let [graph_area, text_area] = split_typing_area(Rect::new(0, 0, 80, 8));
+
+        assert_eq!(graph_area.height, 0);
+        assert_eq!(text_area.height, 8);
+    }
 }

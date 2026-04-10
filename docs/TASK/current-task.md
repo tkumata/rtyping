@@ -1,14 +1,12 @@
 # Current Task
 
-- Date: 2026-04-09 23:00
-- Summary: タイトル画面に `Practice Mode` を追加し、CLI の `-t 0` / `--timeout 0` と同じくタイムアップなしの開始経路を提供する。
+- Date: 2026-04-10 09:15
+- Summary: 結果画面にも最終的な WPM グラフを表示し、タイピング中のリアルタイム表示と役割を分ける。
 - Scope:
-  - Update requirements, ADR, specifications, design, help, and product overview docs for `Practice Mode`.
-  - Define `Practice Mode` as a title menu item that starts `Local` generation with `timeout=0`.
-  - Keep `-t 0` / `--timeout 0` as a direct no-timeout practice mode entry point.
-  - Preserve the existing strict typing and `Esc` returning to `Menu` behavior in the same document set.
+  - Update requirements, ADR, specifications, and design docs for final WPM graph rendering on the `Result` screen.
+  - Reuse the existing `wpm_history` so the `Typing` screen remains real-time and the `Result` screen shows the final snapshot.
+  - Adjust result-screen layout without regressing existing metrics or navigation text.
 - Verification:
-  - Confirm the title menu explicitly lists `Practice Mode`.
-  - Confirm `Practice Mode` and `timeout=0` share the same no-timeout behavior.
-  - Confirm the help text and product overview no longer describe `Esc` as a result-screen transition.
-  - Confirm the new wording remains aligned with the existing strict typing flow.
+  - Confirm the `Typing` screen still shows a live WPM trend graph while typing.
+  - Confirm the `Result` screen shows the final WPM trend graph after finishing or timing out.
+  - Confirm the graph does not overlap existing result metrics in narrow layouts.
