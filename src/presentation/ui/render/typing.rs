@@ -54,10 +54,10 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
         } else {
             Color::Green
         };
-        ("Time: ", format!("{:03}", time_remaining), color)
+        ("Time: ", format!("{time_remaining:03}"), color)
     };
 
-    let timer_text = vec![Line::from(vec![
+    let countdown_widget = vec![Line::from(vec![
         Span::styled(time_label, Style::default().fg(Color::Gray)),
         Span::styled(
             time_text,
@@ -67,7 +67,7 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
     ])];
 
     frame.render_widget(
-        Paragraph::new(timer_text)
+        Paragraph::new(countdown_widget)
             .block(
                 Block::default()
                     .borders(Borders::ALL)
@@ -126,31 +126,35 @@ fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
     let input_len = app.input_chars().len();
 
     for (i, target_char) in app.target_string().chars().enumerate() {
-        if i < input_len {
-            let input_char = app.input_chars()[i];
-            if input_char == target_char {
-                text_spans.push(Span::styled(
-                    input_char.to_string(),
-                    Style::default().fg(Color::Green),
-                ));
-            } else {
+        match i.cmp(&input_len) {
+            std::cmp::Ordering::Less => {
+                let input_char = app.input_chars()[i];
+                if input_char == target_char {
+                    text_spans.push(Span::styled(
+                        input_char.to_string(),
+                        Style::default().fg(Color::Green),
+                    ));
+                } else {
+                    text_spans.push(Span::styled(
+                        target_char.to_string(),
+                        Style::default().fg(Color::White).bg(Color::Red),
+                    ));
+                }
+            }
+            std::cmp::Ordering::Equal => {
                 text_spans.push(Span::styled(
                     target_char.to_string(),
-                    Style::default().fg(Color::White).bg(Color::Red),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::UNDERLINED),
                 ));
             }
-        } else if i == input_len {
-            text_spans.push(Span::styled(
-                target_char.to_string(),
-                Style::default()
-                    .fg(Color::Yellow)
-                    .add_modifier(Modifier::UNDERLINED),
-            ));
-        } else {
-            text_spans.push(Span::styled(
-                target_char.to_string(),
-                Style::default().fg(Color::White),
-            ));
+            std::cmp::Ordering::Greater => {
+                text_spans.push(Span::styled(
+                    target_char.to_string(),
+                    Style::default().fg(Color::White),
+                ));
+            }
         }
     }
 

@@ -1,9 +1,12 @@
 pub fn calc_wpm(inputs_length: usize, seconds: i32, misses: i32) -> f64 {
-    (inputs_length as f64 - misses as f64) / (5.0 * seconds as f64 / 60.0)
+    #[expect(clippy::cast_precision_loss)]
+    let inputs = inputs_length as f64;
+    (inputs - f64::from(misses)) / (5.0 * f64::from(seconds) / 60.0)
 }
 
 #[cfg(test)]
 mod tests {
+    #![expect(clippy::float_cmp)]
     use super::*;
 
     #[test]

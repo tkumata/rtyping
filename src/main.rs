@@ -22,10 +22,8 @@ use std::sync::{Arc, Mutex, mpsc};
 use domain::config::AppConfig;
 use presentation::bgm_handler::BgmHandler;
 use presentation::ui::app::App;
-use presentation::ui::ui_handler::UiHandler;
 
 fn main() -> io::Result<()> {
-    let args = UiHandler::parse_args();
     let (loaded_config, config_message) = match config::load_config() {
         Ok(report) => {
             let message = if report.warnings.is_empty() {
@@ -46,7 +44,7 @@ fn main() -> io::Result<()> {
     audio_sink.log_on_drop(false);
     let (snd_sender, snd_receiver) = mpsc::channel();
 
-    if args.sound {
+    if loaded_config.game.sound_enabled_value() {
         let bgm_handler = BgmHandler::new(snd_receiver);
         bgm_handler.start();
     }
@@ -57,14 +55,7 @@ fn main() -> io::Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let mut app = App::new(
-        args.timeout,
-        args.text_scale,
-        args.freq,
-        args.sound,
-        args.source,
-        loaded_config,
-    );
+    let mut app = App::new(loaded_config);
     if let Some(message) = config_message {
         app.set_status_message(message);
     }
@@ -74,7 +65,7 @@ fn main() -> io::Result<()> {
     let (timeout_tx, timeout_rx) = mpsc::channel::<()>();
     let timer_thread = runtime::spawn_timer_thread(
         Arc::clone(&timer),
-        args.timeout,
+        0,
         timer_command_rx,
         timeout_tx,
     );
@@ -84,8 +75,8 @@ fn main() -> io::Result<()> {
         &mut app,
         &timer,
         &audio_sink,
-        timer_command_tx.clone(),
-        timeout_rx,
+        &timer_command_tx,
+        &timeout_rx,
     );
 
     disable_raw_mode()?;
@@ -97,11 +88,11 @@ fn main() -> io::Result<()> {
     terminal.show_cursor()?;
 
     timer_command_tx.send(runtime::TimerCommand::Shutdown).ok();
-    timer_thread.join().unwrap();
+    timer_thread.join().ok();
     snd_sender.send(()).ok();
 
     if let Err(err) = res {
-        println!("Error: {:?}", err);
+        println!("Error: {err:?}");
     }
 
     Ok(())

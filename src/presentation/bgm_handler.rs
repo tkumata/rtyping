@@ -23,7 +23,7 @@ impl BgmHandler {
 
             loop {
                 match self.receiver.try_recv() {
-                    Ok(_) | Err(TryRecvError::Disconnected) => break,
+                    Ok(()) | Err(TryRecvError::Disconnected) => break,
                     Err(TryRecvError::Empty) => {
                         if append_audio(&sink).is_err() {
                             break;

@@ -31,19 +31,28 @@ pub enum ConfigField {
     GroqApiUrl,
     GroqApiKey,
     GroqModel,
+    GameTimeout,
+    GameTextScale,
+    GameFreq,
+    GameSoundEnabled,
 }
 
 impl ConfigField {
-    pub const ALL: [ConfigField; 6] = [
+    pub const ALL: [ConfigField; 10] = [
         ConfigField::GoogleApiUrl,
         ConfigField::GoogleApiKey,
         ConfigField::GoogleModel,
         ConfigField::GroqApiUrl,
         ConfigField::GroqApiKey,
         ConfigField::GroqModel,
+        ConfigField::GameTimeout,
+        ConfigField::GameTextScale,
+        ConfigField::GameFreq,
+        ConfigField::GameSoundEnabled,
     ];
 }
 
+#[expect(clippy::struct_excessive_bools)]
 pub struct App {
     state: AppState,
     target_string: String,
@@ -53,12 +62,8 @@ pub struct App {
     wpm_history: Vec<u64>,
     last_wpm_sample: Option<(i32, usize, usize)>,
     timer: i32,
-    timeout: i32,
     practice_mode: bool,
-    text_scale: usize,
     should_quit: bool,
-    freq: f32,
-    sound_enabled: bool,
     time_started: bool,
     show_help: bool,
     help_scroll: u16,
@@ -70,14 +75,7 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(
-        timeout: i32,
-        text_scale: usize,
-        freq: f32,
-        sound_enabled: bool,
-        generation_source: GenerationSource,
-        config: AppConfig,
-    ) -> Self {
+    pub fn new(config: AppConfig) -> Self {
         Self {
             state: AppState::Menu,
             target_string: String::new(),
@@ -87,12 +85,8 @@ impl App {
             wpm_history: Vec::new(),
             last_wpm_sample: None,
             timer: 0,
-            timeout,
             practice_mode: false,
-            text_scale,
             should_quit: false,
-            freq,
-            sound_enabled,
             time_started: false,
             show_help: false,
             help_scroll: 0,
@@ -100,7 +94,7 @@ impl App {
             config_field: ConfigField::GoogleApiUrl,
             config,
             status_message: None,
-            generation_source,
+            generation_source: GenerationSource::Local,
         }
     }
 
@@ -178,7 +172,11 @@ impl App {
     }
 
     pub fn timeout(&self) -> i32 {
-        if self.practice_mode { 0 } else { self.timeout }
+        if self.practice_mode {
+            0
+        } else {
+            self.config.game.timeout_value()
+        }
     }
 
     pub fn set_practice_mode(&mut self, practice_mode: bool) {
@@ -195,11 +193,11 @@ impl App {
     }
 
     pub fn typing_sound_enabled(&self) -> bool {
-        self.sound_enabled
+        self.config.game.sound_enabled_value()
     }
 
     pub fn frequency(&self) -> f32 {
-        self.freq
+        self.config.game.freq_value()
     }
 
     pub fn generation_source(&self) -> GenerationSource {
@@ -211,7 +209,7 @@ impl App {
     }
 
     pub fn generation_settings(&self) -> (usize, GenerationSource, AppConfig) {
-        (self.text_scale, self.generation_source, self.config.clone())
+        (self.config.game.text_scale_value(), self.generation_source, self.config.clone())
     }
 
     pub fn is_help_visible(&self) -> bool {
@@ -247,7 +245,7 @@ impl App {
         if self.timer <= 0 {
             0.0
         } else {
-            crate::usecase::wpm::calc_wpm(self.typed_count, self.timer, self.incorrects as i32)
+            crate::usecase::wpm::calc_wpm(self.typed_count, self.timer, i32::try_from(self.incorrects).unwrap_or(i32::MAX))
                 .max(0.0)
         }
     }
@@ -260,7 +258,8 @@ impl App {
             return;
         }
 
-        let sample = self.current_wpm().round().clamp(0.0, u64::MAX as f64) as u64;
+        #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let sample = self.current_wpm().round().clamp(0.0, f64::from(u32::MAX)) as u64;
         self.wpm_history.push(sample);
         if self.wpm_history.len() > MAX_WPM_HISTORY {
             let overflow = self.wpm_history.len() - MAX_WPM_HISTORY;

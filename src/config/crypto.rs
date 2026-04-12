@@ -184,8 +184,7 @@ fn decode_array<const N: usize>(input: &str, label: &str) -> io::Result<[u8; N]>
     let len = decoded.len();
     decoded.try_into().map_err(|_| {
         io::Error::other(format!(
-            "{label} has invalid length: expected {N}, got {}",
-            len
+            "{label} has invalid length: expected {N}, got {len}"
         ))
     })
 }

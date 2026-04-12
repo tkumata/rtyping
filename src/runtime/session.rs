@@ -17,8 +17,8 @@ pub fn run_app(
     app: &mut App,
     timer: &Arc<Mutex<i32>>,
     audio_sink: &MixerDeviceSink,
-    timer_command_tx: mpsc::Sender<TimerCommand>,
-    timeout_rx: mpsc::Receiver<()>,
+    timer_command_tx: &mpsc::Sender<TimerCommand>,
+    timeout_rx: &mpsc::Receiver<()>,
 ) -> io::Result<()> {
     let (generation_tx, generation_rx) = mpsc::channel::<GenerationJobResult>();
     let mut next_request_id = 1_u64;
@@ -34,7 +34,7 @@ pub fn run_app(
         drain_generation_results(
             &generation_rx,
             app,
-            &timer_command_tx,
+            timer_command_tx,
             &mut active_request_id,
         );
 
@@ -52,7 +52,7 @@ pub fn run_app(
                 next_request_id: &mut next_request_id,
                 active_request_id: &mut active_request_id,
                 audio_sink,
-                timer_command_tx: &timer_command_tx,
+                timer_command_tx,
             };
             handle_key_event(key, app, &mut context);
         }

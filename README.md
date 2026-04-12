@@ -2,7 +2,7 @@
 
 R-Typing is a terminal-based typing game built with Rust. It provides a TUI powered by `ratatui` and `crossterm`, real-time WPM feedback, optional audio, and multiple text generation sources.
 
-By default, the game starts from a title menu where you can choose local generation, Google AI Studio, or Groq for the next game. CLI flags can still preselect the generation source at launch.
+The game starts from a title menu where you can choose a generation source and play mode. All settings are configured through the in-app Config screen and saved to disk.
 
 ![sample1](./docs/screenshot-01.png)
 ![sample2](./docs/screenshot-02.png)
@@ -13,25 +13,17 @@ By default, the game starts from a title menu where you can choose local generat
 
 - Terminal UI with title menu, config screen, typing screen, and result screen
 - Real-time WPM, timer, typed character count, and miss count
-- Optional BGM and typing feedback sound
+- Practice mode (no time limit) via menu or by setting timeout to 0
+- Optional BGM and typing feedback sound (configured in-app, saved to disk)
 - Local text generation with a 4-gram Markov chain
 - Remote text generation through Google AI Studio or Groq
-- Provider configuration saved under `~/.config/rtyping/`
+- All settings (timeout, text scale, frequency, sound, provider API keys) saved under `~/.config/rtyping/`
 
 ## Run
 
 ```shell
 # Start normally and choose a provider from the title menu
 cargo run
-
-# Start with Google AI Studio preselected as the generation source
-cargo run -- --google
-
-# Start with Groq preselected as the generation source
-cargo run -- --groq
-
-# Custom game settings
-cargo run -- --timeout 30 --level 20 --sound
 ```
 
 ## Build
@@ -42,27 +34,15 @@ cargo build --release
 cargo install --path .
 ```
 
-## CLI Options
-
-```text
--t, --timeout <SECONDS>  Timer duration (default: 60)
--l, --level <LEVEL>      Target text length scale (default: 60)
-    --freq <FREQUENCY>   Sound frequency in Hz (default: 80.0)
--s, --sound              Enable BGM and typing sound
-    --google             Use Google AI Studio for text generation
-    --groq               Use Groq for text generation
-```
-
-`--google` and `--groq` are mutually exclusive. If neither is specified, local generation is used.
-
 ## Title Menu
 
 - Menu entries:
   - `Start Game`
+  - `Practice Mode`
   - `Start Game via Google AI Studio`
   - `Start Game via Groq`
   - `Config`
-- `Up / Down`: move between the four menu entries
+- `Up / Down`: move between the five menu entries
 - `Enter`: confirm selection
 - `h`: open or close help
 - `Esc`: quit
@@ -70,7 +50,7 @@ cargo install --path .
 
 ## Config Screen
 
-The `Config` screen lets you edit both Google AI Studio and Groq settings.
+The `Config` screen lets you edit both Google AI Studio and Groq provider settings and game settings.
 
 Each provider has these fields:
 
@@ -78,10 +58,18 @@ Each provider has these fields:
 - `API Key`
 - `Model`
 
+Game Settings:
+
+- `Timeout` – timer duration in seconds (`0` = no time limit / practice mode)
+- `TextScale` – target text length scale
+- `Freq` – typing sound frequency in Hz
+- `SoundEnabled` – `true` / `false`
+
 Controls:
 
 - `Up / Down`: move focus
 - `Backspace`: delete one character
+- `Space`: toggle `SoundEnabled`
 - `Enter`: save configuration
 - `Esc`: return to the title screen
 
@@ -115,7 +103,7 @@ Final URL: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-fl
 
 ## Text Length
 
-The generated target text length follows `--level`. The current implementation uses roughly `level * 5` characters for both local and remote generation, so `--level` is a text-length scale rather than a literal word count.
+The generated target text length is controlled by `TextScale` in the Config screen. The current implementation uses roughly `text_scale * 5` characters for both local and remote generation.
 
 ## Development
 

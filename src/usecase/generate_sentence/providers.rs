@@ -37,7 +37,7 @@ pub(super) fn generate_google_sentence(
     let response_text = response
         .text()
         .map_err(|err| io::Error::other(format!("Failed to read Google response body: {err}")))?;
-    let payload = parse_json_response("Google AI Studio", status, response_text)?;
+    let payload = parse_json_response("Google AI Studio", status, &response_text)?;
     payload["candidates"][0]["content"]["parts"][0]["text"]
         .as_str()
         .map(ToOwned::to_owned)
@@ -73,7 +73,7 @@ pub(super) fn generate_groq_sentence(
     let response_text = response
         .text()
         .map_err(|err| io::Error::other(format!("Failed to read Groq response body: {err}")))?;
-    let payload = parse_json_response("Groq", status, response_text)?;
+    let payload = parse_json_response("Groq", status, &response_text)?;
     payload["choices"][0]["message"]["content"]
         .as_str()
         .map(ToOwned::to_owned)
@@ -107,7 +107,7 @@ fn build_http_client() -> Result<Client, io::Error> {
 fn parse_json_response(
     provider_name: &str,
     status: StatusCode,
-    response_text: String,
+    response_text: &str,
 ) -> Result<Value, io::Error> {
     if !status.is_success() {
         let summary = response_text.replace('\n', " ");
@@ -118,7 +118,7 @@ fn parse_json_response(
         )));
     }
 
-    serde_json::from_str(&response_text)
+    serde_json::from_str(response_text)
         .map_err(|err| io::Error::other(format!("{provider_name} returned invalid JSON: {err}")))
 }
 

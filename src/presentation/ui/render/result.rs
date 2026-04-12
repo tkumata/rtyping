@@ -16,7 +16,7 @@ use super::wpm_graph;
 pub fn render_result(frame: &mut Frame, app: &App) {
     let area = centered_rect(70, 60, frame.area());
     let elapsed = app.timer().max(1);
-    let score = wpm::calc_wpm(app.typed_count(), elapsed, app.incorrects() as i32);
+    let score = wpm::calc_wpm(app.typed_count(), elapsed, i32::try_from(app.incorrects()).unwrap_or(i32::MAX));
     let accuracy = accuracy::calc_accuracy(app.typed_count(), app.incorrects());
     let [metrics_area, graph_area, footer_area] = split_result_area(area);
     let lines = vec![
@@ -24,9 +24,9 @@ pub fn render_result(frame: &mut Frame, app: &App) {
         Line::from(""),
         Line::from(format!("Typed: {}", app.typed_count())),
         Line::from(format!("Misses: {}", app.incorrects())),
-        Line::from(format!("Accuracy: {:.1}%", accuracy)),
-        Line::from(format!("Time: {} sec", elapsed)),
-        Line::from(format!("WPM: {:.1}", score)),
+        Line::from(format!("Accuracy: {accuracy:.1}%")),
+        Line::from(format!("Time: {elapsed} sec")),
+        Line::from(format!("WPM: {score:.1}")),
     ];
     frame.render_widget(Clear, area);
     frame.render_widget(

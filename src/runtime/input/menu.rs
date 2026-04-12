@@ -112,14 +112,7 @@ mod tests {
     }
 
     fn test_app() -> App {
-        App::new(
-            60,
-            60,
-            80.0,
-            false,
-            GenerationSource::Local,
-            AppConfig::default(),
-        )
+        App::new(AppConfig::default())
     }
 
     #[test]

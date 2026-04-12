@@ -23,7 +23,6 @@ mod tests {
     use super::*;
     use crate::domain::config::AppConfig;
     use crate::presentation::ui::app::App;
-    use crate::usecase::generate_sentence::GenerationSource;
     use crossterm::event::{KeyEventKind, KeyEventState};
 
     fn key(code: KeyCode) -> KeyEvent {
@@ -37,14 +36,7 @@ mod tests {
 
     #[test]
     fn escape_on_loading_cancels_request() {
-        let mut app = App::new(
-            60,
-            30,
-            80.0,
-            false,
-            GenerationSource::Local,
-            AppConfig::default(),
-        );
+        let mut app = App::new(AppConfig::default());
         let mut active_request_id = Some(8);
 
         app.enter_loading();

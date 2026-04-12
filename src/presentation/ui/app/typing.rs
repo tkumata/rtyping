@@ -69,17 +69,9 @@ impl App {
 mod tests {
     use super::App;
     use crate::domain::config::AppConfig;
-    use crate::usecase::generate_sentence::GenerationSource;
 
     fn new_app() -> App {
-        App::new(
-            60,
-            30,
-            80.0,
-            false,
-            GenerationSource::Local,
-            AppConfig::default(),
-        )
+        App::new(AppConfig::default())
     }
 
     #[test]
