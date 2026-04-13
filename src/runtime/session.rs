@@ -1,4 +1,8 @@
-use crossterm::event::{self, Event};
+use crossterm::{
+    cursor::SetCursorStyle,
+    event::{self, Event},
+    execute,
+};
 use ratatui::{Terminal, backend::CrosstermBackend};
 use rodio::MixerDeviceSink;
 use std::io;
@@ -23,8 +27,18 @@ pub fn run_app(
     let (generation_tx, generation_rx) = mpsc::channel::<GenerationJobResult>();
     let mut next_request_id = 1_u64;
     let mut active_request_id: Option<u64> = None;
+    let mut using_typing_cursor_style = false;
 
     loop {
+        let is_typing = app.state() == AppState::Typing;
+        if is_typing && !using_typing_cursor_style {
+            execute!(terminal.backend_mut(), SetCursorStyle::SteadyBar)?;
+            using_typing_cursor_style = true;
+        } else if !is_typing && using_typing_cursor_style {
+            execute!(terminal.backend_mut(), SetCursorStyle::DefaultUserShape)?;
+            using_typing_cursor_style = false;
+        }
+
         terminal.draw(|frame| render::render(frame, app))?;
 
         if app.is_quit_requested() {

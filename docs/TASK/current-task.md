@@ -1,16 +1,14 @@
 # Current Task
 
-- Date: 2026-04-12 14:53
-- Summary: CLI 引数を撤廃し、タイムアウト・テキスト量・サウンド設定などをすべて Config 画面で編集・ファイル保存できるようにする。
+- Date: 2026-04-13 13:39
+- Summary: Typing 画面で改行・折返し時にカーソル位置がずれる不具合を修正する。
 - Scope:
-  - すべての CLI 引数（--timeout, --level, --freq, --sound, --google, --groq）を削除する
-  - GameSettings（timeout, text_scale, freq, sound_enabled）を AppConfig に追加する
-  - Config 画面にゲーム設定セクションを追加し、編集・保存できるようにする
-  - config.json のシリアライズにゲーム設定を追加する（#[serde(default)] により後方互換を維持）
-  - App::new() を AppConfig のみ受け取るよう簡素化する
-  - clap 依存を削除する
+  - Typing 画面のカーソル座標計算を、実際の折返し表示に追従するよう見直す
+  - 改行境界をまたいでもカーソル位置が累積してずれないようにする
+  - 現在の縦棒カーソル方針と右側配置を維持する
+  - Menu、Config、Loading、Result の表示や遷移は変更しない
 - Verification:
-  - cargo build で警告・エラーがないこと
-  - cargo test で全テストがパスすること
-  - Config 画面に Game Settings セクションが表示されること
-  - 設定保存でゲーム設定がファイルに永続化されること
+  - 長い出題文字列が複数行に折り返されても、カーソルが各行の表示位置と一致すること
+  - 行をまたいでもカーソルずれが累積しないこと
+  - 他画面の表示と状態遷移に影響がないこと
+  - 画面が狭い場合でも出題文字列とカーソルが破綻しないこと

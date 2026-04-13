@@ -29,7 +29,9 @@ pub fn spawn_timer_thread(
                         break;
                     }
                     Err(mpsc::RecvTimeoutError::Timeout) => {
-                        let mut elapsed = timer.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+                        let mut elapsed = timer
+                            .lock()
+                            .unwrap_or_else(std::sync::PoisonError::into_inner);
                         *elapsed += 1;
                         if current_timeout > 0 && *elapsed >= current_timeout {
                             running = false;
@@ -55,11 +57,15 @@ pub fn spawn_timer_thread(
 }
 
 pub(super) fn reset_timer(timer: &Arc<Mutex<i32>>) {
-    *timer.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = 0;
+    *timer
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner) = 0;
 }
 
 pub(super) fn current_timer(timer: &Arc<Mutex<i32>>) -> i32 {
-    *timer.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    *timer
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 pub(super) fn stop_timer(timer_command_tx: &mpsc::Sender<TimerCommand>) {

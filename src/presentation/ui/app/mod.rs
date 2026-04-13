@@ -209,7 +209,11 @@ impl App {
     }
 
     pub fn generation_settings(&self) -> (usize, GenerationSource, AppConfig) {
-        (self.config.game.text_scale_value(), self.generation_source, self.config.clone())
+        (
+            self.config.game.text_scale_value(),
+            self.generation_source,
+            self.config.clone(),
+        )
     }
 
     pub fn is_help_visible(&self) -> bool {
@@ -245,8 +249,12 @@ impl App {
         if self.timer <= 0 {
             0.0
         } else {
-            crate::usecase::wpm::calc_wpm(self.typed_count, self.timer, i32::try_from(self.incorrects).unwrap_or(i32::MAX))
-                .max(0.0)
+            crate::usecase::wpm::calc_wpm(
+                self.typed_count,
+                self.timer,
+                i32::try_from(self.incorrects).unwrap_or(i32::MAX),
+            )
+            .max(0.0)
         }
     }
 

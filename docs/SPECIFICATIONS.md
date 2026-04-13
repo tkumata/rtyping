@@ -77,6 +77,16 @@
   - 画面サイズが不足する場合でも、各画面の主要情報の可読性を優先し、グラフは縮小または簡略表示しても重なりを起こさない。
 - `RUN-025`
   - `src/presentation/ui/render/typing.rs` と `src/presentation/ui/render/result.rs` を含む描画モジュールでは、`#[cfg(test)] mod tests` を通常関数より後ろ、すなわちファイル末尾へ配置し、`clippy::items_after_test_module` を発生させない。
+- `RUN-026`
+  - `Typing` 画面の現在入力位置カーソルは縦棒で表示し、四角カーソルは使用しない。
+- `RUN-027`
+  - カーソル形状の変更は `Typing` 画面に限定し、`Menu`、`Config`、`Loading`、`Result` の表示には影響させない。
+- `RUN-028`
+  - `Typing` 画面の縦棒カーソルは、現在入力位置の文字の右側に配置し、文字の左側には配置しない。
+- `RUN-029`
+  - `Typing` 画面では、出題文字列が改行で折り返されてもカーソルが表示上の現在位置と一致し、行移動のたびにずれない。
+- `RUN-030`
+  - カーソル座標は、出題文字列の描画と同じ折返し条件に基づいて算出する。
 
 ## Sentence Generation
 
@@ -105,3 +115,6 @@
   - `Typing` 画面で WPM グラフ領域と出題文字列領域が分離されること
   - `Result` 画面で最終 WPM グラフが表示されること
   - `src/presentation/ui/render/typing.rs` で `cargo clippy` の `items_after_test_module` 警告が発生しないこと
+  - `Typing` 画面のカーソルが縦棒として描画されること
+  - `Typing` 画面の縦棒カーソルが現在入力位置の文字の右側に描画されること
+  - 長い出題文字列が複数行に折り返されてもカーソル位置がずれないこと
