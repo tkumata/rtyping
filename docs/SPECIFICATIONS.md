@@ -118,3 +118,12 @@
   - `Typing` 画面のカーソルが縦棒として描画されること
   - `Typing` 画面の縦棒カーソルが現在入力位置の文字の右側に描画されること
   - 長い出題文字列が複数行に折り返されてもカーソル位置がずれないこと
+
+## Tooling
+
+- `TOOL-001`
+  - `Cargo.toml` の `[lints.clippy]` は Cargo が読み込める形式を維持する。
+- `TOOL-002`
+  - VS Code の TOML スキーマ検証が Cargo の lint テーブルを誤検出する場合は、manifest の lint 強度を下げずにエディタ検証設定で解消する。
+- `TOOL-003`
+  - 診断解消後も `cargo metadata --no-deps --format-version 1` で manifest が読めることを確認する。

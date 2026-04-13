@@ -75,6 +75,12 @@
 - `config.key` は別ファイルで管理し、起動時は優先パスと互換パスの候補を順に試す。
 - 旧 AEAD ラベルと旧 XOR 形式の API key も復元対象に含める。
 
+## 開発環境設定
+
+- `Cargo.toml` の `[lints.clippy]` は Cargo 標準の lint 設定として維持する。
+- エディタ拡張のスキーマが Cargo の lint テーブルに追従していない場合は、`.vscode/settings.json` の TOML 検証設定で対象診断を抑制する。
+- manifest 構文の確認は `cargo metadata --no-deps --format-version 1` を用いる。
+
 ## テスト方針
 
 - `src/usecase/wpm.rs`
