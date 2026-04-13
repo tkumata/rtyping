@@ -8,6 +8,7 @@ The game starts from a title menu where you can choose a generation source and p
 ![sample2](./docs/screenshot-02.png)
 ![sample3](./docs/screenshot-03.png)
 ![sample4](./docs/screenshot-04.png)
+![sample5](./docs/screenshot-05.png)
 
 ## Features
 
