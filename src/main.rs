@@ -10,6 +10,7 @@ mod runtime;
 mod usecase;
 
 use crossterm::{
+    cursor::SetCursorStyle,
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
@@ -63,12 +64,8 @@ fn main() -> io::Result<()> {
     let timer = Arc::new(Mutex::new(0i32));
     let (timer_command_tx, timer_command_rx) = mpsc::channel::<runtime::TimerCommand>();
     let (timeout_tx, timeout_rx) = mpsc::channel::<()>();
-    let timer_thread = runtime::spawn_timer_thread(
-        Arc::clone(&timer),
-        0,
-        timer_command_rx,
-        timeout_tx,
-    );
+    let timer_thread =
+        runtime::spawn_timer_thread(Arc::clone(&timer), 0, timer_command_rx, timeout_tx);
 
     let res = runtime::run_app(
         &mut terminal,
@@ -82,6 +79,7 @@ fn main() -> io::Result<()> {
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
+        SetCursorStyle::DefaultUserShape,
         LeaveAlternateScreen,
         DisableMouseCapture
     )?;

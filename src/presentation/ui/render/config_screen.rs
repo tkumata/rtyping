@@ -93,7 +93,11 @@ fn render_game_settings_block(frame: &mut Frame, area: Rect, app: &App) {
 
     let fields: [(ConfigField, &str, String); 4] = [
         (ConfigField::GameTimeout, "Timeout", game.timeout.clone()),
-        (ConfigField::GameTextScale, "TextScale", game.text_scale.clone()),
+        (
+            ConfigField::GameTextScale,
+            "TextScale",
+            game.text_scale.clone(),
+        ),
         (ConfigField::GameFreq, "Freq", game.freq.clone()),
         (
             ConfigField::GameSoundEnabled,

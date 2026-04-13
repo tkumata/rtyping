@@ -1,6 +1,6 @@
 use ratatui::{
     Frame,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Position, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Wrap},
@@ -144,9 +144,7 @@ fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
             std::cmp::Ordering::Equal => {
                 text_spans.push(Span::styled(
                     target_char.to_string(),
-                    Style::default()
-                        .fg(Color::Yellow)
-                        .add_modifier(Modifier::UNDERLINED),
+                    Style::default().fg(Color::Yellow),
                 ));
             }
             std::cmp::Ordering::Greater => {
@@ -175,6 +173,10 @@ fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
         .wrap(Wrap { trim: false }),
         text_area,
     );
+
+    if let Some(cursor_position) = typing_cursor_position(text_area, app) {
+        frame.set_cursor_position(cursor_position);
+    }
 }
 
 fn split_typing_area(area: Rect) -> [Rect; 2] {
@@ -190,6 +192,152 @@ fn split_typing_area(area: Rect) -> [Rect; 2] {
         .constraints(constraints)
         .split(area);
     [chunks[0], chunks[1]]
+}
+
+fn typing_cursor_position(area: Rect, app: &App) -> Option<Position> {
+    let content_x = area.x.checked_add(1)?;
+    let content_y = area.y.checked_add(3)?;
+    let content_width = area.width.checked_sub(2)?;
+    let content_height = area.height.checked_sub(4)?;
+    if content_width == 0 || content_height == 0 {
+        return None;
+    }
+
+    let cursor_index = app
+        .input_chars()
+        .len()
+        .saturating_add(1)
+        .min(app.target_string().chars().count());
+    let (cursor_row, cursor_col) =
+        wrapped_cursor_offset(app.target_string(), cursor_index, content_width)?;
+    let cursor_x = content_x.checked_add(cursor_col)?;
+    let cursor_y = content_y.checked_add(cursor_row)?;
+    let max_x = area.x.checked_add(area.width.checked_sub(2)?)?;
+    let max_y = area.y.checked_add(area.height.checked_sub(2)?)?;
+
+    if cursor_x > max_x || cursor_y > max_y {
+        return None;
+    }
+
+    Some(Position::new(cursor_x, cursor_y))
+}
+
+#[derive(Debug, Clone, Copy)]
+struct WrappedChar {
+    character_index: usize,
+    width: u16,
+}
+
+fn wrapped_cursor_offset(
+    text: &str,
+    cursor_index: usize,
+    content_width: u16,
+) -> Option<(u16, u16)> {
+    if content_width == 0 {
+        return None;
+    }
+
+    let cursor_character_index = cursor_index.saturating_sub(1);
+    for (row, line) in wrapped_lines(text, content_width).iter().enumerate() {
+        let mut col = 0_u16;
+        for wrapped_char in line {
+            col = col.checked_add(wrapped_char.width)?;
+            if wrapped_char.character_index == cursor_character_index {
+                return Some((u16::try_from(row).ok()?, col));
+            }
+        }
+    }
+
+    if text.is_empty() {
+        return Some((0, 0));
+    }
+
+    None
+}
+
+fn wrapped_lines(text: &str, content_width: u16) -> Vec<Vec<WrappedChar>> {
+    let mut lines = Vec::new();
+    let mut pending_line = Vec::new();
+    let mut pending_word = Vec::new();
+    let mut pending_whitespace = std::collections::VecDeque::<WrappedChar>::new();
+    let mut line_width = 0_u16;
+    let mut word_width = 0_u16;
+    let mut whitespace_width = 0_u16;
+    let mut non_whitespace_previous = false;
+
+    for (character_index, character) in text.chars().enumerate() {
+        let symbol_width = character_width(character);
+        if symbol_width == 0 || symbol_width > content_width {
+            continue;
+        }
+
+        let is_whitespace = character.is_whitespace();
+        let word_found = non_whitespace_previous && is_whitespace;
+        let untrimmed_overflow =
+            pending_line.is_empty() && word_width + whitespace_width + symbol_width > content_width;
+
+        if word_found || untrimmed_overflow {
+            pending_line.extend(pending_whitespace.drain(..));
+            line_width += whitespace_width;
+            pending_line.append(&mut pending_word);
+            line_width += word_width;
+            whitespace_width = 0;
+            word_width = 0;
+        }
+
+        let line_full = line_width >= content_width;
+        let pending_word_overflow =
+            symbol_width > 0 && line_width + whitespace_width + word_width >= content_width;
+
+        if line_full || pending_word_overflow {
+            let mut remaining_width = content_width.saturating_sub(line_width);
+            lines.push(std::mem::take(&mut pending_line));
+            line_width = 0;
+
+            while let Some(wrapped_char) = pending_whitespace.front() {
+                if wrapped_char.width > remaining_width {
+                    break;
+                }
+
+                whitespace_width -= wrapped_char.width;
+                remaining_width -= wrapped_char.width;
+                pending_whitespace.pop_front();
+            }
+
+            if is_whitespace && pending_whitespace.is_empty() {
+                continue;
+            }
+        }
+
+        let wrapped_char = WrappedChar {
+            character_index,
+            width: symbol_width,
+        };
+        if is_whitespace {
+            whitespace_width += symbol_width;
+            pending_whitespace.push_back(wrapped_char);
+        } else {
+            word_width += symbol_width;
+            pending_word.push(wrapped_char);
+        }
+
+        non_whitespace_previous = !is_whitespace;
+    }
+
+    pending_line.extend(pending_whitespace);
+    pending_line.append(&mut pending_word);
+    if !pending_line.is_empty() {
+        lines.push(pending_line);
+    }
+    if lines.is_empty() {
+        lines.push(Vec::new());
+    }
+
+    lines
+}
+
+fn character_width(character: char) -> u16 {
+    u16::from(!character.is_ascii_control())
 }
 
 fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
@@ -232,8 +380,19 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
 
 #[cfg(test)]
 mod tests {
-    use super::split_typing_area;
-    use ratatui::layout::Rect;
+    use super::{split_typing_area, typing_cursor_position, wrapped_cursor_offset};
+    use crate::domain::config::AppConfig;
+    use crate::presentation::ui::app::App;
+    use ratatui::layout::{Position, Rect};
+
+    fn new_app_with_target(target: &str, input_len: usize) -> App {
+        let mut app = App::new(AppConfig::default());
+        app.prepare_new_game(target.to_string());
+        for _ in 0..input_len {
+            app.push_char('a');
+        }
+        app
+    }
 
     #[test]
     fn split_typing_area_separates_graph_and_text_when_height_allows() {
@@ -250,5 +409,49 @@ mod tests {
 
         assert_eq!(graph_area.height, 0);
         assert_eq!(text_area.height, 8);
+    }
+
+    #[test]
+    fn typing_cursor_position_tracks_current_input_offset() {
+        let app = new_app_with_target("abcd", 2);
+        let cursor = typing_cursor_position(Rect::new(0, 0, 20, 10), &app);
+
+        assert_eq!(cursor, Some(Position::new(4, 3)));
+    }
+
+    #[test]
+    fn typing_cursor_position_wraps_to_next_line_when_needed() {
+        let app = new_app_with_target("abcdef", 5);
+        let cursor = typing_cursor_position(Rect::new(0, 0, 6, 10), &app);
+
+        assert_eq!(cursor, Some(Position::new(3, 4)));
+    }
+
+    #[test]
+    fn typing_cursor_position_matches_word_wrapping() {
+        let app = new_app_with_target("abcd efgh ijkl", 7);
+        let cursor = typing_cursor_position(Rect::new(0, 0, 8, 10), &app);
+
+        assert_eq!(cursor, Some(Position::new(4, 4)));
+    }
+
+    #[test]
+    fn wrapped_cursor_offset_keeps_words_with_their_wrapped_line() {
+        assert_eq!(wrapped_cursor_offset("abcd efgh ijkl", 8, 6), Some((1, 3)));
+    }
+
+    #[test]
+    fn typing_cursor_position_returns_none_when_text_area_is_too_small() {
+        let app = new_app_with_target("abcd", 2);
+
+        assert_eq!(typing_cursor_position(Rect::new(0, 0, 2, 10), &app), None);
+        assert_eq!(typing_cursor_position(Rect::new(0, 0, 20, 4), &app), None);
+    }
+
+    #[test]
+    fn typing_cursor_position_returns_none_when_wrap_overflows_visible_height() {
+        let app = new_app_with_target("abcdef", 5);
+
+        assert_eq!(typing_cursor_position(Rect::new(0, 0, 3, 5), &app), None);
     }
 }

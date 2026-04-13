@@ -8,6 +8,7 @@
     "editor.defaultFormatter": "rust-lang.rust-analyzer",
     "editor.formatOnSave": true
   },
+  "evenBetterToml.schema.enabled": false,
   "rust-analyzer.check.command": "clippy",
   "rust-analyzer.cargo.features": "all"
 }

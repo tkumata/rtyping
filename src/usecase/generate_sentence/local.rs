@@ -32,7 +32,9 @@ fn generate_markov_chain(text: &str, n: usize, target_chars: usize) -> String {
 
     while current_len < target_chars {
         if let Some(next_words) = markov_chain.get(&current_state) {
-            let Some(next_word) = next_words.choose(&mut rng) else { break };
+            let Some(next_word) = next_words.choose(&mut rng) else {
+                break;
+            };
             result.push(*next_word);
             current_len += next_word.chars().count() + 1;
             current_state.push(*next_word);

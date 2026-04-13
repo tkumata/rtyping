@@ -37,10 +37,18 @@ struct StoredGameSettings {
     sound_enabled: String,
 }
 
-fn default_timeout() -> String { "60".to_string() }
-fn default_text_scale() -> String { "60".to_string() }
-fn default_freq() -> String { "80.0".to_string() }
-fn default_sound_enabled() -> String { "false".to_string() }
+fn default_timeout() -> String {
+    "60".to_string()
+}
+fn default_text_scale() -> String {
+    "60".to_string()
+}
+fn default_freq() -> String {
+    "80.0".to_string()
+}
+fn default_sound_enabled() -> String {
+    "false".to_string()
+}
 
 impl Default for StoredGameSettings {
     fn default() -> Self {
