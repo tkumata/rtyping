@@ -48,12 +48,11 @@ pub(in crate::runtime::input) fn apply_generation_result(
                 .send(TimerCommand::Start(app.timeout()))
                 .ok();
         }
-        Ok(_) => {}
         Err(message) if app.state() == AppState::Loading => {
             app.return_to_menu();
             app.set_status_message(message);
         }
-        Err(_) => {}
+        _ => {}
     }
 }
 
@@ -74,14 +73,7 @@ mod tests {
     use crate::presentation::ui::app::App;
 
     fn test_app() -> App {
-        App::new(
-            60,
-            60,
-            80.0,
-            false,
-            GenerationSource::Local,
-            AppConfig::default(),
-        )
+        App::new(AppConfig::default())
     }
 
     fn app_config() -> AppConfig {
@@ -96,6 +88,7 @@ mod tests {
                 api_key: "groq-secret".into(),
                 model: "groq-model".into(),
             },
+            game: AppConfig::default().game,
         }
     }
 

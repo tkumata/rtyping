@@ -3,13 +3,14 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::domain::config::{AppConfig, ConfigLoadReport, ProviderConfig};
+use crate::domain::config::{AppConfig, ConfigLoadReport, GameSettings, ProviderConfig};
 
 use super::crypto::{
     decrypt_with_candidates, encrypt_value, ensure_key, read_key, set_private_permissions,
 };
 use super::paths::alternate_config_paths;
 
+#[derive(Copy, Clone)]
 struct ProviderRestoreSpec<'a> {
     current_aad_label: &'a str,
     legacy_aad_label: &'a str,
@@ -24,10 +25,40 @@ struct StoredProviderConfig {
     model: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct StoredGameSettings {
+    #[serde(default = "default_timeout")]
+    timeout: String,
+    #[serde(default = "default_text_scale")]
+    text_scale: String,
+    #[serde(default = "default_freq")]
+    freq: String,
+    #[serde(default = "default_sound_enabled")]
+    sound_enabled: String,
+}
+
+fn default_timeout() -> String { "60".to_string() }
+fn default_text_scale() -> String { "60".to_string() }
+fn default_freq() -> String { "80.0".to_string() }
+fn default_sound_enabled() -> String { "false".to_string() }
+
+impl Default for StoredGameSettings {
+    fn default() -> Self {
+        Self {
+            timeout: default_timeout(),
+            text_scale: default_text_scale(),
+            freq: default_freq(),
+            sound_enabled: default_sound_enabled(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 struct StoredAppConfig {
     google: StoredProviderConfig,
     groq: StoredProviderConfig,
+    #[serde(default)]
+    game: StoredGameSettings,
 }
 
 pub(super) fn load_config_from_paths(
@@ -69,7 +100,16 @@ pub(super) fn load_config_from_paths(
     );
 
     Ok(ConfigLoadReport {
-        config: AppConfig { google, groq },
+        config: AppConfig {
+            google,
+            groq,
+            game: GameSettings {
+                timeout: stored.game.timeout.clone(),
+                text_scale: stored.game.text_scale.clone(),
+                freq: stored.game.freq.clone(),
+                sound_enabled: stored.game.sound_enabled.clone(),
+            },
+        },
         warnings,
     })
 }
@@ -87,6 +127,12 @@ pub(super) fn save_config_to_paths(
     let stored = StoredAppConfig {
         google: store_provider_config(&config.google, &key, "google")?,
         groq: store_provider_config(&config.groq, &key, "groq")?,
+        game: StoredGameSettings {
+            timeout: config.game.timeout.clone(),
+            text_scale: config.game.text_scale.clone(),
+            freq: config.game.freq.clone(),
+            sound_enabled: config.game.sound_enabled.clone(),
+        },
     };
     let body = serde_json::to_string_pretty(&stored)
         .map_err(|err| io::Error::other(format!("failed to serialize config: {err}")))?;
@@ -200,6 +246,7 @@ fn restore_provider_config(
 
 #[cfg(test)]
 pub(super) mod test_support {
+    #![expect(clippy::expect_used)]
     use base64::{Engine as _, engine::general_purpose::STANDARD};
     use rand::Rng;
     use std::fs;
@@ -226,6 +273,7 @@ pub(super) mod test_support {
                 api_key_nonce: groq_cipher.1,
                 model: "llama".into(),
             },
+            ..StoredAppConfig::default()
         };
         let body = serde_json::to_string_pretty(&stored).expect("json should serialize");
         fs::write(config_path, body).expect("config should be written");
@@ -249,6 +297,7 @@ pub(super) mod test_support {
                 api_key_nonce: groq_cipher.1,
                 model: "llama".into(),
             },
+            ..StoredAppConfig::default()
         };
         let body = serde_json::to_string_pretty(&stored).expect("json should serialize");
         fs::write(config_path, body).expect("config should be written");

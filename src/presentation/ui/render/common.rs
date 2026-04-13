@@ -10,7 +10,7 @@ const HELP_TEXT: &str = include_str!("../../../../docs/HELP.md");
 const DECORATION_BLOCK: &str = "▗ ████████ ▖\n ▚█▙████▟█▞\n  ████████\n   ▛    ▜";
 
 pub fn help_line_count() -> u16 {
-    HELP_TEXT.lines().count() as u16
+    u16::try_from(HELP_TEXT.lines().count()).unwrap_or(u16::MAX)
 }
 
 pub fn render_help_overlay(frame: &mut Frame, scroll: u16) {

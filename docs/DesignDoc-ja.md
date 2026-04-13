@@ -18,7 +18,7 @@
    - 所有権
    - 構造体
    - スレッドと同期・非同期処理 (`mpsc`)
-   - クレートの活用 (`ratatui`, `crossterm`, `rodio`, `clap`, `rand`)
+   - クレートの活用 (`ratatui`, `crossterm`, `rodio`, `rand`)
    - Clean Architecture を意識したモジュール構成
 2. **タイピングの楽しさを追求**  
    手軽に、ただひたすらタイピングできる環境を提供。
@@ -53,7 +53,6 @@
 - **`src/presentation/`**: UI とユーザーインタラクション層。
   - **`ui/app.rs`**: アプリケーションの状態管理 (`App` 構造体)。`AppState` (Menu, Config, Loading, Typing, Result) の遷移、入力処理、タイマー更新を行う。
   - **`ui/render.rs`**: `ratatui` を用いた描画ロジック。各状態に応じたウィジェットのレイアウトとレンダリング。
-  - **`ui/ui_handler.rs`**: `clap` を使用した CLI 引数のパース定義。
   - **`bgm_handler.rs`**: `rodio` を使用した BGM 再生管理。
 - **`src/usecase/`**: アプリケーションロジック層。
   - **`generate_sentence.rs`**: マルコフ連鎖アルゴリズムによる文生成ロジック。

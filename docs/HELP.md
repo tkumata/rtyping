@@ -1,16 +1,5 @@
 # R-Typing Help
 
-## CLI Options
-
-```text
--t, --timeout <SECONDS>  Timer duration (default: 60, 0 = practice mode)
--l, --level <LEVEL>      Target text length scale (default: 30)
-    --freq <FREQUENCY>   Sound frequency in Hz (default: 80.0)
--s, --sound              Enable BGM and typing sound
-    --google             Use Google AI Studio for text generation
-    --groq               Use Groq for text generation
-```
-
 ## Keyboard Shortcuts
 
 ### Title Screen
@@ -26,6 +15,7 @@
 
 - **Up / Down**: Move focused field
 - **Backspace**: Delete last character
+- **Space**: Toggle `SoundEnabled`
 - **Enter**: Save configuration
 - **Esc**: Return to title screen
 

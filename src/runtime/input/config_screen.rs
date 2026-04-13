@@ -1,13 +1,16 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use crate::config;
-use crate::presentation::ui::app::App;
+use crate::presentation::ui::app::{App, ConfigField};
 
 pub(super) fn handle_config_input(key: KeyEvent, app: &mut App) {
     match key.code {
         KeyCode::Up => app.move_config_up(),
         KeyCode::Down | KeyCode::Tab => app.move_config_down(),
         KeyCode::Backspace => app.pop_config_char(),
+        KeyCode::Char(' ') if app.config_field() == ConfigField::GameSoundEnabled => {
+            app.toggle_sound_enabled();
+        }
         KeyCode::Enter => match config::save_config(app.config()) {
             Ok(()) => {
                 app.return_to_menu_with_start_selected();

@@ -3,11 +3,16 @@ pub fn calc_accuracy(typed_count: usize, incorrects: usize) -> f64 {
         return 0.0;
     }
 
-    (typed_count as f64 - incorrects as f64) / typed_count as f64 * 100.0
+    #[expect(clippy::cast_precision_loss)]
+    let typed = typed_count as f64;
+    #[expect(clippy::cast_precision_loss)]
+    let incorrect = incorrects as f64;
+    (typed - incorrect) / typed * 100.0
 }
 
 #[cfg(test)]
 mod tests {
+    #![expect(clippy::float_cmp)]
     use super::*;
 
     #[test]

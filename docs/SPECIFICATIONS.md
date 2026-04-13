@@ -1,22 +1,5 @@
 # 仕様 (SPECIFICATIONS)
 
-## CLI
-
-- `CLI-001`
-  - 引数未指定時は `Local` 生成を使う。
-- `CLI-002`
-  - `--google` 指定時は Google AI Studio を使う。
-- `CLI-003`
-  - `--groq` 指定時は Groq を使う。
-- `CLI-004`
-  - `--google` と `--groq` の同時指定は `clap` が拒否する。
-- `CLI-005`
-  - 引数未指定時の制限時間は 60 秒である。
-- `CLI-006`
-  - `-t 0` または `--timeout 0` はタイムアウトしない練習モードとして扱う。
-- `CLI-007`
-  - `--sound` 指定時のみ BGM と正答音を有効化する。
-
 ## Config
 
 - `CFG-001`
@@ -33,6 +16,14 @@
   - 旧 AEAD ラベルと旧 XOR 形式の保存データを互換復元する。
 - `CFG-007`
   - 壊れた `config.json` は parse error として扱う。
+- `CFG-008`
+  - Config 画面では `Timeout`（秒）、`TextScale`（文字数スケール）、`Freq`（Hz）、`SoundEnabled`（true/false）を編集できる。
+- `CFG-009`
+  - `SoundEnabled` フィールドではスペースキーでトグル操作を行う。
+- `CFG-010`
+  - ゲーム設定は `String` 型として保存し、`config.json` の `game` セクションに書き込む（旧ファイルは `#[serde(default)]` で読み込み可能）。
+- `CFG-011`
+  - BGM は起動時の設定を使用し、再起動後に反映される。キープレス音は設定変更後即時反映される。
 
 ## Runtime
 
@@ -55,9 +46,9 @@
 - `RUN-009`
   - `Typing` 中に全文入力またはタイムアウトで `Result` に遷移する。
 - `RUN-010`
-  - `-t 0` または `--timeout 0` で開始した `Typing` は、全文入力時のみ `Result` に遷移し、タイムアウトでは終了しない。
+  - Config で `timeout=0` に設定して開始した `Typing` は、全文入力時のみ `Result` に遷移し、タイムアウトでは終了しない。
 - `RUN-011`
-  - `Practice Mode` で開始した `Typing` は、全文入力時のみ `Result` に遷移し、CLI 引数の制限時間値に影響されない。
+  - `Practice Mode` で開始した `Typing` は、全文入力時のみ `Result` に遷移する。
 - `RUN-012`
   - `Typing` は strict 判定を行い、入力文字がターゲット文字と一致した場合のみ入力位置を進める。
 - `RUN-013`

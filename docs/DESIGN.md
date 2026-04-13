@@ -3,7 +3,7 @@
 ## モジュール責務
 
 - `src/main.rs`
-  - CLI 引数解析、設定読み込み、端末初期化、終了処理を担当する。
+  - 設定読み込み、端末初期化、終了処理を担当する（CLI 引数解析は行わない）。
 - `src/runtime/mod.rs`
   - ランタイム構成要素を束ねる。
 - `src/runtime/session.rs`
@@ -19,7 +19,7 @@
 - `src/runtime/timer.rs`
   - タイマースレッドとタイマー補助処理を担当する。`timeout=0` の場合はタイムアウト通知を送らず、経過時間の計測のみを維持する。
 - `src/domain/config.rs`
-  - 設定モデルを保持し、UI と永続化の共有境界を担う。
+  - 設定モデルを保持し、UI と永続化の共有境界を担う。`GameSettings`（timeout / text_scale / freq / sound_enabled を文字列で管理）を含む。
 - `src/presentation/ui/app.rs`
   - TUI 状態、選択中メニュー、現在入力中文字列、総入力数、WPM 履歴、設定編集対象などの画面状態を保持する。
 - `src/presentation/ui/render/mod.rs`
@@ -27,7 +27,7 @@
 - `src/presentation/ui/render/menu.rs`
   - Menu 画面を描画する。`Practice Mode` を含む 5 項目のタイトルメニューを描画する。
 - `src/presentation/ui/render/config_screen.rs`
-  - Config 画面を描画する。
+  - Config 画面を描画する。Provider セクション（Google / Groq）と Game Settings セクションを表示する。
 - `src/presentation/ui/render/loading.rs`
   - Loading 画面を描画する。
 - `src/presentation/ui/render/typing.rs`
@@ -52,8 +52,8 @@
 
 ## 実行フロー
 
-1. `main` が CLI 引数と設定を読み込む。
-2. `main` が端末と音声、タイマースレッドを初期化する。
+1. `main` が設定を読み込む。
+2. `main` が端末と音声、タイマースレッドを初期化する。`sound_enabled` が `true` の場合のみ BGM を開始する。
 3. `runtime` がイベントループを実行し、`AppState` ごとの入力処理を分岐する。
 4. タイトルメニューの開始系項目を選択した場合は、選択項目に対応する生成元と制限時間モードを `App` に反映したうえで別スレッドの文字列生成を開始し、結果をチャネルで受け取る。`Practice Mode` は `Local` 生成と `timeout=0` を組み合わせる。
 5. `Typing` 中はタイマースレッドの経過秒数を参照し、WPM を再計算して履歴へ追加しながら、完了またはタイムアウトで `Result` へ遷移する。
@@ -68,6 +68,7 @@
 
 - 保存先は優先パスの `~/.config/rtyping/` 配下を使う。
 - `config.json` には URL、モデル、暗号化済み API key を保存する。
+- `config.json` の `game` セクションにタイムアウト、テキスト量、周波数、サウンド設定を保存する。
 - `config.key` は別ファイルで管理し、起動時は優先パスと互換パスの候補を順に試す。
 - 旧 AEAD ラベルと旧 XOR 形式の API key も復元対象に含める。
 
@@ -105,4 +106,5 @@
 - 詳細なミス統計を追加する場合は `App` のカウンタ追加だけでなく、`Backspace` を含む入力イベント定義と結果画面文言を同時に見直す。
 - タイムアップなしの練習モードを追加する場合は、`timeout=0` の扱いとタイマー停止条件を先に固定する。
 - Typing / Result 画面のレイアウト変更時は、主要テキストの可読性、Sparkline 領域との非重複、狭い端末での退避挙動を同時に確認する。
+- `GameSettings` のフィールドは `String` 型で保持する。これにより UI の入力処理が統一され、数値バリデーションは保存時または使用時に行う。
 - Rust モジュールでテストを追加する場合は、通常項目の後に `#[cfg(test)] mod tests` を置く配置を維持する。

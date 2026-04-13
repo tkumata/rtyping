@@ -20,7 +20,7 @@ pub fn generate(
 ) -> Result<String, io::Error> {
     let target_chars = target_character_count(text_scale);
     let sentence = match source {
-        GenerationSource::Local => local::generate_local_sentence(target_chars)?,
+        GenerationSource::Local => local::generate_local_sentence(target_chars),
         GenerationSource::Google => {
             providers::generate_google_sentence(target_chars, provider_config)?
         }
@@ -36,6 +36,7 @@ pub fn target_character_count(text_scale: usize) -> usize {
 
 #[cfg(test)]
 mod tests {
+    #![expect(clippy::expect_used)]
     use super::*;
 
     #[test]

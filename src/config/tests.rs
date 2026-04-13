@@ -1,7 +1,9 @@
+#![expect(clippy::expect_used)]
+
 use super::paths::alternate_config_paths;
 use super::storage::{load_config_from_paths, save_config_to_paths, test_support};
 use super::{load_config, save_config};
-use crate::domain::config::{AppConfig, ProviderConfig};
+use crate::domain::config::{AppConfig, GameSettings, ProviderConfig};
 use rand::RngExt;
 use std::env;
 use std::fs;
@@ -55,7 +57,7 @@ impl EnvSandbox {
     fn new() -> Self {
         let lock = ENV_LOCK
             .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let sandbox = TestConfigSandbox::new();
         fs::create_dir_all(&sandbox.dir).expect("sandbox dir should be created");
 
@@ -83,6 +85,7 @@ impl EnvSandbox {
         self.root.join("xdg").join("rtyping")
     }
 
+    #[expect(clippy::unused_self)]
     fn legacy_dir(&self) -> Option<PathBuf> {
         alternate_config_paths()
             .expect("alternate path lookup should succeed")
@@ -124,6 +127,7 @@ fn sample_config() -> AppConfig {
             api_key: "groq-secret".into(),
             model: "llama".into(),
         },
+        game: GameSettings::default(),
     }
 }
 
@@ -193,6 +197,7 @@ fn load_config_prefers_xdg_path_over_legacy_path() {
             model: "preferred-model".into(),
         },
         groq: ProviderConfig::default(),
+        game: GameSettings::default(),
     };
     let legacy = AppConfig {
         google: ProviderConfig {
@@ -201,6 +206,7 @@ fn load_config_prefers_xdg_path_over_legacy_path() {
             model: "legacy-model".into(),
         },
         groq: ProviderConfig::default(),
+        game: GameSettings::default(),
     };
 
     let preferred_dir = env_sandbox.preferred_dir();
@@ -234,6 +240,7 @@ fn load_config_falls_back_to_legacy_path_when_preferred_is_missing() {
             model: "legacy-model".into(),
         },
         groq: ProviderConfig::default(),
+        game: GameSettings::default(),
     };
 
     if let Some(legacy_dir) = env_sandbox.legacy_dir() {

@@ -41,7 +41,7 @@ pub(super) fn drain_generation_results(
     loop {
         match generation_rx.try_recv() {
             Ok(job) => {
-                gameplay::apply_generation_result(app, timer_command_tx, active_request_id, job)
+                gameplay::apply_generation_result(app, timer_command_tx, active_request_id, job);
             }
             Err(mpsc::TryRecvError::Empty) => break,
             Err(mpsc::TryRecvError::Disconnected) => {

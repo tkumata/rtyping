@@ -2,18 +2,12 @@ use rand::RngExt;
 use rand::prelude::IndexedRandom;
 use rand::rng;
 use std::collections::HashMap;
-use std::io;
 
 use crate::domain::entity;
 
-pub(super) fn generate_local_sentence(target_chars: usize) -> Result<String, io::Error> {
-    match entity::get_sample() {
-        Ok(sampling_contents) => Ok(generate_markov_chain(&sampling_contents, 4, target_chars)),
-        Err(err) => {
-            eprintln!("Failed to read file: {}", err);
-            Err(err)
-        }
-    }
+pub(super) fn generate_local_sentence(target_chars: usize) -> String {
+    let sampling_contents = entity::get_sample();
+    generate_markov_chain(&sampling_contents, 4, target_chars)
 }
 
 fn generate_markov_chain(text: &str, n: usize, target_chars: usize) -> String {
@@ -38,7 +32,7 @@ fn generate_markov_chain(text: &str, n: usize, target_chars: usize) -> String {
 
     while current_len < target_chars {
         if let Some(next_words) = markov_chain.get(&current_state) {
-            let next_word = next_words.choose(&mut rng).expect("next word should exist");
+            let Some(next_word) = next_words.choose(&mut rng) else { break };
             result.push(*next_word);
             current_len += next_word.chars().count() + 1;
             current_state.push(*next_word);

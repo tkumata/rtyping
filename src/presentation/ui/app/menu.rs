@@ -22,11 +22,12 @@ impl App {
     }
 
     fn cycle_menu_selection(&self, delta: isize) -> MenuItem {
+        #[expect(clippy::cast_possible_wrap)]
         let current_index = Self::MENU_ITEMS
             .iter()
             .position(|item| *item == self.menu_selected)
             .unwrap_or(0) as isize;
-        let len = Self::MENU_ITEMS.len() as isize;
+        let len = Self::MENU_ITEMS.len().cast_signed();
         let next_index = (current_index + delta).rem_euclid(len) as usize;
         Self::MENU_ITEMS[next_index]
     }
@@ -36,17 +37,9 @@ impl App {
 mod tests {
     use super::*;
     use crate::domain::config::AppConfig;
-    use crate::usecase::generate_sentence::GenerationSource;
 
     fn new_app() -> App {
-        App::new(
-            60,
-            30,
-            80.0,
-            false,
-            GenerationSource::Local,
-            AppConfig::default(),
-        )
+        App::new(AppConfig::default())
     }
 
     #[test]

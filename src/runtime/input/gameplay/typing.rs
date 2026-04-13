@@ -44,17 +44,9 @@ pub(in crate::runtime::input) fn handle_typing_input(
 mod tests {
     use super::*;
     use crate::domain::config::AppConfig;
-    use crate::usecase::generate_sentence::GenerationSource;
 
     fn new_app() -> App {
-        App::new(
-            60,
-            30,
-            80.0,
-            false,
-            GenerationSource::Local,
-            AppConfig::default(),
-        )
+        App::new(AppConfig::default())
     }
 
     #[test]
