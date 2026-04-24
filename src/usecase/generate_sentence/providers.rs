@@ -38,8 +38,14 @@ pub(super) fn generate_google_sentence(
         .text()
         .map_err(|err| io::Error::other(format!("Failed to read Google response body: {err}")))?;
     let payload = parse_json_response("Google AI Studio", status, &response_text)?;
-    payload["candidates"][0]["content"]["parts"][0]["text"]
-        .as_str()
+    payload
+        .get("candidates")
+        .and_then(|candidates| candidates.get(0))
+        .and_then(|candidate| candidate.get("content"))
+        .and_then(|content| content.get("parts"))
+        .and_then(|parts| parts.get(0))
+        .and_then(|part| part.get("text"))
+        .and_then(Value::as_str)
         .map(ToOwned::to_owned)
         .ok_or_else(|| io::Error::other("Failed to parse Google AI Studio response"))
 }
@@ -74,8 +80,12 @@ pub(super) fn generate_groq_sentence(
         .text()
         .map_err(|err| io::Error::other(format!("Failed to read Groq response body: {err}")))?;
     let payload = parse_json_response("Groq", status, &response_text)?;
-    payload["choices"][0]["message"]["content"]
-        .as_str()
+    payload
+        .get("choices")
+        .and_then(|choices| choices.get(0))
+        .and_then(|choice| choice.get("message"))
+        .and_then(|message| message.get("content"))
+        .and_then(Value::as_str)
         .map(ToOwned::to_owned)
         .ok_or_else(|| io::Error::other("Failed to parse Groq response"))
 }

@@ -12,17 +12,31 @@ pub(super) fn generate_local_sentence(target_chars: usize) -> String {
 
 fn generate_markov_chain(text: &str, n: usize, target_chars: usize) -> String {
     let words: Vec<&str> = text.split_whitespace().collect();
+    if words.len() <= n {
+        return words.join(" ");
+    }
+
     let mut markov_chain: HashMap<Vec<&str>, Vec<&str>> = HashMap::new();
 
     for i in 0..(words.len() - n) {
-        let key = words[i..i + n].to_vec();
-        let value = words[i + n];
-        markov_chain.entry(key).or_default().push(value);
+        let Some(key_slice) = words.get(i..i + n) else {
+            continue;
+        };
+        let Some(&value) = words.get(i + n) else {
+            continue;
+        };
+        markov_chain
+            .entry(key_slice.to_vec())
+            .or_default()
+            .push(value);
     }
 
     let mut rng = rng();
     let start_index = rng.random_range(0..words.len() - n);
-    let mut current_state = words[start_index..start_index + n].to_vec();
+    let Some(current_state_slice) = words.get(start_index..start_index + n) else {
+        return words.join(" ");
+    };
+    let mut current_state = current_state_slice.to_vec();
     let mut result = current_state.clone();
     let mut current_len = result
         .iter()

@@ -26,11 +26,14 @@ pub fn render_typing(frame: &mut Frame, app: &App) {
             Constraint::Length(vertical_padding),
         ])
         .split(area);
+    let [_, header_area, typing_area, footer_area, decoration_area] = &*chunks else {
+        return;
+    };
 
-    render_header(frame, chunks[1], app);
-    render_typing_area(frame, chunks[2], app);
-    render_footer(frame, chunks[3], app);
-    render_decoration_block(frame, chunks[4]);
+    render_header(frame, *header_area, app);
+    render_typing_area(frame, *typing_area, app);
+    render_footer(frame, *footer_area, app);
+    render_decoration_block(frame, *decoration_area);
 }
 
 fn render_header(frame: &mut Frame, area: Rect, app: &App) {
@@ -42,6 +45,9 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
             Constraint::Percentage(33),
         ])
         .split(area);
+    let [countdown_area, title_area, wpm_area] = &*header_chunks else {
+        return;
+    };
 
     let (time_label, time_text, time_color) = if app.timeout() <= 0 {
         ("Elapsed: ", format!("{:03}", app.timer()), Color::Cyan)
@@ -74,7 +80,7 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
                     .border_style(Style::default().fg(Color::Cyan)),
             )
             .alignment(Alignment::Center),
-        header_chunks[0],
+        *countdown_area,
     );
 
     let provider_label = match app.generation_source() {
@@ -95,7 +101,7 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
         ),
     ]))
     .alignment(Alignment::Center);
-    frame.render_widget(title, header_chunks[1]);
+    frame.render_widget(title, *title_area);
 
     let wpm_text = vec![Line::from(vec![
         Span::styled("WPM: ", Style::default().fg(Color::Gray)),
@@ -114,7 +120,7 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
                     .border_style(Style::default().fg(Color::Cyan)),
             )
             .alignment(Alignment::Center),
-        header_chunks[2],
+        *wpm_area,
     );
 }
 
@@ -128,7 +134,9 @@ fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
     for (i, target_char) in app.target_string().chars().enumerate() {
         match i.cmp(&input_len) {
             std::cmp::Ordering::Less => {
-                let input_char = app.input_chars()[i];
+                let Some(input_char) = app.input_chars().get(i).copied() else {
+                    continue;
+                };
                 if input_char == target_char {
                     text_spans.push(Span::styled(
                         input_char.to_string(),
@@ -191,7 +199,10 @@ fn split_typing_area(area: Rect) -> [Rect; 2] {
         .direction(Direction::Vertical)
         .constraints(constraints)
         .split(area);
-    [chunks[0], chunks[1]]
+    let [graph_area, text_area] = &*chunks else {
+        return [area, area];
+    };
+    [*graph_area, *text_area]
 }
 
 fn typing_cursor_position(area: Rect, app: &App) -> Option<Position> {
@@ -345,6 +356,9 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(area);
+    let [types_area, misses_area] = &*footer_chunks else {
+        return;
+    };
 
     frame.render_widget(
         Paragraph::new(Line::from(vec![
@@ -359,7 +373,7 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
         ]))
         .block(Block::default().borders(Borders::ALL))
         .alignment(Alignment::Center),
-        footer_chunks[0],
+        *types_area,
     );
 
     frame.render_widget(
@@ -374,7 +388,7 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
         ]))
         .block(Block::default().borders(Borders::ALL))
         .alignment(Alignment::Center),
-        footer_chunks[1],
+        *misses_area,
     );
 }
 

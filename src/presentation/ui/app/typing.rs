@@ -17,6 +17,8 @@ impl App {
         self.typed_count = 0;
         self.incorrects = 0;
         self.wpm_history.clear();
+        self.wpm_activity_revision = 0;
+        self.last_wpm_activity_timer = None;
         self.last_wpm_sample = None;
         self.timer = 0;
         self.time_started = false;
@@ -31,6 +33,8 @@ impl App {
         let position = self.inputs.len();
         let is_correct = self.target_string.chars().nth(position) == Some(c);
         self.typed_count += 1;
+        self.wpm_activity_revision += 1;
+        self.last_wpm_activity_timer = Some(self.timer);
 
         if is_correct || !self.practice_mode {
             self.inputs.push(c);
@@ -45,9 +49,9 @@ impl App {
 
     pub fn pop_char(&mut self) -> Option<char> {
         let removed = self.inputs.pop();
-        if removed.is_some() {
-            self.record_wpm_snapshot();
-        }
+        self.wpm_activity_revision += 1;
+        self.last_wpm_activity_timer = Some(self.timer);
+        self.record_wpm_snapshot();
         removed
     }
 
@@ -158,5 +162,19 @@ mod tests {
 
         app.update_timer(1);
         assert_eq!(app.wpm_history().len(), 2);
+    }
+
+    #[test]
+    fn wpm_history_keeps_wpm_during_idle_grace_and_then_goes_zero() {
+        let mut app = new_app();
+        app.prepare_new_game("ab".to_string());
+        app.start_typing();
+        app.update_timer(1);
+        app.push_char('a');
+        app.update_timer(2);
+        app.update_timer(3);
+        app.update_timer(4);
+
+        assert_eq!(app.wpm_history(), &[0, 0, 12, 6, 0, 0]);
     }
 }

@@ -25,11 +25,16 @@ serde_json = "1.0"
 sha2 = "0.11.0"
 
 [lints.clippy]
-pedantic = { level = "warn", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
 unwrap_used = "deny"
 expect_used = "deny"
 allow_attributes = "deny"
 dbg_macro = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+panic_in_result_fn = "deny"
+indexing_slicing = "deny"
 
 [[bin]]
 name = "rtyping"

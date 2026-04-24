@@ -8,13 +8,19 @@ impl App {
         } else {
             idx - 1
         };
-        self.config_field = ConfigField::ALL[next];
+        self.config_field = ConfigField::ALL
+            .get(next)
+            .copied()
+            .unwrap_or(self.config_field);
     }
 
     pub fn move_config_down(&mut self) {
         let idx = self.config_field_index();
         let next = (idx + 1) % ConfigField::ALL.len();
-        self.config_field = ConfigField::ALL[next];
+        self.config_field = ConfigField::ALL
+            .get(next)
+            .copied()
+            .unwrap_or(self.config_field);
     }
 
     pub fn edit_config_char(&mut self, ch: char) {

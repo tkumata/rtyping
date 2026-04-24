@@ -56,13 +56,21 @@ pub fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {
             Constraint::Percentage((100 - percent_y) / 2),
         ])
         .split(area);
+    let [_, middle_row, _] = &*popup_layout else {
+        return area;
+    };
 
-    Layout::default()
+    let inner_layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
             Constraint::Percentage((100 - percent_x) / 2),
             Constraint::Percentage(percent_x),
             Constraint::Percentage((100 - percent_x) / 2),
         ])
-        .split(popup_layout[1])[1]
+        .split(*middle_row);
+    let [_, middle_col, _] = &*inner_layout else {
+        return area;
+    };
+
+    *middle_col
 }
