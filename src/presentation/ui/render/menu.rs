@@ -22,6 +22,9 @@ pub fn render_menu(frame: &mut Frame, app: &App) {
             Constraint::Min(0),
         ])
         .split(area);
+    let [_, title_area, menu_area, hint_area, _] = &*chunks else {
+        return;
+    };
 
     let title_text = vec![
         Line::from(" ____     _____            _             "),
@@ -39,7 +42,7 @@ pub fn render_menu(frame: &mut Frame, app: &App) {
                 .border_style(Style::default().fg(Color::Cyan)),
         )
         .alignment(Alignment::Center);
-    frame.render_widget(title, chunks[1]);
+    frame.render_widget(title, *title_area);
 
     let menu_lines = vec![
         menu_line(app, MenuItem::StartGame, "Start Game"),
@@ -59,7 +62,7 @@ pub fn render_menu(frame: &mut Frame, app: &App) {
                 .border_style(Style::default().fg(Color::Blue)),
         )
         .alignment(Alignment::Center);
-    frame.render_widget(menu, chunks[2]);
+    frame.render_widget(menu, *menu_area);
 
     let hint = Paragraph::new(vec![Line::from(vec![
         Span::styled("Up/Down", Style::default().fg(Color::Yellow)),
@@ -70,7 +73,7 @@ pub fn render_menu(frame: &mut Frame, app: &App) {
         Span::raw(" for help"),
     ])])
     .alignment(Alignment::Center);
-    frame.render_widget(hint, chunks[3]);
+    frame.render_widget(hint, *hint_area);
 
     if let Some(message) = app.status_message() {
         let message_area = centered_rect(70, 15, area);

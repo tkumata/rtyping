@@ -5,3 +5,4 @@ GEMINI.md
 /target
 .idea
 core
+.codex/state/

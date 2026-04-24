@@ -139,8 +139,9 @@ pub(super) fn xor_with_keystream(input: &[u8], key: &[u8], nonce: &[u8]) -> Vec<
         let block_len = remaining.min(block.len());
         let start = output.len();
 
-        for idx in 0..block_len {
-            output.push(input[start + idx] ^ block[idx]);
+        for (&input_byte, &block_byte) in input.iter().skip(start).take(block_len).zip(block.iter())
+        {
+            output.push(input_byte ^ block_byte);
         }
 
         counter += 1;

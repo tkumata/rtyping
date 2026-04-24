@@ -82,7 +82,10 @@ fn split_result_area(area: Rect) -> [Rect; 3] {
         .direction(Direction::Vertical)
         .constraints(constraints)
         .split(area);
-    [chunks[0], chunks[1], chunks[2]]
+    let [metrics_area, graph_area, footer_area] = &*chunks else {
+        return [area, area, area];
+    };
+    [*metrics_area, *graph_area, *footer_area]
 }
 
 #[cfg(test)]

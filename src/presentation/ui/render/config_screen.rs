@@ -21,6 +21,17 @@ pub fn render_config(frame: &mut Frame, app: &App) {
             Constraint::Min(0),
         ])
         .split(area);
+    let [
+        header_area,
+        google_area,
+        groq_area,
+        game_area,
+        footer_area,
+        _,
+    ] = &*chunks
+    else {
+        return;
+    };
 
     let header = Paragraph::new("Edit settings. Enter saves. Esc discards. Space toggles Sound.")
         .block(
@@ -30,11 +41,11 @@ pub fn render_config(frame: &mut Frame, app: &App) {
                 .border_style(Style::default().fg(Color::Cyan)),
         )
         .alignment(Alignment::Center);
-    frame.render_widget(header, chunks[0]);
+    frame.render_widget(header, *header_area);
 
     render_provider_block(
         frame,
-        chunks[1],
+        *google_area,
         "Google AI Studio",
         [
             (
@@ -58,7 +69,7 @@ pub fn render_config(frame: &mut Frame, app: &App) {
 
     render_provider_block(
         frame,
-        chunks[2],
+        *groq_area,
         "Groq",
         [
             (
@@ -76,7 +87,7 @@ pub fn render_config(frame: &mut Frame, app: &App) {
         app.config_field(),
     );
 
-    render_game_settings_block(frame, chunks[3], app);
+    render_game_settings_block(frame, *game_area, app);
 
     let footer_text = app
         .status_message()
@@ -84,7 +95,7 @@ pub fn render_config(frame: &mut Frame, app: &App) {
     let footer = Paragraph::new(footer_text)
         .block(Block::default().borders(Borders::ALL))
         .wrap(Wrap { trim: true });
-    frame.render_widget(footer, chunks[4]);
+    frame.render_widget(footer, *footer_area);
 }
 
 fn render_game_settings_block(frame: &mut Frame, area: Rect, app: &App) {

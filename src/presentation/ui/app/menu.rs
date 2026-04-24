@@ -29,7 +29,10 @@ impl App {
             .unwrap_or(0) as isize;
         let len = Self::MENU_ITEMS.len().cast_signed();
         let next_index = (current_index + delta).rem_euclid(len) as usize;
-        Self::MENU_ITEMS[next_index]
+        Self::MENU_ITEMS
+            .get(next_index)
+            .copied()
+            .unwrap_or(MenuItem::StartGame)
     }
 }
 

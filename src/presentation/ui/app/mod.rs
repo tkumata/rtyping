@@ -60,7 +60,9 @@ pub struct App {
     typed_count: usize,
     incorrects: usize,
     wpm_history: Vec<u64>,
-    last_wpm_sample: Option<(i32, usize, usize)>,
+    wpm_activity_revision: u64,
+    last_wpm_activity_timer: Option<i32>,
+    last_wpm_sample: Option<(i32, usize, usize, u64)>,
     timer: i32,
     practice_mode: bool,
     should_quit: bool,
@@ -83,6 +85,8 @@ impl App {
             typed_count: 0,
             incorrects: 0,
             wpm_history: Vec::new(),
+            wpm_activity_revision: 0,
+            last_wpm_activity_timer: None,
             last_wpm_sample: None,
             timer: 0,
             practice_mode: false,
@@ -260,14 +264,28 @@ impl App {
 
     pub fn record_wpm_snapshot(&mut self) {
         const MAX_WPM_HISTORY: usize = 120;
+        const WPM_IDLE_GRACE_SECONDS: i32 = 2;
 
-        let sample_key = (self.timer, self.typed_count, self.incorrects);
+        let sample_key = (
+            self.timer,
+            self.typed_count,
+            self.incorrects,
+            self.wpm_activity_revision,
+        );
         if self.last_wpm_sample == Some(sample_key) {
             return;
         }
 
-        #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let sample = self.current_wpm().round().clamp(0.0, f64::from(u32::MAX)) as u64;
+        let should_zero = self
+            .last_wpm_activity_timer
+            .is_some_and(|last_activity_timer| {
+                self.timer.saturating_sub(last_activity_timer) >= WPM_IDLE_GRACE_SECONDS
+            });
+        let sample = if should_zero {
+            0
+        } else {
+            rounded_wpm_sample(self.current_wpm())
+        };
         self.wpm_history.push(sample);
         if self.wpm_history.len() > MAX_WPM_HISTORY {
             let overflow = self.wpm_history.len() - MAX_WPM_HISTORY;
@@ -275,4 +293,9 @@ impl App {
         }
         self.last_wpm_sample = Some(sample_key);
     }
+}
+
+#[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn rounded_wpm_sample(current_wpm: f64) -> u64 {
+    current_wpm.round().clamp(0.0, f64::from(u32::MAX)) as u64
 }

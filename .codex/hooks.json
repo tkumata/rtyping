@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ./.codex/hooks/verify_pipeline.sh",
+            "timeout": 600,
+            "statusMessage": "[Hooks] Running Rust validation pipeline"
+          }
+        ]
+      }
+    ]
+  }
+}
