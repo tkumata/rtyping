@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": ".agent-hooks/dispatcher.sh copilot preToolUse",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "agentStop": [
+      {
+        "type": "command",
+        "bash": ".agent-hooks/dispatcher.sh copilot agentStop",
+        "timeoutSec": 30
+      }
+    ]
+  }
+}
