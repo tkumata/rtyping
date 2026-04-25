@@ -26,14 +26,7 @@ pub fn render_menu(frame: &mut Frame, app: &App) {
         return;
     };
 
-    let title_text = vec![
-        Line::from(" ____     _____            _             "),
-        Line::from("|  _ \\   |_   _|   _ _ __ (_)_ __   __ _ "),
-        Line::from("| |_) | _  | || | | | '_ \\| | '_ \\ / _` |"),
-        Line::from("|  _ < (_) | || |_| | |_) | | | | | (_| |"),
-        Line::from("|_| \\_\\    |_| \\__, | .__/|_|_| |_|\\__, |"),
-        Line::from("               |___/|_|            |___/ "),
-    ];
+    let title_text = logo_lines();
 
     let title = Paragraph::new(title_text)
         .block(
@@ -110,4 +103,28 @@ fn menu_line(app: &App, item: MenuItem, label: &str) -> Line<'static> {
         Span::styled(format!("{pointer} "), style),
         Span::styled(label.to_string(), style),
     ])
+}
+
+fn logo_lines() -> Vec<Line<'static>> {
+    const LOGO_COLORS: [Color; 6] = [
+        Color::Rgb(198, 229, 255),
+        Color::Rgb(214, 236, 255),
+        Color::Rgb(228, 242, 255),
+        Color::Rgb(239, 247, 255),
+        Color::Rgb(247, 251, 255),
+        Color::Rgb(255, 255, 255),
+    ];
+
+    [
+        " ____     _____            _             ",
+        "|  _ \\   |_   _|   _ _ __ (_)_ __   __ _ ",
+        "| |_) | _  | || | | | '_ \\| | '_ \\ / _` |",
+        "|  _ < (_) | || |_| | |_) | | | | | (_| |",
+        "|_| \\_\\    |_| \\__, | .__/|_|_| |_|\\__, |",
+        "               |___/|_|            |___/ ",
+    ]
+    .into_iter()
+    .zip(LOGO_COLORS)
+    .map(|(line, color)| Line::from(Span::styled(line, Style::default().fg(color))))
+    .collect()
 }
