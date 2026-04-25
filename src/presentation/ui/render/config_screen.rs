@@ -1,6 +1,6 @@
 use ratatui::{
     Frame,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Position, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Wrap},
@@ -43,7 +43,7 @@ pub fn render_config(frame: &mut Frame, app: &App) {
         .alignment(Alignment::Center);
     frame.render_widget(header, *header_area);
 
-    render_provider_block(
+    let google_cursor_position = render_provider_block(
         frame,
         *google_area,
         "Google AI Studio",
@@ -67,7 +67,7 @@ pub fn render_config(frame: &mut Frame, app: &App) {
         app.config_field(),
     );
 
-    render_provider_block(
+    let groq_cursor_position = render_provider_block(
         frame,
         *groq_area,
         "Groq",
@@ -87,7 +87,10 @@ pub fn render_config(frame: &mut Frame, app: &App) {
         app.config_field(),
     );
 
-    render_game_settings_block(frame, *game_area, app);
+    let game_cursor_position = render_game_settings_block(frame, *game_area, app);
+    let cursor_position = google_cursor_position
+        .or(groq_cursor_position)
+        .or(game_cursor_position);
 
     let footer_text = app
         .status_message()
@@ -96,9 +99,13 @@ pub fn render_config(frame: &mut Frame, app: &App) {
         .block(Block::default().borders(Borders::ALL))
         .wrap(Wrap { trim: true });
     frame.render_widget(footer, *footer_area);
+
+    if let Some(cursor_position) = cursor_position {
+        frame.set_cursor_position(cursor_position);
+    }
 }
 
-fn render_game_settings_block(frame: &mut Frame, area: Rect, app: &App) {
+fn render_game_settings_block(frame: &mut Frame, area: Rect, app: &App) -> Option<Position> {
     let game = &app.config().game;
     let focused = app.config_field();
 
@@ -152,6 +159,8 @@ fn render_game_settings_block(frame: &mut Frame, area: Rect, app: &App) {
         )
         .wrap(Wrap { trim: false });
     frame.render_widget(block, area);
+
+    config_cursor_position(area, focused, &fields, 11)
 }
 
 fn render_provider_block(
@@ -160,7 +169,7 @@ fn render_provider_block(
     title: &str,
     fields: [(ConfigField, &str, &String); 3],
     focused: ConfigField,
-) {
+) -> Option<Position> {
     let mut lines = Vec::new();
     for (field, label, value) in fields {
         let is_focused = field == focused;
@@ -203,4 +212,76 @@ fn render_provider_block(
         )
         .wrap(Wrap { trim: false });
     frame.render_widget(block, area);
+
+    config_cursor_position(area, focused, &fields, 10)
+}
+
+fn config_cursor_position<V: AsRef<str>>(
+    area: Rect,
+    focused: ConfigField,
+    fields: &[(ConfigField, &str, V)],
+    label_width: u16,
+) -> Option<Position> {
+    let field_index = fields.iter().position(|(field, _, _)| *field == focused)?;
+    let value = fields.get(field_index)?.2.as_ref();
+    let row_offset = u16::try_from(field_index).ok()?.saturating_mul(2);
+    let cursor_x = area
+        .x
+        .checked_add(1)?
+        .checked_add(label_width)?
+        .checked_add(u16::try_from(value.chars().count()).ok()?)?;
+    let cursor_y = area.y.checked_add(1)?.checked_add(row_offset)?;
+
+    Some(Position::new(cursor_x, cursor_y))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ConfigField, config_cursor_position};
+    use ratatui::layout::{Position, Rect};
+
+    #[test]
+    fn config_cursor_position_points_to_provider_value_end() {
+        let fields = [
+            (
+                ConfigField::GoogleApiUrl,
+                "API URL",
+                String::from("https://"),
+            ),
+            (ConfigField::GoogleApiKey, "API Key", String::from("secret")),
+            (ConfigField::GoogleModel, "Model", String::from("gemini")),
+        ];
+
+        let cursor = config_cursor_position(
+            Rect::new(2, 4, 40, 10),
+            ConfigField::GoogleApiKey,
+            &fields,
+            10,
+        );
+
+        assert_eq!(cursor, Some(Position::new(19, 7)));
+    }
+
+    #[test]
+    fn config_cursor_position_points_to_game_value_end() {
+        let fields = [
+            (ConfigField::GameTimeout, "Timeout", String::from("60")),
+            (ConfigField::GameTextScale, "TextScale", String::from("60")),
+            (ConfigField::GameFreq, "Freq", String::from("80.0")),
+            (
+                ConfigField::GameSoundEnabled,
+                "Sound",
+                String::from("enabled"),
+            ),
+        ];
+
+        let cursor = config_cursor_position(
+            Rect::new(0, 0, 40, 12),
+            ConfigField::GameSoundEnabled,
+            &fields,
+            11,
+        );
+
+        assert_eq!(cursor, Some(Position::new(19, 7)));
+    }
 }
