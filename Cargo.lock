@@ -2131,7 +2131,7 @@ checksum = "7204ed6420f698836b76d4d5c2ec5dec7585fd5c3a788fd1cde855d1de598239"
 
 [[package]]
 name = "rtyping"
-version = "1.0.20"
+version = "1.0.21"
 dependencies = [
  "base64",
  "crossterm",
