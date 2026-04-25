@@ -187,8 +187,14 @@ mod tests {
     fn split_runs_keeps_zero_samples_in_the_same_run() {
         let runs = split_runs(&[12, 0, 4, 11]);
         assert_eq!(runs.len(), 1);
-        assert_eq!(runs[0].start_index, 0);
-        assert_eq!(runs[0].values, &[12, 0, 4, 11]);
+        assert_eq!(
+            runs.iter().map(|run| run.start_index).collect::<Vec<_>>(),
+            vec![0]
+        );
+        assert_eq!(
+            runs.iter().map(|run| run.values).collect::<Vec<_>>(),
+            vec![&[12, 0, 4, 11][..]]
+        );
     }
 
     #[test]
