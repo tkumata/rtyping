@@ -128,3 +128,7 @@ For Windows x86_64 GNU:
 rustup target add x86_64-pc-windows-gnu
 cargo build --release --target=x86_64-pc-windows-gnu
 ```
+
+## Harness Engineering
+
+Codex CLI と Copilot CLI 向けにハーネスを導入しました。GPT-5.4-Mini でも一定の品質が保てるようになりました。
