@@ -15,6 +15,10 @@ pub(super) fn config_paths() -> io::Result<ConfigPaths> {
     })
 }
 
+pub(super) fn history_path() -> io::Result<PathBuf> {
+    Ok(preferred_config_base_dir()?.join("history.json"))
+}
+
 pub(super) fn alternate_config_paths() -> io::Result<Option<ConfigPaths>> {
     let preferred_base_dir = preferred_config_base_dir()?;
     let system_base_dir = match dirs::config_dir() {

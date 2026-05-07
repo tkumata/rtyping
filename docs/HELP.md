@@ -4,7 +4,7 @@
 
 ### Title Screen
 
-- **Up / Down**: Select `Start Game`, `Practice Mode`, `Start Game via Google AI Studio`, `Start Game via Groq`, or `Config`
+- **Up / Down**: Select `Start Game`, `Practice Mode`, `Start Game via Google AI Studio`, `Start Game via Groq`, `Stats`, or `Config`
 - **Enter**: Confirm selection
 - **h**: Show/Hide this help
 - **Up / Down**: Scroll help text (when visible)
@@ -27,7 +27,13 @@
 
 ### Result Screen
 
+- Review current result and saved Timed history summary
 - **Enter**: Return to title screen
+
+### Stats Screen
+
+- Review saved Timed history summary
+- **Enter / Esc**: Return to title screen
 
 ## Tips
 

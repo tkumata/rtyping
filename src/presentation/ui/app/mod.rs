@@ -3,12 +3,17 @@ mod menu;
 mod typing;
 
 use crate::domain::config::AppConfig;
+use crate::domain::history::{HistoryEntry, HistoryMode};
+use crate::usecase::accuracy;
 use crate::usecase::generate_sentence::GenerationSource;
+use crate::usecase::history_stats::{self, HistoryStats};
+use crate::usecase::wpm;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AppState {
     Menu,
     Config,
+    Stats,
     Loading,
     Typing,
     Result,
@@ -20,6 +25,7 @@ pub enum MenuItem {
     PracticeMode,
     StartGameGoogle,
     StartGameGroq,
+    Stats,
     Config,
 }
 
@@ -59,6 +65,7 @@ pub struct App {
     inputs: Vec<char>,
     typed_count: usize,
     incorrects: usize,
+    missed_chars: Vec<char>,
     wpm_history: Vec<u64>,
     wpm_activity_revision: u64,
     last_wpm_activity_timer: Option<i32>,
@@ -74,6 +81,7 @@ pub struct App {
     config: AppConfig,
     status_message: Option<String>,
     generation_source: GenerationSource,
+    history_entries: Vec<HistoryEntry>,
 }
 
 impl App {
@@ -84,6 +92,7 @@ impl App {
             inputs: Vec::new(),
             typed_count: 0,
             incorrects: 0,
+            missed_chars: Vec::new(),
             wpm_history: Vec::new(),
             wpm_activity_revision: 0,
             last_wpm_activity_timer: None,
@@ -99,6 +108,7 @@ impl App {
             config,
             status_message: None,
             generation_source: GenerationSource::Local,
+            history_entries: Vec::new(),
         }
     }
 
@@ -136,6 +146,11 @@ impl App {
         self.state = AppState::Config;
     }
 
+    pub fn open_stats(&mut self) {
+        self.state = AppState::Stats;
+        self.clear_status_message();
+    }
+
     pub fn return_to_menu(&mut self) {
         self.state = AppState::Menu;
         self.hide_help();
@@ -167,6 +182,11 @@ impl App {
         self.incorrects
     }
 
+    #[cfg(test)]
+    pub fn missed_chars(&self) -> &[char] {
+        &self.missed_chars
+    }
+
     pub fn wpm_history(&self) -> &[u64] {
         &self.wpm_history
     }
@@ -187,7 +207,6 @@ impl App {
         self.practice_mode = practice_mode;
     }
 
-    #[cfg(test)]
     pub fn is_practice_mode(&self) -> bool {
         self.practice_mode
     }
@@ -218,6 +237,39 @@ impl App {
             self.generation_source,
             self.config.clone(),
         )
+    }
+
+    pub fn set_history_entries(&mut self, entries: Vec<HistoryEntry>) {
+        self.history_entries = entries;
+    }
+
+    pub fn history_entries(&self) -> &[HistoryEntry] {
+        &self.history_entries
+    }
+
+    pub fn history_stats(&self) -> HistoryStats {
+        history_stats::summarize(&self.history_entries)
+    }
+
+    pub fn build_history_entry(&self) -> Option<HistoryEntry> {
+        if self.practice_mode {
+            return None;
+        }
+
+        let elapsed = self.timer.max(1);
+        Some(HistoryEntry {
+            wpm: wpm::calc_wpm(
+                self.typed_count(),
+                elapsed,
+                i32::try_from(self.incorrects()).unwrap_or(i32::MAX),
+            ),
+            accuracy: accuracy::calc_accuracy(self.typed_count(), self.incorrects()),
+            miss_count: self.incorrects(),
+            elapsed_seconds: elapsed,
+            generation_source: self.generation_source.label().into(),
+            mode: HistoryMode::Timed,
+            missed_chars: self.missed_chars.clone(),
+        })
     }
 
     pub fn is_help_visible(&self) -> bool {

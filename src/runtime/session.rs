@@ -13,7 +13,7 @@ use crate::presentation::ui::app::{App, AppState};
 use crate::presentation::ui::render;
 
 use super::input::{drain_generation_results, handle_key_event};
-use super::timer::current_timer;
+use super::timer::{current_timer, persist_timed_history};
 use super::{GenerationJobResult, RuntimeContext, TimerCommand};
 
 pub fn run_app(
@@ -54,6 +54,7 @@ pub fn run_app(
 
         if app.state() == AppState::Typing && app.timeout() > 0 && timeout_rx.try_recv().is_ok() {
             app.update_timer(current_timer(timer));
+            persist_timed_history(app);
             app.finish_typing();
         }
 

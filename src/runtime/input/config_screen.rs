@@ -25,10 +25,8 @@ pub(super) fn handle_config_input(key: KeyEvent, app: &mut App) {
             app.set_status_message("Configuration changes discarded");
         }
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => app.quit(),
-        KeyCode::Char(ch) => {
-            if accepts_config_char(key.modifiers) {
-                app.edit_config_char(ch);
-            }
+        KeyCode::Char(ch) if accepts_config_char(key.modifiers) => {
+            app.edit_config_char(ch);
         }
         _ => {}
     }

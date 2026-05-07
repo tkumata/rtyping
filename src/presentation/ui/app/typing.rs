@@ -16,6 +16,7 @@ impl App {
         self.inputs.clear();
         self.typed_count = 0;
         self.incorrects = 0;
+        self.missed_chars.clear();
         self.wpm_history.clear();
         self.wpm_activity_revision = 0;
         self.last_wpm_activity_timer = None;
@@ -31,7 +32,8 @@ impl App {
 
     pub fn push_char(&mut self, c: char) -> bool {
         let position = self.inputs.len();
-        let is_correct = self.target_string.chars().nth(position) == Some(c);
+        let expected_char = self.target_string.chars().nth(position);
+        let is_correct = expected_char == Some(c);
         self.typed_count += 1;
         self.wpm_activity_revision += 1;
         self.last_wpm_activity_timer = Some(self.timer);
@@ -42,6 +44,9 @@ impl App {
 
         if !is_correct {
             self.incorrects += 1;
+            if let Some(expected_char) = expected_char {
+                self.missed_chars.push(expected_char);
+            }
         }
         self.record_wpm_snapshot();
         is_correct
@@ -112,6 +117,7 @@ mod tests {
 
         assert!(!app.push_char('x'));
         assert_eq!(app.input_chars(), &['x']);
+        assert_eq!(app.missed_chars(), &['a']);
         assert_eq!(app.current_input_count(), 1);
         assert_eq!(app.typed_count(), 1);
         assert_eq!(app.incorrects(), 1);
@@ -129,6 +135,45 @@ mod tests {
         assert_eq!(app.typed_count(), 0);
         assert!(app.input_chars().is_empty());
         assert_eq!(app.incorrects(), 0);
+        assert!(app.missed_chars().is_empty());
+    }
+
+    #[test]
+    fn build_history_entry_skips_practice_mode() {
+        let mut app = new_app();
+        app.prepare_new_game("ab".to_string());
+        app.set_practice_mode(true);
+        app.start_typing();
+        app.update_timer(1);
+        app.push_char('a');
+
+        assert!(app.build_history_entry().is_none());
+    }
+
+    #[test]
+    fn build_history_entry_captures_timed_result() {
+        let mut app = new_app();
+        app.prepare_new_game("ab".to_string());
+        app.start_typing();
+        app.update_timer(1);
+        app.push_char('x');
+
+        let entry = app.build_history_entry();
+        assert!(entry.is_some());
+        let entry = entry.unwrap_or(crate::domain::history::HistoryEntry {
+            wpm: 0.0,
+            accuracy: 0.0,
+            miss_count: 0,
+            elapsed_seconds: 0,
+            generation_source: String::new(),
+            mode: crate::domain::history::HistoryMode::Timed,
+            missed_chars: Vec::new(),
+        });
+
+        assert_eq!(entry.miss_count, 1);
+        assert_eq!(entry.elapsed_seconds, 1);
+        assert_eq!(entry.generation_source, "Local");
+        assert_eq!(entry.missed_chars, vec!['a']);
     }
 
     #[test]

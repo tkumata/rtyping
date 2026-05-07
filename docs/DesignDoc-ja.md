@@ -28,7 +28,7 @@
 - **単語の抽出と文生成**  
   `src/domain/sample.txt` からテキストを読み込み、マルコフ連鎖 (4-gram) を用いてランダムかつ自然な文を生成する。
 - **タイピングゲームの基本動作**
-  - タイトル画面で `Start Game`、`Practice Mode`、生成元別の開始項目、`Config` を選択して開始する。
+  - タイトル画面で `Start Game`、`Practice Mode`、生成元別の開始項目、`Stats`、`Config` を選択して開始または確認する。
   - 生成された目標文字列を入力。
   - 通常モードは制限時間内にタイプし、練習モードは時間制限なしでタイプする。
   - 誤入力では先へ進まず、ESC で中断してタイトル画面へ戻る。
@@ -41,7 +41,7 @@
   - **BGM**: `rodio` を使用してバックグラウンド音楽を再生 (オプション)。
   - **SE**: 正解タイプ時に正弦波 (SineWave) による効果音を再生。
 - **タイピング統計**  
-  WPM (Words Per Minute) をリアルタイムおよび結果画面で計算・表示。
+  WPM (Words Per Minute) をリアルタイムおよび結果画面で計算・表示し、Timed セッションの履歴を保存して統計表示する。
 
 ## Architecture & Code Structure
 
@@ -51,14 +51,16 @@
 
 - **`src/main.rs`**: アプリケーションのエントリーポイント。ターミナルバックエンドの初期化、オーディオスレッドのセットアップ、タイマースレッドの起動、およびメインイベントループ (`run_app`) を担当。
 - **`src/presentation/`**: UI とユーザーインタラクション層。
-  - **`ui/app.rs`**: アプリケーションの状態管理 (`App` 構造体)。`AppState` (Menu, Config, Loading, Typing, Result) の遷移、入力処理、タイマー更新を行う。
+  - **`ui/app.rs`**: アプリケーションの状態管理 (`App` 構造体)。`AppState` (Menu, Config, Loading, Typing, Result, Stats) の遷移、入力処理、タイマー更新を行う。
   - **`ui/render.rs`**: `ratatui` を用いた描画ロジック。各状態に応じたウィジェットのレイアウトとレンダリング。
   - **`bgm_handler.rs`**: `rodio` を使用した BGM 再生管理。
 - **`src/usecase/`**: アプリケーションロジック層。
   - **`generate_sentence.rs`**: マルコフ連鎖アルゴリズムによる文生成ロジック。
   - **`wpm.rs`**: WPM 計算ロジック。
+  - **`history_stats.rs`**: 保存済み履歴の統計集計ロジック。
 - **`src/domain/`**: ドメイン層。
   - **`entity.rs`**: サンプルテキストリソースの読み込み。
+  - **`history.rs`**: 成績履歴の保存単位。
 
 ## Goals
 
@@ -74,7 +76,7 @@
 ### Title Screen (Menu)
 
 - アスキーアートによるロゴ表示。
-- `Start Game` / `Practice Mode` / 生成元別開始 / `Config` のメニュー表示と選択操作。
+- `Start Game` / `Practice Mode` / 生成元別開始 / `Stats` / `Config` のメニュー表示と選択操作。
 - ヘルプオーバーレイ (h キーでトグル)。
   - **スクロール機能**: ヘルプ内容が長い場合、Up/Down キーでスクロール可能。
 
@@ -91,6 +93,12 @@
   - Total Typing
   - Total Misses
   - Words Per Minute (WPM)
+  - Timed 履歴の自己ベスト、平均、直近推移、頻出ミス文字
+
+### Stats Screen
+
+- Timed 履歴の統計サマリを表示。
+  - Enter または Esc キーでタイトル画面へ戻る。
 
 ## 既知の問題
 

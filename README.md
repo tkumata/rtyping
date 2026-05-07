@@ -12,13 +12,14 @@ The game starts from a title menu where you can choose a generation source and p
 
 ## Features
 
-- Terminal UI with title menu, config screen, typing screen, and result screen
+- Terminal UI with title menu, config screen, typing screen, result screen, and stats screen
 - Real-time WPM, timer, typed character count, and miss count
+- Timed history with best WPM, average WPM, average accuracy, recent WPM trend, and frequent missed characters
 - Practice mode (no time limit) via menu or by setting timeout to 0
 - Optional BGM and typing feedback sound (configured in-app, saved to disk)
 - Local text generation with a 4-gram Markov chain
 - Remote text generation through Google AI Studio or Groq
-- All settings (timeout, text scale, frequency, sound, provider API keys) saved under `~/.config/rtyping/`
+- All settings and timed history saved under `~/.config/rtyping/`
 
 ## Run
 
@@ -42,8 +43,9 @@ cargo install --path .
   - `Practice Mode`
   - `Start Game via Google AI Studio`
   - `Start Game via Groq`
+  - `Stats`
   - `Config`
-- `Up / Down`: move between the five menu entries
+- `Up / Down`: move between the six menu entries
 - `Enter`: confirm selection
 - `h`: open or close help
 - `Esc`: quit
@@ -78,8 +80,36 @@ Saved files:
 
 - `~/.config/rtyping/config.json`
 - `~/.config/rtyping/config.key`
+- `~/.config/rtyping/history.json`
 
 `config.json` stores encrypted API key data. The encryption key is stored separately in `config.key`.
+
+`history.json` stores completed timed-session results. Practice Mode results are not saved to history.
+
+## Result and Stats
+
+The `Result` screen shows the current session summary:
+
+- WPM
+- Accuracy
+- Miss count
+- Elapsed input time
+- Generation source
+- Practice or timed mode
+
+For timed sessions, the result is saved to `~/.config/rtyping/history.json`.
+
+The `Result` and `Stats` screens also show saved timed-history stats:
+
+- Best WPM
+- Average WPM
+- Average accuracy
+- Recent 10-run WPM trend
+- Frequent missed characters, counted by the expected character
+
+Controls on the `Stats` screen:
+
+- `Enter / Esc`: return to the title screen
 
 ## Provider Notes
 
