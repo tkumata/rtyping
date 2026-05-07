@@ -71,6 +71,9 @@ pub(super) fn handle_menu_input(
                 reset_timer(timer);
                 spawn_generation_job(app, generation_tx, next_request_id, active_request_id);
             }
+            MenuItem::Stats => {
+                app.open_stats();
+            }
             MenuItem::Config => {
                 app.clear_status_message();
                 app.open_config();
@@ -186,5 +189,30 @@ mod tests {
         assert_eq!(app.generation_source(), GenerationSource::Groq);
         assert_eq!(app.state(), AppState::Loading);
         assert_eq!(active_request_id, Some(3));
+    }
+
+    #[test]
+    fn enter_on_stats_menu_opens_stats_without_generation() {
+        let mut app = test_app();
+        let timer = Arc::new(Mutex::new(0));
+        let (generation_tx, _generation_rx) = mpsc::channel();
+        let mut next_request_id = 5;
+        let mut active_request_id = None;
+
+        app.move_menu_down();
+        app.move_menu_down();
+        app.move_menu_down();
+        app.move_menu_down();
+        handle_menu_input(
+            key(KeyCode::Enter),
+            &mut app,
+            &timer,
+            &generation_tx,
+            &mut next_request_id,
+            &mut active_request_id,
+        );
+
+        assert_eq!(app.state(), AppState::Stats);
+        assert_eq!(active_request_id, None);
     }
 }

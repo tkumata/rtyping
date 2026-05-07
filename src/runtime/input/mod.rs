@@ -1,6 +1,7 @@
 mod config_screen;
 mod gameplay;
 mod menu;
+mod stats;
 
 use crossterm::event::KeyEvent;
 use std::sync::mpsc;
@@ -20,6 +21,7 @@ pub(super) fn handle_key_event(key: KeyEvent, app: &mut App, context: &mut Runti
             context.active_request_id,
         ),
         AppState::Config => config_screen::handle_config_input(key, app),
+        AppState::Stats => stats::handle_stats_input(key, app),
         AppState::Loading => gameplay::handle_loading_input(key, app, context.active_request_id),
         AppState::Typing => gameplay::handle_typing_input(
             key,

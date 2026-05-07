@@ -39,6 +39,17 @@ fn main() -> io::Result<()> {
             Some(format!("Failed to load config: {err}")),
         ),
     };
+    let (history_entries, history_message) = match config::load_history() {
+        Ok(report) => {
+            let message = if report.warnings.is_empty() {
+                None
+            } else {
+                Some(format!("History warning: {}", report.warnings.join(" / ")))
+            };
+            (report.entries, message)
+        }
+        Err(err) => (Vec::new(), Some(format!("Failed to load history: {err}"))),
+    };
 
     let mut audio_sink = DeviceSinkBuilder::open_default_sink()
         .map_err(|err| io::Error::other(format!("failed to open audio device: {err}")))?;
@@ -57,8 +68,13 @@ fn main() -> io::Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = App::new(loaded_config);
-    if let Some(message) = config_message {
-        app.set_status_message(message);
+    app.set_history_entries(history_entries);
+    let startup_messages = [config_message, history_message]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+    if !startup_messages.is_empty() {
+        app.set_status_message(startup_messages.join(" / "));
     }
 
     let timer = Arc::new(Mutex::new(0i32));

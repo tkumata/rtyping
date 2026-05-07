@@ -1,11 +1,12 @@
 use super::{App, MenuItem};
 
 impl App {
-    const MENU_ITEMS: [MenuItem; 5] = [
+    const MENU_ITEMS: [MenuItem; 6] = [
         MenuItem::StartGame,
         MenuItem::PracticeMode,
         MenuItem::StartGameGoogle,
         MenuItem::StartGameGroq,
+        MenuItem::Stats,
         MenuItem::Config,
     ];
 

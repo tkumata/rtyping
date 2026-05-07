@@ -13,6 +13,16 @@ pub enum GenerationSource {
     Groq,
 }
 
+impl GenerationSource {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Local => "Local",
+            Self::Google => "Google AI Studio",
+            Self::Groq => "Groq",
+        }
+    }
+}
+
 pub fn generate(
     text_scale: usize,
     source: GenerationSource,

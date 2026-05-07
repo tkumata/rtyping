@@ -30,7 +30,7 @@
 ## Runtime
 
 - `RUN-001`
-  - タイトル画面では `Start Game`、`Practice Mode`、`Start Game via Google AI Studio`、`Start Game via Groq`、`Config` を上下キーで巡回選択できる。
+  - タイトル画面では `Start Game`、`Practice Mode`、`Start Game via Google AI Studio`、`Start Game via Groq`、`Stats`、`Config` を上下キーで巡回選択できる。
 - `RUN-002`
   - `Start Game` 選択時は `Local` 生成で `Loading` に遷移し、生成完了で `Typing` に進む。
 - `RUN-003`
@@ -40,59 +40,84 @@
 - `RUN-005`
   - `Start Game via Groq` 選択時は `Groq` 生成で `Loading` に遷移し、生成完了で `Typing` に進む。
 - `RUN-006`
-  - 生成失敗時は `Menu` に戻り、失敗理由を表示する。
+  - `Stats` 選択時は保存済み履歴の統計サマリ画面に遷移する。
 - `RUN-007`
-  - `Loading` 中に `Esc` を押すと生成要求を破棄して `Menu` に戻る。
+  - 生成失敗時は `Menu` に戻り、失敗理由を表示する。
 - `RUN-008`
-  - `Config` 画面で `Enter` は保存、`Esc` は破棄、`Backspace` は文字削除として扱う。
+  - `Loading` 中に `Esc` を押すと生成要求を破棄して `Menu` に戻る。
 - `RUN-009`
-  - `Typing` 中に全文入力またはタイムアウトで `Result` に遷移する。
+  - `Config` 画面で `Enter` は保存、`Esc` は破棄、`Backspace` は文字削除として扱う。
 - `RUN-010`
-  - Config で `timeout=0` に設定して開始した `Typing` は、全文入力時のみ `Result` に遷移し、タイムアウトでは終了しない。
+  - `Typing` 中に全文入力またはタイムアウトで `Result` に遷移する。
 - `RUN-011`
-  - `Practice Mode` で開始した `Typing` は、全文入力時のみ `Result` に遷移する。
+  - Config で `timeout=0` に設定して開始した `Typing` は、全文入力時のみ `Result` に遷移し、タイムアウトでは終了しない。
 - `RUN-012`
-  - `Typing` は strict 判定を行い、入力文字がターゲット文字と一致した場合のみ入力位置を進める。
+  - `Practice Mode` で開始した `Typing` は、全文入力時のみ `Result` に遷移する。
 - `RUN-013`
-  - `Typing` 中に `Esc` を押すと `Menu` に戻る。
+  - `Typing` は strict 判定を行い、入力文字がターゲット文字と一致した場合のみ入力位置を進める。
 - `RUN-014`
-  - `Result` 画面は `Typed`、`Misses`、`Accuracy`、`Time`、`WPM` を表示する。
+  - `Typing` 中に `Esc` を押すと `Menu` に戻る。
 - `RUN-015`
-  - `Typed` は `Backspace` で減らない総入力数 `total_typed_count` を表示する。
+  - `Result` 画面は `Typed`、`Misses`、`Accuracy`、`Time`、`WPM` を表示する。
 - `RUN-016`
-  - `Accuracy` は `accuracy = (total_typed_count - incorrects) / total_typed_count * 100` で算出し、小数 1 桁で表示する。
+  - `Typed` は `Backspace` で減らない総入力数 `total_typed_count` を表示する。
 - `RUN-017`
-  - `total_typed_count = 0` のまま `Result` に遷移した場合、`Accuracy` は `0.0%` と表示する。
+  - `Accuracy` は `accuracy = (total_typed_count - incorrects) / total_typed_count * 100` で算出し、小数 1 桁で表示する。
 - `RUN-018`
-  - `Misses` は既存の `incorrects` をそのまま表示し、ミス修正回数や実ミス数の分離は今回の仕様に含めない。
+  - `total_typed_count = 0` のまま `Result` に遷移した場合、`Accuracy` は `0.0%` と表示する。
 - `RUN-019`
-  - `Typing` 画面は現在 WPM の数値表示に加えて、`ratatui` の線グラフ系ウィジェットによる WPM 推移グラフを表示する。
+  - `Misses` は既存の `incorrects` をそのまま表示し、ミス修正回数や実ミス数の分離は今回の仕様に含めない。
 - `RUN-020`
-  - `Result` 画面は `Typed`、`Misses`、`Accuracy`、`Time`、`WPM` に加えて、セッション終了時点の WPM 推移グラフを表示する。
+  - `Typing` 画面は現在 WPM の数値表示に加えて、`ratatui` の線グラフ系ウィジェットによる WPM 推移グラフを表示する。
 - `RUN-021`
-  - WPM 推移グラフは各画面の本文領域と別座標に配置し、本文テキストと重ならない。
+  - `Result` 画面は `Typed`、`Misses`、`Accuracy`、`Time`、`WPM` に加えて、セッション終了時点の WPM 推移グラフを表示する。
 - `RUN-022`
-  - WPM 推移サンプルはタイピング開始時に空で初期化し、タイピング中の再描画に合わせて更新する。
+  - WPM 推移グラフは各画面の本文領域と別座標に配置し、本文テキストと重ならない。
 - `RUN-023`
-  - `Result` 画面の WPM グラフは、Typing 中に蓄積した `wpm_history` の最終内容をそのまま表示し、結果画面専用の別履歴は持たない。
+  - WPM 推移サンプルはタイピング開始時に空で初期化し、タイピング中の再描画に合わせて更新する。
 - `RUN-024`
-  - 画面サイズが不足する場合でも、各画面の主要情報の可読性を優先し、グラフは縮小または簡略表示しても重なりを起こさない。
+  - `Result` 画面の WPM グラフは、Typing 中に蓄積した `wpm_history` の最終内容をそのまま表示し、結果画面専用の別履歴は持たない。
 - `RUN-025`
-  - `src/presentation/ui/render/typing.rs` と `src/presentation/ui/render/result.rs` を含む描画モジュールでは、`#[cfg(test)] mod tests` を通常関数より後ろ、すなわちファイル末尾へ配置し、`clippy::items_after_test_module` を発生させない。
+  - 画面サイズが不足する場合でも、各画面の主要情報の可読性を優先し、グラフは縮小または簡略表示しても重なりを起こさない。
 - `RUN-026`
-  - `Typing` 画面の現在入力位置カーソルは縦棒で表示し、四角カーソルは使用しない。
+  - `src/presentation/ui/render/typing.rs` と `src/presentation/ui/render/result.rs` を含む描画モジュールでは、`#[cfg(test)] mod tests` を通常関数より後ろ、すなわちファイル末尾へ配置し、`clippy::items_after_test_module` を発生させない。
 - `RUN-027`
-  - カーソル形状の変更は `Typing` 画面に限定し、`Menu`、`Config`、`Loading`、`Result` の表示には影響させない。
+  - `Typing` 画面の現在入力位置カーソルは縦棒で表示し、四角カーソルは使用しない。
 - `RUN-028`
-  - `Typing` 画面の縦棒カーソルは、現在入力位置の文字の右側に配置し、文字の左側には配置しない。
+  - カーソル形状の変更は `Typing` 画面に限定し、`Menu`、`Config`、`Loading`、`Result` の表示には影響させない。
 - `RUN-029`
-  - `Typing` 画面では、出題文字列が改行で折り返されてもカーソルが表示上の現在位置と一致し、行移動のたびにずれない。
+  - `Typing` 画面の縦棒カーソルは、現在入力位置の文字の右側に配置し、文字の左側には配置しない。
 - `RUN-030`
-  - カーソル座標は、出題文字列の描画と同じ折返し条件に基づいて算出する。
+  - `Typing` 画面では、出題文字列が改行で折り返されてもカーソルが表示上の現在位置と一致し、行移動のたびにずれない。
 - `RUN-031`
-  - `Typing` 画面の WPM グラフは、セッション内で高い WPM に相当する線分をオレンジで強調し、それ以外は既定の緑系配色を使う。
+  - カーソル座標は、出題文字列の描画と同じ折返し条件に基づいて算出する。
 - `RUN-032`
+  - `Typing` 画面の WPM グラフは、セッション内で高い WPM に相当する線分をオレンジで強調し、それ以外は既定の緑系配色を使う。
+- `RUN-033`
   - `Typing` 中の WPM 履歴は、入力操作が発生していない区間でも最後の入力から 2 秒の猶予までは直前の WPM 推移を維持し、猶予経過後に 0 として記録する。
+- `RUN-034`
+  - Timed セッション完了時は WPM、Accuracy、Miss count、入力時間、生成元、モード、正解側ミス文字を `history.json` へ追記する。
+- `RUN-035`
+  - Practice Mode 完了時は `history.json` へ追記しない。
+- `RUN-036`
+  - Result 画面は保存済み履歴から自己ベスト WPM、平均 WPM、平均正確率、直近10回の WPM 推移、頻出ミス文字を表示する。
+- `RUN-037`
+  - Stats 画面は保存済み履歴から自己ベスト WPM、平均 WPM、平均正確率、直近10回の WPM 推移、頻出ミス文字を表示する。
+- `RUN-038`
+  - Stats 画面で `Enter` または `Esc` を押すと `Menu` に戻る。
+
+## History
+
+- `HIS-001`
+  - 履歴ファイルは優先設定ディレクトリ配下の `history.json` とする。
+- `HIS-002`
+  - 履歴ファイルが存在しない場合は空履歴として扱う。
+- `HIS-003`
+  - 壊れた履歴ファイルは警告を返し、アプリは空履歴で継続する。
+- `HIS-004`
+  - よく間違える文字は正解側文字を集計する。
+- `HIS-005`
+  - 直近10回の推移は保存順の最新10件を古い順に表示する。
 
 ## Sentence Generation
 
@@ -118,6 +143,8 @@
   - タイトル画面の `Practice Mode` 選択時の開始条件
   - strict 入力判定と `Esc` のメニュー復帰
   - WPM 履歴の初期化と更新
+  - 履歴保存と統計集計
+  - Stats メニュー遷移
   - `Typing` 画面で WPM グラフ領域と出題文字列領域が分離されること
   - `Result` 画面で最終 WPM グラフが表示されること
   - WPM グラフの高値強調と無入力区間の 0 化

@@ -11,7 +11,7 @@
 - `src/runtime/input/mod.rs`
   - 状態別入力処理を束ねる。
 - `src/runtime/input/menu.rs`
-  - Menu 状態の入力処理を担当する。`Practice Mode` 選択時の開始条件切り替えもここで扱う。
+  - Menu 状態の入力処理を担当する。`Practice Mode` 選択時の開始条件切り替えと `Stats` への遷移もここで扱う。
 - `src/runtime/input/config_screen.rs`
   - Config 状態の入力処理を担当する。
 - `src/runtime/input/gameplay.rs`
@@ -20,13 +20,15 @@
   - タイマースレッドとタイマー補助処理を担当する。`timeout=0` の場合はタイムアウト通知を送らず、経過時間の計測のみを維持する。
 - `src/domain/config.rs`
   - 設定モデルを保持し、UI と永続化の共有境界を担う。`GameSettings`（timeout / text_scale / freq / sound_enabled を文字列で管理）を含む。
+- `src/domain/history.rs`
+  - 成績履歴の保存単位とモード種別を保持する。
 - `src/presentation/ui/app.rs`
-  - TUI 状態、選択中メニュー、現在入力中文字列、総入力数、WPM 履歴、設定編集対象などの画面状態を保持する。
+  - TUI 状態、選択中メニュー、現在入力中文字列、総入力数、ミス文字、WPM 履歴、設定編集対象、履歴統計などの画面状態を保持する。
   - WPM 履歴には、入力操作の有無を判定するための進行状態も持たせる。
 - `src/presentation/ui/render/mod.rs`
   - 画面描画の入口を束ねる。
 - `src/presentation/ui/render/menu.rs`
-  - Menu 画面を描画する。`Practice Mode` を含む 5 項目のタイトルメニューを描画する。
+  - Menu 画面を描画する。`Practice Mode` と `Stats` を含むタイトルメニューを描画する。
 - `src/presentation/ui/render/config_screen.rs`
   - Config 画面を描画する。Provider セクション（Google / Groq）と Game Settings セクションを表示する。
 - `src/presentation/ui/render/loading.rs`
@@ -38,20 +40,26 @@
   - カーソル座標は、表示済みの折返し結果と一致するように算出し、改行境界でのずれを防ぐ。
   - 補助関数を先に、`#[cfg(test)] mod tests` をファイル末尾に置くことで、Clippy の構造警告を避ける。
 - `src/presentation/ui/render/result.rs`
-  - Result 画面を描画し、入力文字数、ミス数、正確率、経過時間、WPM と最終 WPM 線グラフを表示する。
+  - Result 画面を描画し、入力文字数、ミス数、正確率、経過時間、WPM、保存済み履歴の統計、最終 WPM 線グラフを表示する。
+- `src/presentation/ui/render/stats.rs`
+  - Stats 画面を描画し、保存済み履歴の自己ベスト、平均、直近10回、頻出ミス文字を表示する。
 - `src/presentation/ui/render/wpm_graph.rs`
   - Typing / Result 両画面で共通利用する WPM グラフ描画補助を担当する。
   - `Canvas` と折れ線描画を使い、高い線分をオレンジで強調する。
 - `src/usecase/wpm.rs`
   - WPM 計算ロジックを提供する。
+- `src/usecase/history_stats.rs`
+  - 保存済み履歴から自己ベスト、平均、直近推移、頻出ミス文字を集計する。
 - `src/config/mod.rs`
-  - 設定永続化の入口を提供する。
+  - 設定永続化と履歴永続化の入口を提供する。
 - `src/config/paths.rs`
   - 設定ファイルと鍵ファイルの探索を担当する。
 - `src/config/crypto.rs`
   - API key の暗号化・復号を担当する。
 - `src/config/storage.rs`
   - 設定の保存形式変換、互換復元、ファイル入出力を担当する。
+- `src/config/history_storage.rs`
+  - `history.json` の読み書きと保存ディレクトリ作成を担当する。
 - `src/usecase/generate_sentence.rs`
   - ローカル生成と外部 API 生成の統一入口を提供する。
 
@@ -64,11 +72,13 @@
 5. `Typing` 中はタイマースレッドの経過秒数を参照し、WPM を再計算して履歴へ追加しながら、完了またはタイムアウトで `Result` へ遷移する。
 6. `Typing` 中の WPM 履歴は、入力操作がない区間でも 2 秒の猶予までは直前の WPM 推移を維持し、猶予経過後に 0 として記録する。
 7. `timeout=0` の場合はタイムアウト遷移を行わず、全文入力完了まで `Typing` を維持する。
-8. `Typing` 中は strict 判定を行い、誤入力では入力位置を進めず、`Backspace` では現在入力中文字列だけを減らす。
+8. `Typing` 中は strict 判定を行い、誤入力では入力位置を進めず、`Backspace` では現在入力中文字列だけを減らす。誤入力時は本来入力すべきだった正解側文字をセッション内のミス文字として記録する。
 9. `Typing` 中に `Esc` を押した場合は `Menu` に戻り、進行中のセッションを破棄する。
-10. `Result` 描画時は総入力数と `incorrects` から正確率を算出し、未入力終了時は `0.0%` を表示する。
-11. `Result` 描画時は `App` が保持している `wpm_history` をそのまま使い、タイピング終了時点のグラフを固定表示する。
-12. 終了時は raw mode、画面、スレッド、BGM を順に停止する。
+10. Timed セッション完了時は Result 遷移前に現在結果を `history.json` へ追記し、Practice Mode は保存をスキップする。
+11. `Result` 描画時は総入力数と `incorrects` から正確率を算出し、未入力終了時は `0.0%` を表示する。
+12. `Result` 描画時は `App` が保持している `wpm_history` をそのまま使い、タイピング終了時点のグラフを固定表示する。
+13. `Stats` 選択時は保存済み履歴から集計済み統計を表示し、`Enter` または `Esc` で Menu に戻る。
+14. 終了時は raw mode、画面、スレッド、BGM を順に停止する。
 
 ## 設定保存
 
@@ -77,6 +87,8 @@
 - `config.json` の `game` セクションにタイムアウト、テキスト量、周波数、サウンド設定を保存する。
 - `config.key` は別ファイルで管理し、起動時は優先パスと互換パスの候補を順に試す。
 - 旧 AEAD ラベルと旧 XOR 形式の API key も復元対象に含める。
+- `history.json` には Timed セッションの成績履歴を保存する。
+- `history.json` が存在しない場合は空履歴、壊れている場合は警告付き空履歴として扱う。
 
 ## 開発環境設定
 
@@ -108,6 +120,10 @@
   - プロバイダ設定選択、生成結果反映、ゲーム進行中の状態遷移を固定する。`Practice Mode`、`timeout=0`、strict 判定、`Esc` 復帰の挙動もここで固定する。
 - `src/runtime/session.rs`
   - イベントループと状態更新の接続点を固定する。タイマー更新に伴う WPM 履歴反映もここで確認する。
+- `src/usecase/history_stats.rs`
+  - 自己ベスト、平均、直近10回、頻出ミス文字の集計を固定する。
+- `src/config/history_storage.rs`
+  - 履歴ファイルの missing / broken / save round trip を確認する。
 
 ## 保守メモ
 
@@ -116,6 +132,7 @@
 - タイトルメニュー項目を変更する場合は、`MenuItem`、`App` の選択遷移、`runtime/input/menu` の確定処理、`render/menu` の表示を同時に更新する。
 - `Practice Mode` を追加する場合は、メニュー項目の並び順と `timeout=0` の一時上書きが結果画面復帰後に通常値へ漏れないように確認する。
 - 詳細なミス統計を追加する場合は `App` のカウンタ追加だけでなく、`Backspace` を含む入力イベント定義と結果画面文言を同時に見直す。
+- 履歴統計を追加する場合は Result と Stats で同じ集計ロジックを使い、描画側で再計算しない。
 - タイムアップなしの練習モードを追加する場合は、`timeout=0` の扱いとタイマー停止条件を先に固定する。
 - Typing / Result 画面のレイアウト変更時は、主要テキストの可読性、Sparkline 領域との非重複、狭い端末での退避挙動を同時に確認する。
 - Typing 画面のグラフ色分けを追加する場合は、通常色と強調色の境界を履歴の高値に合わせ、無入力区間は 0 に落とす。

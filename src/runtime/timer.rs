@@ -79,7 +79,21 @@ pub(super) fn finish_typing_session(
 ) {
     stop_timer(timer_command_tx);
     app.update_timer(current_timer(timer));
+    persist_timed_history(app);
     app.finish_typing();
+}
+
+pub(super) fn persist_timed_history(app: &mut crate::presentation::ui::app::App) {
+    let Some(entry) = app.build_history_entry() else {
+        return;
+    };
+
+    let mut entries = app.history_entries().to_vec();
+    entries.push(entry);
+    match crate::config::save_history(&entries) {
+        Ok(()) => app.set_history_entries(entries),
+        Err(err) => app.set_status_message(format!("Failed to save history: {err}")),
+    }
 }
 
 pub(super) fn cancel_typing_session(
