@@ -72,10 +72,14 @@ Game Settings:
 Controls:
 
 - `Up / Down`: move focus
-- `Backspace`: delete one character
+- `Left / Right`: move the input cursor inside the focused text field
+- Character keys: insert at the current cursor position
+- `Backspace`: delete the character before the cursor
 - `Space`: toggle `SoundEnabled`
 - `Enter`: save configuration
 - `Esc`: return to the title screen
+
+API key fields stay masked while editing, with one mask character per stored character.
 
 Saved files:
 
@@ -86,6 +90,12 @@ Saved files:
 `config.json` stores encrypted API key data. The encryption key is stored separately in `config.key`.
 
 `history.json` stores completed timed-session results. Practice Mode results are not saved to history.
+
+## Typing Screen
+
+The `Target Text` block keeps two blank lines above and two blank lines below the target text, including when the text wraps across multiple lines.
+
+The WPM trend block uses a light yellow border while keeping the graph line colors unchanged.
 
 ## Result and Stats
 

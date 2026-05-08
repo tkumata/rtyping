@@ -65,6 +65,7 @@ pub fn render_config(frame: &mut Frame, app: &App) {
             ),
         ],
         app.config_field(),
+        app.config_cursor_index(),
     );
 
     let groq_cursor_position = render_provider_block(
@@ -85,6 +86,7 @@ pub fn render_config(frame: &mut Frame, app: &App) {
             (ConfigField::GroqModel, "Model", &app.config().groq.model),
         ],
         app.config_field(),
+        app.config_cursor_index(),
     );
 
     let game_cursor_position = render_game_settings_block(frame, *game_area, app);
@@ -92,9 +94,9 @@ pub fn render_config(frame: &mut Frame, app: &App) {
         .or(groq_cursor_position)
         .or(game_cursor_position);
 
-    let footer_text = app
-        .status_message()
-        .unwrap_or("Up/Down: move focus  Backspace: delete  Space: toggle Sound  Enter: save");
+    let footer_text = app.status_message().unwrap_or(
+        "Up/Down: focus  Left/Right: cursor  Backspace: delete before cursor  Enter: save",
+    );
     let footer = Paragraph::new(footer_text)
         .block(Block::default().borders(Borders::ALL))
         .wrap(Wrap { trim: true });
@@ -160,7 +162,7 @@ fn render_game_settings_block(frame: &mut Frame, area: Rect, app: &App) -> Optio
         .wrap(Wrap { trim: false });
     frame.render_widget(block, area);
 
-    config_cursor_position(area, focused, &fields, 11)
+    config_cursor_position(area, focused, &fields, 11, app.config_cursor_index())
 }
 
 fn render_provider_block(
@@ -169,6 +171,7 @@ fn render_provider_block(
     title: &str,
     fields: [(ConfigField, &str, &String); 3],
     focused: ConfigField,
+    cursor_index: usize,
 ) -> Option<Position> {
     let mut lines = Vec::new();
     for (field, label, value) in fields {
@@ -187,11 +190,7 @@ fn render_provider_block(
         };
         let display_value = if matches!(field, ConfigField::GoogleApiKey | ConfigField::GroqApiKey)
         {
-            if value.is_empty() {
-                String::new()
-            } else {
-                "********".to_string()
-            }
+            "*".repeat(value.chars().count())
         } else {
             value.clone()
         };
@@ -213,7 +212,7 @@ fn render_provider_block(
         .wrap(Wrap { trim: false });
     frame.render_widget(block, area);
 
-    config_cursor_position(area, focused, &fields, 10)
+    config_cursor_position(area, focused, &fields, 10, cursor_index)
 }
 
 fn config_cursor_position<V: AsRef<str>>(
@@ -221,15 +220,21 @@ fn config_cursor_position<V: AsRef<str>>(
     focused: ConfigField,
     fields: &[(ConfigField, &str, V)],
     label_width: u16,
+    cursor_index: usize,
 ) -> Option<Position> {
+    if !focused.accepts_text() {
+        return None;
+    }
+
     let field_index = fields.iter().position(|(field, _, _)| *field == focused)?;
     let value = fields.get(field_index)?.2.as_ref();
+    let visible_cursor_index = cursor_index.min(value.chars().count());
     let row_offset = u16::try_from(field_index).ok()?.saturating_mul(2);
     let cursor_x = area
         .x
         .checked_add(1)?
         .checked_add(label_width)?
-        .checked_add(u16::try_from(value.chars().count()).ok()?)?;
+        .checked_add(u16::try_from(visible_cursor_index).ok()?)?;
     let cursor_y = area.y.checked_add(1)?.checked_add(row_offset)?;
 
     Some(Position::new(cursor_x, cursor_y))
@@ -257,13 +262,14 @@ mod tests {
             ConfigField::GoogleApiKey,
             &fields,
             10,
+            3,
         );
 
-        assert_eq!(cursor, Some(Position::new(19, 7)));
+        assert_eq!(cursor, Some(Position::new(16, 7)));
     }
 
     #[test]
-    fn config_cursor_position_points_to_game_value_end() {
+    fn config_cursor_position_points_to_game_value_cursor() {
         let fields = [
             (ConfigField::GameTimeout, "Timeout", String::from("60")),
             (ConfigField::GameTextScale, "TextScale", String::from("60")),
@@ -280,8 +286,24 @@ mod tests {
             ConfigField::GameSoundEnabled,
             &fields,
             11,
+            1,
         );
 
-        assert_eq!(cursor, Some(Position::new(19, 7)));
+        assert_eq!(cursor, None);
+    }
+
+    #[test]
+    fn config_cursor_position_clamps_to_value_end() {
+        let fields = [(ConfigField::GoogleApiKey, "API Key", String::from("secret"))];
+
+        let cursor = config_cursor_position(
+            Rect::new(2, 4, 40, 10),
+            ConfigField::GoogleApiKey,
+            &fields,
+            10,
+            99,
+        );
+
+        assert_eq!(cursor, Some(Position::new(19, 5)));
     }
 }

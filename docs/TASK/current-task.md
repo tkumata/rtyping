@@ -1,12 +1,14 @@
 # Current Task
 
-- Summary: 起動直後のタイトル画面で、選択を表す記号を `>` から `▶︎` へ変更する。
+- Summary: Config 画面の文字列入力欄で、左右キーによるカーソル移動とカーソル位置への文字入力を可能にする。
 - Docs:
-  - PLAN、REQUIREMENTS、SPECIFICATIONS、DESIGN、ADR をタイトルメニュー選択マーカー変更に同期する。
+  - Done: PLAN、REQUIREMENTS、SPECIFICATIONS、DESIGN、ADR を Config 入力カーソル編集仕様に同期する。
 - Implementation:
-  - Done: `src/presentation/ui/render/menu.rs` の `menu_line` で、選択中項目のマーカーを `▶︎` に変更する。
-  - Done: 非選択項目、メニュー項目、選択順、キー操作、状態遷移は変更しない。
-  - Done: README.md の Title Menu に選択マーカー仕様を追記する。
+  - Done: `App` に Config 入力カーソル位置を追加する。
+  - Done: `src/presentation/ui/app/config_editor.rs` で左右移動、挿入、カーソル直前削除を実装する。
+  - Done: `src/runtime/input/config_screen.rs` で `Left` / `Right` を Config 入力カーソル移動に割り当てる。
+  - Done: `src/presentation/ui/render/config_screen.rs` でカーソル座標と API key 同長マスクを反映する。
+  - Done: README.md に Config 画面のカーソル編集操作を反映する。
 - Verification:
-  - Done: `src/presentation/ui/render/menu.rs` で、初期選択項目 `Start Game` のマーカーが `▶︎` になることを確認する。
-  - Done: `make check` と `make build` を実行する。
+  - Done: `make check` を実行する。
+  - Done: `make build` を実行する。

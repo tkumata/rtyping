@@ -13,7 +13,7 @@
 - `src/runtime/input/menu.rs`
   - Menu 状態の入力処理を担当する。`Practice Mode` 選択時の開始条件切り替えと `Stats` への遷移もここで扱う。
 - `src/runtime/input/config_screen.rs`
-  - Config 状態の入力処理を担当する。
+  - Config 状態の入力処理を担当する。入力欄の上下移動、左右カーソル移動、カーソル位置への文字挿入、保存、破棄を扱う。
 - `src/runtime/input/gameplay.rs`
   - Loading、Typing、Result の入力処理と生成ジョブ反映を担当する。Typing では strict 判定、`Esc` のメニュー復帰、練習モード時の遷移制御を扱う。
 - `src/runtime/timer.rs`
@@ -23,18 +23,21 @@
 - `src/domain/history.rs`
   - 成績履歴の保存単位とモード種別を保持する。
 - `src/presentation/ui/app.rs`
-  - TUI 状態、選択中メニュー、現在入力中文字列、総入力数、ミス文字、WPM 履歴、設定編集対象、履歴統計などの画面状態を保持する。
+  - TUI 状態、選択中メニュー、現在入力中文字列、総入力数、ミス文字、WPM 履歴、設定編集対象、Config 入力カーソル位置、履歴統計などの画面状態を保持する。
   - WPM 履歴には、入力操作の有無を判定するための進行状態も持たせる。
 - `src/presentation/ui/render/mod.rs`
   - 画面描画の入口を束ねる。
 - `src/presentation/ui/render/menu.rs`
   - Menu 画面を描画する。`Practice Mode` と `Stats` を含むタイトルメニューを描画する。
 - `src/presentation/ui/render/config_screen.rs`
-  - Config 画面を描画する。Provider セクション（Google / Groq）と Game Settings セクションを表示する。
+  - Config 画面を描画する。Provider セクション（Google / Groq）と Game Settings セクションを表示し、現在の Config 入力カーソル位置に端末カーソルを置く。
 - `src/presentation/ui/render/loading.rs`
   - Loading 画面を描画する。
 - `src/presentation/ui/render/typing.rs`
   - Typing 画面を描画する。出題文字列領域と WPM 線グラフ領域を分離して配置する。
+  - `Target Text` ブロックは、出題本文の前に2行、出題本文の後に2行の空行を持つ行リストとして描画する。
+  - 出題本文が折り返される場合は、折り返し後の本文行全体を本文として扱い、その後に2行の空行を置く。
+  - `Target Text` ブロックは枠線込みで最低8行を確保する。WPM グラフと両立できない高さでは、グラフを非表示にして本文領域を優先する。
   - 現在入力位置のカーソルは縦棒として描画し、四角カーソルは使わない。
   - 縦棒カーソルは文字の左側ではなく右側に置き、入力済み文字列の末尾に続く位置関係を優先する。
   - カーソル座標は、表示済みの折返し結果と一致するように算出し、改行境界でのずれを防ぐ。
@@ -46,6 +49,7 @@
 - `src/presentation/ui/render/wpm_graph.rs`
   - Typing / Result 両画面で共通利用する WPM グラフ描画補助を担当する。
   - `Canvas` と折れ線描画を使い、高い線分をオレンジで強調する。
+  - WPM グラフの `Block` 枠線色を共有定義として持ち、Typing / Result の WPM Trend 枠線だけを薄い黄色で描画する。
 - `src/usecase/wpm.rs`
   - WPM 計算ロジックを提供する。
 - `src/usecase/history_stats.rs`
@@ -79,6 +83,15 @@
 12. `Result` 描画時は `App` が保持している `wpm_history` をそのまま使い、タイピング終了時点のグラフを固定表示する。
 13. `Stats` 選択時は保存済み履歴から集計済み統計を表示し、`Enter` または `Esc` で Menu に戻る。
 14. 終了時は raw mode、画面、スレッド、BGM を順に停止する。
+
+## Config 入力編集
+
+- Config 画面では、`Up` / `Down` / `Tab` が編集対象フィールドを移動する。
+- 文字列フィールドでは、`Left` / `Right` がフィールド内の入力位置を移動する。
+- 文字入力は現在入力位置へ挿入し、`Backspace` は現在入力位置の直前の文字を削除する。
+- フィールド移動時は、移動先フィールドの末尾へ入力カーソルを置く。
+- API key 欄は実値を保持したまま、描画時だけ実文字数と同じ長さの `*` に置き換える。
+- `SoundEnabled` は Space トグル専用の非文字列フィールドとして扱い、文字列編集操作では変更しない。
 
 ## 設定保存
 
@@ -139,5 +152,6 @@
 - Typing 画面のグラフ色分けを追加する場合は、通常色と強調色の境界を履歴の高値に合わせ、無入力区間は 0 に落とす。
 - Typing 画面のカーソル形状を変更する場合は、出題文字列の可読性を損なわないよう縦棒カーソルの幅と位置を先に決める。右側配置に寄せると、入力位置が文字列の読み順に沿って見える。
 - Typing 画面のカーソル位置を調整する場合は、文字数からの単純換算ではなく、表示幅と折返し結果に合わせて座標を求める。改行ごとのずれはこの層で吸収する。
+- Typing 画面の `Target Text` ブロック余白を変更する場合は、本文開始行と `typing_cursor_position` の `content_y` の関係を維持する。
 - `GameSettings` のフィールドは `String` 型で保持する。これにより UI の入力処理が統一され、数値バリデーションは保存時または使用時に行う。
 - Rust モジュールでテストを追加する場合は、通常項目の後に `#[cfg(test)] mod tests` を置く配置を維持する。
