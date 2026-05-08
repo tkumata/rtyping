@@ -7,6 +7,8 @@ pub(super) fn handle_config_input(key: KeyEvent, app: &mut App) {
     match key.code {
         KeyCode::Up => app.move_config_up(),
         KeyCode::Down | KeyCode::Tab => app.move_config_down(),
+        KeyCode::Left => app.move_config_cursor_left(),
+        KeyCode::Right => app.move_config_cursor_right(),
         KeyCode::Backspace => app.pop_config_char(),
         KeyCode::Char(' ') if app.config_field() == ConfigField::GameSoundEnabled => {
             app.toggle_sound_enabled();

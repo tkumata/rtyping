@@ -11,17 +11,20 @@ use crate::presentation::ui::app::App;
 use super::common::render_decoration_block;
 use super::wpm_graph;
 
+const TYPING_CONTENT_HEIGHT: u16 = 18;
+const TYPING_AREA_MIN_HEIGHT: u16 = 12;
+const TARGET_TEXT_MIN_HEIGHT: u16 = 8;
+
 pub fn render_typing(frame: &mut Frame, app: &App) {
     let area = frame.area();
-    let content_height = 17_u16;
-    let vertical_padding = area.height.saturating_sub(content_height) / 2;
+    let vertical_padding = area.height.saturating_sub(TYPING_CONTENT_HEIGHT) / 2;
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(vertical_padding),
             Constraint::Length(3),
-            Constraint::Min(11),
+            Constraint::Min(TYPING_AREA_MIN_HEIGHT),
             Constraint::Length(3),
             Constraint::Length(vertical_padding),
         ])
@@ -74,11 +77,7 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
 
     frame.render_widget(
         Paragraph::new(countdown_widget)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_style(Style::default().fg(Color::Cyan)),
-            )
+            .block(Block::default())
             .alignment(Alignment::Center),
         *countdown_area,
     );
@@ -115,9 +114,9 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(
         Paragraph::new(wpm_text)
             .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_style(Style::default().fg(Color::Cyan)),
+                Block::default(),
+                // .borders(Borders::ALL)
+                // .border_style(Style::default().fg(Color::Cyan)),
             )
             .alignment(Alignment::Center),
         *wpm_area,
@@ -128,57 +127,18 @@ fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
     let [graph_area, text_area] = split_typing_area(area);
     wpm_graph::render_wpm_graph(frame, graph_area, app.wpm_history(), " WPM Trend ");
 
-    let mut text_spans = Vec::new();
-    let input_len = app.input_chars().len();
-
-    for (i, target_char) in app.target_string().chars().enumerate() {
-        match i.cmp(&input_len) {
-            std::cmp::Ordering::Less => {
-                let Some(input_char) = app.input_chars().get(i).copied() else {
-                    continue;
-                };
-                if input_char == target_char {
-                    text_spans.push(Span::styled(
-                        input_char.to_string(),
-                        Style::default().fg(Color::Green),
-                    ));
-                } else {
-                    text_spans.push(Span::styled(
-                        target_char.to_string(),
-                        Style::default().fg(Color::White).bg(Color::Red),
-                    ));
-                }
-            }
-            std::cmp::Ordering::Equal => {
-                text_spans.push(Span::styled(
-                    target_char.to_string(),
-                    Style::default().fg(Color::Yellow),
-                ));
-            }
-            std::cmp::Ordering::Greater => {
-                text_spans.push(Span::styled(
-                    target_char.to_string(),
-                    Style::default().fg(Color::White),
-                ));
-            }
-        }
-    }
+    let content_width = text_area.width.saturating_sub(2);
+    let target_text_lines = target_text_lines(app, content_width);
 
     frame.render_widget(
-        Paragraph::new(vec![
-            Line::from(""),
-            Line::from(""),
-            Line::from(text_spans),
-            Line::from(""),
-            Line::from(""),
-        ])
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(" Target Text ")
-                .border_style(Style::default().fg(Color::Cyan)),
-        )
-        .wrap(Wrap { trim: false }),
+        Paragraph::new(target_text_lines)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Target Text ")
+                    .border_style(Style::default().fg(Color::Cyan)),
+            )
+            .wrap(Wrap { trim: false }),
         text_area,
     );
 
@@ -187,12 +147,73 @@ fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
     }
 }
 
+fn target_text_lines(app: &App, content_width: u16) -> Vec<Line<'static>> {
+    let target_chars = app.target_string().chars().collect::<Vec<_>>();
+    let wrapped_lines = wrapped_lines(app.target_string(), content_width);
+    let mut lines = Vec::with_capacity(wrapped_lines.len() + 4);
+    lines.push(Line::from(""));
+    lines.push(Line::from(""));
+
+    for wrapped_line in wrapped_lines {
+        let spans = wrapped_line
+            .into_iter()
+            .filter_map(|wrapped_char| {
+                target_chars
+                    .get(wrapped_char.character_index)
+                    .copied()
+                    .map(|target_char| {
+                        target_char_span(app, wrapped_char.character_index, target_char)
+                    })
+            })
+            .collect::<Vec<_>>();
+        lines.push(Line::from(spans));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(Line::from(""));
+    lines
+}
+
+fn target_char_span(app: &App, index: usize, target_char: char) -> Span<'static> {
+    match index.cmp(&app.input_chars().len()) {
+        std::cmp::Ordering::Less => {
+            let Some(input_char) = app.input_chars().get(index).copied() else {
+                return Span::raw("");
+            };
+            if input_char == target_char {
+                Span::styled(input_char.to_string(), Style::default().fg(Color::Green))
+            } else {
+                Span::styled(
+                    target_char.to_string(),
+                    Style::default().fg(Color::White).bg(Color::Red),
+                )
+            }
+        }
+        std::cmp::Ordering::Equal => {
+            Span::styled(target_char.to_string(), Style::default().fg(Color::Yellow))
+        }
+        std::cmp::Ordering::Greater => {
+            Span::styled(target_char.to_string(), Style::default().fg(Color::White))
+        }
+    }
+}
+
 fn split_typing_area(area: Rect) -> [Rect; 2] {
-    let graph_height = if area.height >= 10 { 4 } else { 0 };
-    let constraints = if graph_height > 0 {
-        [Constraint::Length(graph_height), Constraint::Min(7)]
+    let graph_height = if area.height >= TYPING_AREA_MIN_HEIGHT {
+        4
     } else {
-        [Constraint::Length(0), Constraint::Min(7)]
+        0
+    };
+    let constraints = if graph_height > 0 {
+        [
+            Constraint::Length(graph_height),
+            Constraint::Min(TARGET_TEXT_MIN_HEIGHT),
+        ]
+    } else {
+        [
+            Constraint::Length(0),
+            Constraint::Min(TARGET_TEXT_MIN_HEIGHT),
+        ]
     };
 
     let chunks = Layout::default()
@@ -371,7 +392,7 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
             ),
             Span::styled(" chars", Style::default().fg(Color::Gray)),
         ]))
-        .block(Block::default().borders(Borders::ALL))
+        .block(Block::default())
         .alignment(Alignment::Center),
         *types_area,
     );
@@ -386,7 +407,7 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
                     .add_modifier(Modifier::BOLD),
             ),
         ]))
-        .block(Block::default().borders(Borders::ALL))
+        .block(Block::default())
         .alignment(Alignment::Center),
         *misses_area,
     );
@@ -394,7 +415,9 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
 
 #[cfg(test)]
 mod tests {
-    use super::{split_typing_area, typing_cursor_position, wrapped_cursor_offset};
+    use super::{
+        split_typing_area, target_text_lines, typing_cursor_position, wrapped_cursor_offset,
+    };
     use crate::domain::config::AppConfig;
     use crate::presentation::ui::app::App;
     use ratatui::layout::{Position, Rect};
@@ -414,7 +437,15 @@ mod tests {
 
         assert_eq!(graph_area.height, 4);
         assert_eq!(text_area.y, graph_area.y + graph_area.height);
-        assert!(text_area.height >= 7);
+        assert_eq!(text_area.height, 8);
+    }
+
+    #[test]
+    fn split_typing_area_keeps_graph_hidden_until_text_padding_fits() {
+        let [graph_area, text_area] = split_typing_area(Rect::new(0, 0, 80, 11));
+
+        assert_eq!(graph_area.height, 0);
+        assert_eq!(text_area.height, 11);
     }
 
     #[test]
@@ -431,6 +462,30 @@ mod tests {
         let cursor = typing_cursor_position(Rect::new(0, 0, 20, 10), &app);
 
         assert_eq!(cursor, Some(Position::new(4, 3)));
+    }
+
+    #[test]
+    fn target_text_lines_keep_two_blank_lines_around_single_line_text() {
+        let app = new_app_with_target("abcd", 0);
+        let lines = target_text_lines(&app, 20);
+        let span_counts = lines
+            .iter()
+            .map(|line| line.spans.len())
+            .collect::<Vec<_>>();
+
+        assert_eq!(span_counts, vec![0, 0, 4, 0, 0]);
+    }
+
+    #[test]
+    fn target_text_lines_place_bottom_padding_after_wrapped_text() {
+        let app = new_app_with_target("abcdef", 0);
+        let lines = target_text_lines(&app, 3);
+        let span_counts = lines
+            .iter()
+            .map(|line| line.spans.len())
+            .collect::<Vec<_>>();
+
+        assert_eq!(span_counts, vec![0, 0, 3, 3, 0, 0]);
     }
 
     #[test]

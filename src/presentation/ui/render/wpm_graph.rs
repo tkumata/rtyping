@@ -9,6 +9,8 @@ use ratatui::{
     },
 };
 
+const WPM_GRAPH_BORDER_COLOR: Color = Color::LightYellow;
+
 pub fn render_wpm_graph(frame: &mut Frame, area: Rect, history: &[u64], title: &str) {
     if area.height < 3 || area.width < 8 {
         return;
@@ -21,7 +23,7 @@ pub fn render_wpm_graph(frame: &mut Frame, area: Rect, history: &[u64], title: &
                 Block::default()
                     .borders(Borders::ALL)
                     .title(title)
-                    .border_style(Style::default().fg(Color::Cyan)),
+                    .border_style(Style::default().fg(WPM_GRAPH_BORDER_COLOR)),
             )
             .background_color(Color::Reset)
             .x_bounds(graph_x_bounds(history))

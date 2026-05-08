@@ -50,6 +50,7 @@ cargo install --path .
 - `h`: open or close help
 - `Esc`: quit
 - `Ctrl+c`: quit
+- The selected entry is marked with `▶︎`
 
 ## Config Screen
 
@@ -71,10 +72,14 @@ Game Settings:
 Controls:
 
 - `Up / Down`: move focus
-- `Backspace`: delete one character
+- `Left / Right`: move the input cursor inside the focused text field
+- Character keys: insert at the current cursor position
+- `Backspace`: delete the character before the cursor
 - `Space`: toggle `SoundEnabled`
 - `Enter`: save configuration
 - `Esc`: return to the title screen
+
+API key fields stay masked while editing, with one mask character per stored character.
 
 Saved files:
 
@@ -85,6 +90,12 @@ Saved files:
 `config.json` stores encrypted API key data. The encryption key is stored separately in `config.key`.
 
 `history.json` stores completed timed-session results. Practice Mode results are not saved to history.
+
+## Typing Screen
+
+The `Target Text` block keeps two blank lines above and two blank lines below the target text, including when the text wraps across multiple lines.
+
+The WPM trend block uses a light yellow border while keeping the graph line colors unchanged.
 
 ## Result and Stats
 
@@ -117,6 +128,7 @@ Controls on the `Stats` screen:
 
 - The final request URL is built as `API URL/` + `Model` + `:generateContent`
 - The API key is appended as the `key` query parameter
+- The prompt includes a per-request variation seed so repeated starts do not send identical instructions
 
 Example:
 
@@ -131,10 +143,11 @@ Final URL: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-fl
 - `API URL` should be the full chat completions endpoint you want to call
 - `Model` is sent in the request body
 - `API Key` is sent as a bearer token
+- The prompt includes a per-request variation seed so repeated starts do not send identical instructions
 
 ## Text Length
 
-The generated target text length is controlled by `TextScale` in the Config screen. The current implementation uses roughly `text_scale * 5` characters for both local and remote generation.
+The generated target text length is controlled by `TextScale` in the Config screen. The current implementation uses roughly `text_scale * 5` characters for both local and remote generation. Remote text is normalized and trimmed by the app, so the final target text does not exceed that character count.
 
 ## Development
 

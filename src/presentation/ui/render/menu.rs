@@ -92,7 +92,7 @@ pub fn render_menu(frame: &mut Frame, app: &App) {
 
 fn menu_line(app: &App, item: MenuItem, label: &str) -> Line<'static> {
     let selected = app.menu_selected() == item;
-    let pointer = if selected { ">" } else { " " };
+    let pointer = if selected { "▶︎" } else { " " };
     let style = if selected {
         Style::default()
             .fg(Color::Yellow)

@@ -13,7 +13,7 @@
 - `src/runtime/input/menu.rs`
   - Menu 状態の入力処理を担当する。`Practice Mode` 選択時の開始条件切り替えと `Stats` への遷移もここで扱う。
 - `src/runtime/input/config_screen.rs`
-  - Config 状態の入力処理を担当する。
+  - Config 状態の入力処理を担当する。入力欄の上下移動、左右カーソル移動、カーソル位置への文字挿入、保存、破棄を扱う。
 - `src/runtime/input/gameplay.rs`
   - Loading、Typing、Result の入力処理と生成ジョブ反映を担当する。Typing では strict 判定、`Esc` のメニュー復帰、練習モード時の遷移制御を扱う。
 - `src/runtime/timer.rs`
@@ -23,18 +23,21 @@
 - `src/domain/history.rs`
   - 成績履歴の保存単位とモード種別を保持する。
 - `src/presentation/ui/app.rs`
-  - TUI 状態、選択中メニュー、現在入力中文字列、総入力数、ミス文字、WPM 履歴、設定編集対象、履歴統計などの画面状態を保持する。
+  - TUI 状態、選択中メニュー、現在入力中文字列、総入力数、ミス文字、WPM 履歴、設定編集対象、Config 入力カーソル位置、履歴統計などの画面状態を保持する。
   - WPM 履歴には、入力操作の有無を判定するための進行状態も持たせる。
 - `src/presentation/ui/render/mod.rs`
   - 画面描画の入口を束ねる。
 - `src/presentation/ui/render/menu.rs`
   - Menu 画面を描画する。`Practice Mode` と `Stats` を含むタイトルメニューを描画する。
 - `src/presentation/ui/render/config_screen.rs`
-  - Config 画面を描画する。Provider セクション（Google / Groq）と Game Settings セクションを表示する。
+  - Config 画面を描画する。Provider セクション（Google / Groq）と Game Settings セクションを表示し、現在の Config 入力カーソル位置に端末カーソルを置く。
 - `src/presentation/ui/render/loading.rs`
   - Loading 画面を描画する。
 - `src/presentation/ui/render/typing.rs`
   - Typing 画面を描画する。出題文字列領域と WPM 線グラフ領域を分離して配置する。
+  - `Target Text` ブロックは、出題本文の前に2行、出題本文の後に2行の空行を持つ行リストとして描画する。
+  - 出題本文が折り返される場合は、折り返し後の本文行全体を本文として扱い、その後に2行の空行を置く。
+  - `Target Text` ブロックは枠線込みで最低8行を確保する。WPM グラフと両立できない高さでは、グラフを非表示にして本文領域を優先する。
   - 現在入力位置のカーソルは縦棒として描画し、四角カーソルは使わない。
   - 縦棒カーソルは文字の左側ではなく右側に置き、入力済み文字列の末尾に続く位置関係を優先する。
   - カーソル座標は、表示済みの折返し結果と一致するように算出し、改行境界でのずれを防ぐ。
@@ -46,6 +49,7 @@
 - `src/presentation/ui/render/wpm_graph.rs`
   - Typing / Result 両画面で共通利用する WPM グラフ描画補助を担当する。
   - `Canvas` と折れ線描画を使い、高い線分をオレンジで強調する。
+  - WPM グラフの `Block` 枠線色を共有定義として持ち、Typing / Result の WPM Trend 枠線だけを薄い黄色で描画する。
 - `src/usecase/wpm.rs`
   - WPM 計算ロジックを提供する。
 - `src/usecase/history_stats.rs`
@@ -69,16 +73,34 @@
 2. `main` が端末と音声、タイマースレッドを初期化する。`sound_enabled` が `true` の場合のみ BGM を開始する。
 3. `runtime` がイベントループを実行し、`AppState` ごとの入力処理を分岐する。
 4. タイトルメニューの開始系項目を選択した場合は、選択項目に対応する生成元と制限時間モードを `App` に反映したうえで別スレッドの文字列生成を開始し、結果をチャネルで受け取る。`Practice Mode` は `Local` 生成と `timeout=0` を組み合わせる。
-5. `Typing` 中はタイマースレッドの経過秒数を参照し、WPM を再計算して履歴へ追加しながら、完了またはタイムアウトで `Result` へ遷移する。
-6. `Typing` 中の WPM 履歴は、入力操作がない区間でも 2 秒の猶予までは直前の WPM 推移を維持し、猶予経過後に 0 として記録する。
-7. `timeout=0` の場合はタイムアウト遷移を行わず、全文入力完了まで `Typing` を維持する。
-8. `Typing` 中は strict 判定を行い、誤入力では入力位置を進めず、`Backspace` では現在入力中文字列だけを減らす。誤入力時は本来入力すべきだった正解側文字をセッション内のミス文字として記録する。
-9. `Typing` 中に `Esc` を押した場合は `Menu` に戻り、進行中のセッションを破棄する。
-10. Timed セッション完了時は Result 遷移前に現在結果を `history.json` へ追記し、Practice Mode は保存をスキップする。
-11. `Result` 描画時は総入力数と `incorrects` から正確率を算出し、未入力終了時は `0.0%` を表示する。
-12. `Result` 描画時は `App` が保持している `wpm_history` をそのまま使い、タイピング終了時点のグラフを固定表示する。
-13. `Stats` 選択時は保存済み履歴から集計済み統計を表示し、`Enter` または `Esc` で Menu に戻る。
-14. 終了時は raw mode、画面、スレッド、BGM を順に停止する。
+5. 外部 API 生成の場合、`usecase::generate_sentence` がプロンプト内にリクエストごとの variation seed と日常的な場面カテゴリを含める。
+6. 生成結果は正規化層で ASCII ベースへ整形し、`TextScale` から算出した目標文字数以下に切り詰める。
+7. `Typing` 中はタイマースレッドの経過秒数を参照し、WPM を再計算して履歴へ追加しながら、完了またはタイムアウトで `Result` へ遷移する。
+8. `Typing` 中の WPM 履歴は、入力操作がない区間でも 2 秒の猶予までは直前の WPM 推移を維持し、猶予経過後に 0 として記録する。
+9. `timeout=0` の場合はタイムアウト遷移を行わず、全文入力完了まで `Typing` を維持する。
+10. `Typing` 中は strict 判定を行い、誤入力では入力位置を進めず、`Backspace` では現在入力中文字列だけを減らす。誤入力時は本来入力すべきだった正解側文字をセッション内のミス文字として記録する。
+11. `Typing` 中に `Esc` を押した場合は `Menu` に戻り、進行中のセッションを破棄する。
+12. Timed セッション完了時は Result 遷移前に現在結果を `history.json` へ追記し、Practice Mode は保存をスキップする。
+13. `Result` 描画時は総入力数と `incorrects` から正確率を算出し、未入力終了時は `0.0%` を表示する。
+14. `Result` 描画時は `App` が保持している `wpm_history` をそのまま使い、タイピング終了時点のグラフを固定表示する。
+15. `Stats` 選択時は保存済み履歴から集計済み統計を表示し、`Enter` または `Esc` で Menu に戻る。
+16. 終了時は raw mode、画面、スレッド、BGM を順に停止する。
+
+## 外部 API 生成プロンプト
+
+- Google AI Studio と Groq は同じ `build_prompt` で生成したプロンプトを使う。
+- `build_prompt` は目標文字数、variation seed、日常的な場面カテゴリを含める。
+- variation seed と場面カテゴリはリクエストごとに生成し、Config には保存しない。
+- API 側の出力トークン上限は追加せず、最終文字数は既存の正規化処理で制御する。
+
+## Config 入力編集
+
+- Config 画面では、`Up` / `Down` / `Tab` が編集対象フィールドを移動する。
+- 文字列フィールドでは、`Left` / `Right` がフィールド内の入力位置を移動する。
+- 文字入力は現在入力位置へ挿入し、`Backspace` は現在入力位置の直前の文字を削除する。
+- フィールド移動時は、移動先フィールドの末尾へ入力カーソルを置く。
+- API key 欄は実値を保持したまま、描画時だけ実文字数と同じ長さの `*` に置き換える。
+- `SoundEnabled` は Space トグル専用の非文字列フィールドとして扱い、文字列編集操作では変更しない。
 
 ## 設定保存
 
@@ -109,7 +131,7 @@
 - `src/presentation/ui/app/typing.rs`
   - 総入力数が `Backspace` で減らないことを固定する。
 - `src/usecase/generate_sentence.rs`
-  - ローカル生成、URL 組み立て、設定不足時の失敗、正規化処理を確認する。
+  - ローカル生成、URL 組み立て、設定不足時の失敗、外部 API 用プロンプト、正規化処理を確認する。
 - `src/config/mod.rs`
   - 公開入口の設定ロード・保存を確認する。
 - `src/config/storage.rs`
@@ -130,6 +152,7 @@
 - UI 仕様変更を伴わない内部整理では、まず `runtime/session` と `runtime/input` の責務境界を確認する。
 - 新しい生成元や設定項目を追加する場合は、`domain::config::AppConfig`、`ConfigField`、`provider_config_for_source`、描画処理の順に追うと全体を把握しやすい。
 - タイトルメニュー項目を変更する場合は、`MenuItem`、`App` の選択遷移、`runtime/input/menu` の確定処理、`render/menu` の表示を同時に更新する。
+- タイトルメニューの選択マーカーだけを変更する場合は、`src/presentation/ui/render/menu.rs` の `menu_line` に閉じ、`MenuItem` と `runtime/input/menu` は変更しない。
 - `Practice Mode` を追加する場合は、メニュー項目の並び順と `timeout=0` の一時上書きが結果画面復帰後に通常値へ漏れないように確認する。
 - 詳細なミス統計を追加する場合は `App` のカウンタ追加だけでなく、`Backspace` を含む入力イベント定義と結果画面文言を同時に見直す。
 - 履歴統計を追加する場合は Result と Stats で同じ集計ロジックを使い、描画側で再計算しない。
@@ -138,5 +161,6 @@
 - Typing 画面のグラフ色分けを追加する場合は、通常色と強調色の境界を履歴の高値に合わせ、無入力区間は 0 に落とす。
 - Typing 画面のカーソル形状を変更する場合は、出題文字列の可読性を損なわないよう縦棒カーソルの幅と位置を先に決める。右側配置に寄せると、入力位置が文字列の読み順に沿って見える。
 - Typing 画面のカーソル位置を調整する場合は、文字数からの単純換算ではなく、表示幅と折返し結果に合わせて座標を求める。改行ごとのずれはこの層で吸収する。
+- Typing 画面の `Target Text` ブロック余白を変更する場合は、本文開始行と `typing_cursor_position` の `content_y` の関係を維持する。
 - `GameSettings` のフィールドは `String` 型で保持する。これにより UI の入力処理が統一され、数値バリデーションは保存時または使用時に行う。
 - Rust モジュールでテストを追加する場合は、通常項目の後に `#[cfg(test)] mod tests` を置く配置を維持する。

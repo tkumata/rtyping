@@ -56,6 +56,10 @@ impl ConfigField {
         ConfigField::GameFreq,
         ConfigField::GameSoundEnabled,
     ];
+
+    pub fn accepts_text(self) -> bool {
+        self != ConfigField::GameSoundEnabled
+    }
 }
 
 #[expect(clippy::struct_excessive_bools)]
@@ -78,6 +82,7 @@ pub struct App {
     help_scroll: u16,
     menu_selected: MenuItem,
     config_field: ConfigField,
+    config_cursor_index: usize,
     config: AppConfig,
     status_message: Option<String>,
     generation_source: GenerationSource,
@@ -105,6 +110,7 @@ impl App {
             help_scroll: 0,
             menu_selected: MenuItem::StartGame,
             config_field: ConfigField::GoogleApiUrl,
+            config_cursor_index: 0,
             config,
             status_message: None,
             generation_source: GenerationSource::Local,
@@ -144,6 +150,7 @@ impl App {
 
     pub fn open_config(&mut self) {
         self.state = AppState::Config;
+        self.move_config_cursor_to_end();
     }
 
     pub fn open_stats(&mut self) {
@@ -291,6 +298,10 @@ impl App {
 
     pub fn config_field(&self) -> ConfigField {
         self.config_field
+    }
+
+    pub fn config_cursor_index(&self) -> usize {
+        self.config_cursor_index
     }
 
     pub fn config(&self) -> &AppConfig {
