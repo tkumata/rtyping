@@ -128,6 +128,7 @@ Controls on the `Stats` screen:
 
 - The final request URL is built as `API URL/` + `Model` + `:generateContent`
 - The API key is appended as the `key` query parameter
+- The prompt includes a per-request variation seed so repeated starts do not send identical instructions
 
 Example:
 
@@ -142,10 +143,11 @@ Final URL: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-fl
 - `API URL` should be the full chat completions endpoint you want to call
 - `Model` is sent in the request body
 - `API Key` is sent as a bearer token
+- The prompt includes a per-request variation seed so repeated starts do not send identical instructions
 
 ## Text Length
 
-The generated target text length is controlled by `TextScale` in the Config screen. The current implementation uses roughly `text_scale * 5` characters for both local and remote generation.
+The generated target text length is controlled by `TextScale` in the Config screen. The current implementation uses roughly `text_scale * 5` characters for both local and remote generation. Remote text is normalized and trimmed by the app, so the final target text does not exceed that character count.
 
 ## Development
 

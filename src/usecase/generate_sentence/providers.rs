@@ -1,10 +1,31 @@
+use rand::RngExt;
+use rand::prelude::IndexedRandom;
+use rand::rng;
 use reqwest::StatusCode;
 use reqwest::blocking::Client;
 use serde_json::{Value, json};
 use std::io;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use crate::domain::config::ProviderConfig;
+
+static PROMPT_SEQUENCE: AtomicU64 = AtomicU64::new(1);
+
+const PROMPT_CONTEXTS: &[&str] = &[
+    "morning routine",
+    "small city errand",
+    "quiet office task",
+    "weekend cooking",
+    "train station moment",
+    "library visit",
+    "neighborhood walk",
+    "workshop cleanup",
+    "planning a short trip",
+    "fixing a simple mistake",
+    "organizing a desk",
+    "talking with a coworker",
+];
 
 pub(super) fn generate_google_sentence(
     target_chars: usize,
@@ -132,8 +153,47 @@ fn parse_json_response(
         .map_err(|err| io::Error::other(format!("{provider_name} returned invalid JSON: {err}")))
 }
 
-fn build_prompt(target_chars: usize) -> String {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct PromptVariation {
+    seed: String,
+    context: &'static str,
+}
+
+impl PromptVariation {
+    fn random() -> Self {
+        let sequence = PROMPT_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        let mut rng = rng();
+        let random = rng.random::<u64>();
+        let context = match PROMPT_CONTEXTS.choose(&mut rng) {
+            Some(context) => *context,
+            None => "everyday task",
+        };
+
+        Self {
+            seed: format!("{sequence:x}-{random:x}"),
+            context,
+        }
+    }
+
+    #[cfg(test)]
+    pub(super) fn for_test(seed: impl Into<String>, context: &'static str) -> Self {
+        Self {
+            seed: seed.into(),
+            context,
+        }
+    }
+}
+
+pub(super) fn build_prompt(target_chars: usize) -> String {
+    build_prompt_with_variation(target_chars, &PromptVariation::random())
+}
+
+pub(super) fn build_prompt_with_variation(
+    target_chars: usize,
+    variation: &PromptVariation,
+) -> String {
     format!(
-        "Generate plain English typing text with about {target_chars} characters. Use ASCII letters, spaces, and simple punctuation only. Do not add markdown, numbering, labels, or quotes."
+        "Generate one plain English typing text with about {target_chars} characters. Make it long enough that the app can trim it to the target length. Variation seed: {}. Situation focus: {}. Use a fresh topic, opening, wording, and sentence order for this seed. Do not print the seed or the focus label. Use ASCII letters, spaces, and simple punctuation only. Do not add markdown, numbering, labels, or quotes.",
+        variation.seed, variation.context
     )
 }

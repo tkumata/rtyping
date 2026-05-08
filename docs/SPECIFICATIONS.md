@@ -159,6 +159,10 @@
   - Google と Groq は設定不足時に `io::Error` を返す。
 - `GEN-004`
   - 応答文字列は ASCII ベースへ正規化し、目標文字数で切り詰める。
+- `GEN-005`
+  - Google と Groq のプロンプトは、リクエストごとに異なる variation seed と日常的な場面カテゴリを含める。
+- `GEN-006`
+  - Google と Groq の request body には、短すぎる出力を誘発する API 側の出力トークン上限を追加しない。
 
 ## Test Entry Points
 

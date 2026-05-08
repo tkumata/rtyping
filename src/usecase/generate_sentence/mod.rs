@@ -80,6 +80,28 @@ mod tests {
     }
 
     #[test]
+    fn external_prompt_includes_variation_without_token_limit_instruction() {
+        let variation = providers::PromptVariation::for_test("seed-123", "library visit");
+        let prompt = providers::build_prompt_with_variation(120, &variation);
+
+        assert!(prompt.contains("120"));
+        assert!(prompt.contains("seed-123"));
+        assert!(prompt.contains("library visit"));
+        assert!(prompt.contains("fresh topic"));
+        assert!(prompt.contains("ASCII"));
+        assert!(!prompt.contains("maxOutputTokens"));
+        assert!(!prompt.contains("max_completion_tokens"));
+    }
+
+    #[test]
+    fn external_prompt_changes_between_requests() {
+        let first = providers::build_prompt(120);
+        let second = providers::build_prompt(120);
+
+        assert_ne!(first, second);
+    }
+
+    #[test]
     fn google_generation_requires_complete_config() {
         let err =
             generate(10, GenerationSource::Google, None).expect_err("config should be required");
