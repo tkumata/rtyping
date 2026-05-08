@@ -50,6 +50,7 @@ cargo install --path .
 - `h`: open or close help
 - `Esc`: quit
 - `Ctrl+c`: quit
+- The selected entry is marked with `▶︎`
 
 ## Config Screen
 

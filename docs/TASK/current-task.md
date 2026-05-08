@@ -1,15 +1,12 @@
 # Current Task
 
-- Summary: Timed セッションの結果履歴を保存し、Result と Stats 画面で統計を表示する。
+- Summary: 起動直後のタイトル画面で、選択を表す記号を `>` から `▶︎` へ変更する。
 - Docs:
-  - REQUIREMENTS、SPECIFICATIONS、DESIGN、ADR、PLAN を履歴管理仕様に同期する。
+  - PLAN、REQUIREMENTS、SPECIFICATIONS、DESIGN、ADR をタイトルメニュー選択マーカー変更に同期する。
 - Implementation:
-  - `~/.config/rtyping/history.json` の読み書きを追加する。
-  - Timed セッション完了時だけ履歴を保存する。
-  - 正解側ミス文字を記録し、頻出ミス文字として集計する。
-  - Result 画面と Stats 画面に自己ベスト、平均、直近10回、頻出ミス文字を表示する。
-  - Menu に `Stats` を追加する。
+  - Done: `src/presentation/ui/render/menu.rs` の `menu_line` で、選択中項目のマーカーを `▶︎` に変更する。
+  - Done: 非選択項目、メニュー項目、選択順、キー操作、状態遷移は変更しない。
+  - Done: README.md の Title Menu に選択マーカー仕様を追記する。
 - Verification:
-  - Timed と Practice Mode の保存対象差をテストする。
-  - 統計集計と Menu / Stats 遷移をテストする。
-  - `make check` と `make build` を実行する。
+  - Done: `src/presentation/ui/render/menu.rs` で、初期選択項目 `Start Game` のマーカーが `▶︎` になることを確認する。
+  - Done: `make check` と `make build` を実行する。

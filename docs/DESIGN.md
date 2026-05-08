@@ -130,6 +130,7 @@
 - UI 仕様変更を伴わない内部整理では、まず `runtime/session` と `runtime/input` の責務境界を確認する。
 - 新しい生成元や設定項目を追加する場合は、`domain::config::AppConfig`、`ConfigField`、`provider_config_for_source`、描画処理の順に追うと全体を把握しやすい。
 - タイトルメニュー項目を変更する場合は、`MenuItem`、`App` の選択遷移、`runtime/input/menu` の確定処理、`render/menu` の表示を同時に更新する。
+- タイトルメニューの選択マーカーだけを変更する場合は、`src/presentation/ui/render/menu.rs` の `menu_line` に閉じ、`MenuItem` と `runtime/input/menu` は変更しない。
 - `Practice Mode` を追加する場合は、メニュー項目の並び順と `timeout=0` の一時上書きが結果画面復帰後に通常値へ漏れないように確認する。
 - 詳細なミス統計を追加する場合は `App` のカウンタ追加だけでなく、`Backspace` を含む入力イベント定義と結果画面文言を同時に見直す。
 - 履歴統計を追加する場合は Result と Stats で同じ集計ロジックを使い、描画側で再計算しない。
