@@ -25,10 +25,12 @@
 - `src/presentation/ui/app.rs`
   - TUI 状態、選択中メニュー、現在入力中文字列、総入力数、ミス文字、WPM 履歴、設定編集対象、Config 入力カーソル位置、履歴統計などの画面状態を保持する。
   - WPM 履歴には、入力操作の有無を判定するための進行状態も持たせる。
+- `src/presentation/ui/app/menu.rs`
+  - 現在の設定からタイトル画面で表示可能なメニュー項目を組み立てる。Google AI Studio と GroqCloud の開始項目は、各プロバイダの `API URL`、`API Key`、`Model` がすべて空でない場合だけ含める。
 - `src/presentation/ui/render/mod.rs`
   - 画面描画の入口を束ねる。
 - `src/presentation/ui/render/menu.rs`
-  - Menu 画面を描画する。`Practice Mode` と `Stats` を含むタイトルメニューを描画する。
+  - Menu 画面を描画する。`Practice Mode` と `Stats` を含むタイトルメニューを描画し、外部プロバイダの開始項目は `App` が返す表示可能リストに従う。
 - `src/presentation/ui/render/config_screen.rs`
   - Config 画面を描画する。Provider セクション（Google / Groq）と Game Settings セクションを表示し、現在の Config 入力カーソル位置に端末カーソルを置く。
 - `src/presentation/ui/render/loading.rs`
@@ -72,19 +74,20 @@
 1. `main` が設定を読み込む。
 2. `main` が端末と音声、タイマースレッドを初期化する。`sound_enabled` が `true` の場合のみ BGM を開始する。
 3. `runtime` がイベントループを実行し、`AppState` ごとの入力処理を分岐する。
-4. タイトルメニューの開始系項目を選択した場合は、選択項目に対応する生成元と制限時間モードを `App` に反映したうえで別スレッドの文字列生成を開始し、結果をチャネルで受け取る。`Practice Mode` は `Local` 生成と `timeout=0` を組み合わせる。
-5. 外部 API 生成の場合、`usecase::generate_sentence` がプロンプト内にリクエストごとの variation seed と日常的な場面カテゴリを含める。
-6. 生成結果は正規化層で ASCII ベースへ整形し、`TextScale` から算出した目標文字数以下に切り詰める。
-7. `Typing` 中はタイマースレッドの経過秒数を参照し、WPM を再計算して履歴へ追加しながら、完了またはタイムアウトで `Result` へ遷移する。
-8. `Typing` 中の WPM 履歴は、入力操作がない区間でも 2 秒の猶予までは直前の WPM 推移を維持し、猶予経過後に 0 として記録する。
-9. `timeout=0` の場合はタイムアウト遷移を行わず、全文入力完了まで `Typing` を維持する。
-10. `Typing` 中は strict 判定を行い、誤入力では入力位置を進めず、`Backspace` では現在入力中文字列だけを減らす。誤入力時は本来入力すべきだった正解側文字をセッション内のミス文字として記録する。
-11. `Typing` 中に `Esc` を押した場合は `Menu` に戻り、進行中のセッションを破棄する。
-12. Timed セッション完了時は Result 遷移前に現在結果を `history.json` へ追記し、Practice Mode は保存をスキップする。
-13. `Result` 描画時は総入力数と `incorrects` から正確率を算出し、未入力終了時は `0.0%` を表示する。
-14. `Result` 描画時は `App` が保持している `wpm_history` をそのまま使い、タイピング終了時点のグラフを固定表示する。
-15. `Stats` 選択時は保存済み履歴から集計済み統計を表示し、`Enter` または `Esc` で Menu に戻る。
-16. 終了時は raw mode、画面、スレッド、BGM を順に停止する。
+4. タイトルメニューは現在の設定に応じて表示可能な項目だけを描画し、上下キー移動も同じ項目リストを巡回する。
+5. タイトルメニューの開始系項目を選択した場合は、選択項目に対応する生成元と制限時間モードを `App` に反映したうえで別スレッドの文字列生成を開始し、結果をチャネルで受け取る。`Practice Mode` は `Local` 生成と `timeout=0` を組み合わせる。
+6. 外部 API 生成の場合、`usecase::generate_sentence` がプロンプト内にリクエストごとの variation seed と日常的な場面カテゴリを含める。
+7. 生成結果は正規化層で ASCII ベースへ整形し、`TextScale` から算出した目標文字数以下に切り詰める。
+8. `Typing` 中はタイマースレッドの経過秒数を参照し、WPM を再計算して履歴へ追加しながら、完了またはタイムアウトで `Result` へ遷移する。
+9. `Typing` 中の WPM 履歴は、入力操作がない区間でも 2 秒の猶予までは直前の WPM 推移を維持し、猶予経過後に 0 として記録する。
+10. `timeout=0` の場合はタイムアウト遷移を行わず、全文入力完了まで `Typing` を維持する。
+11. `Typing` 中は strict 判定を行い、誤入力では入力位置を進めず、`Backspace` では現在入力中文字列だけを減らす。誤入力時は本来入力すべきだった正解側文字をセッション内のミス文字として記録する。
+12. `Typing` 中に `Esc` を押した場合は `Menu` に戻り、進行中のセッションを破棄する。
+13. Timed セッション完了時は Result 遷移前に現在結果を `history.json` へ追記し、Practice Mode は保存をスキップする。
+14. `Result` 描画時は総入力数と `incorrects` から正確率を算出し、未入力終了時は `0.0%` を表示する。
+15. `Result` 描画時は `App` が保持している `wpm_history` をそのまま使い、タイピング終了時点のグラフを固定表示する。
+16. `Stats` 選択時は保存済み履歴から集計済み統計を表示し、`Enter` または `Esc` で Menu に戻る。
+17. 終了時は raw mode、画面、スレッド、BGM を順に停止する。
 
 ## 外部 API 生成プロンプト
 

@@ -101,7 +101,7 @@ fn should_clear_status_message(key: &KeyEvent) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::config::AppConfig;
+    use crate::domain::config::{AppConfig, ProviderConfig};
     use crate::presentation::ui::app::AppState;
     use crossterm::event::{KeyEventKind, KeyEventState};
 
@@ -118,9 +118,25 @@ mod tests {
         App::new(AppConfig::default())
     }
 
+    fn test_app_with_provider_config() -> App {
+        App::new(AppConfig {
+            google: ProviderConfig {
+                api_url: "https://google.example".to_string(),
+                api_key: "google-key".to_string(),
+                model: "google-model".to_string(),
+            },
+            groq: ProviderConfig {
+                api_url: "https://groq.example".to_string(),
+                api_key: "groq-key".to_string(),
+                model: "groq-model".to_string(),
+            },
+            ..AppConfig::default()
+        })
+    }
+
     #[test]
     fn enter_on_google_menu_sets_google_source_and_loading() {
-        let mut app = test_app();
+        let mut app = test_app_with_provider_config();
         let timer = Arc::new(Mutex::new(0));
         let (generation_tx, _generation_rx) = mpsc::channel();
         let mut next_request_id = 1;
@@ -144,7 +160,7 @@ mod tests {
 
     #[test]
     fn enter_on_practice_mode_sets_local_source_and_practice_mode() {
-        let mut app = test_app();
+        let mut app = test_app_with_provider_config();
         let timer = Arc::new(Mutex::new(0));
         let (generation_tx, _generation_rx) = mpsc::channel();
         let mut next_request_id = 10;
@@ -168,7 +184,7 @@ mod tests {
 
     #[test]
     fn enter_on_groq_menu_sets_groq_source_and_loading() {
-        let mut app = test_app();
+        let mut app = test_app_with_provider_config();
         let timer = Arc::new(Mutex::new(0));
         let (generation_tx, _generation_rx) = mpsc::channel();
         let mut next_request_id = 3;
@@ -199,8 +215,6 @@ mod tests {
         let mut next_request_id = 5;
         let mut active_request_id = None;
 
-        app.move_menu_down();
-        app.move_menu_down();
         app.move_menu_down();
         app.move_menu_down();
         handle_menu_input(

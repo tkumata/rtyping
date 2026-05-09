@@ -6,7 +6,7 @@
 
 ## 機能要件
 
-1. 起動時にタイトルメニューを表示し、`Start Game`、`Practice Mode`、`Start Game via Google AI Studio`、`Start Game via Groq`、`Stats`、`Config` を選択できること。
+1. 起動時にタイトルメニューを表示し、`Start Game`、`Practice Mode`、`Stats`、`Config` を常に選択できること。
 2. 文字列生成元として `Local`、`Google AI Studio`、`Groq` をサポートすること。
 3. タイトルメニューからゲーム開始した場合は、選択した項目に対応する生成元とモードで文字列生成を開始できること。
 4. `Config` 画面では各プロバイダの `API URL`、`API key`、`Model` を編集できること。
@@ -50,6 +50,8 @@
 42. `Cargo.toml` の version 更新を起点に、GitHub Actions で自動リリースを実行できること。
 43. 自動リリースでは OS 別ビルド成果物を単一の GitHub Release に添付できること。
 44. 自動リリースでは GitHub 自動生成だけに依存せず、version、変更履歴、成果物一覧を含むリリースノートを作成できること。
+45. Google AI Studio の `API URL`、`API key`、`Model` がすべて空でない場合だけ、タイトルメニューに `Start Game via Google AI Studio` を表示できること。
+46. Groq の `API URL`、`API key`、`Model` がすべて空でない場合だけ、タイトルメニューに `Start Game via GroqCloud` を表示できること。
 
 ## 非機能要件
 
@@ -73,6 +75,7 @@
 18. 外部 API 生成の固定化回避は API 側の出力トークン上限を追加せず、文字数制御は既存の正規化処理に委ねること。
 19. 自動リリースは Release 作成を matrix job 内で重複実行せず、単一 job で実行すること。
 20. 自動リリース前には `make check` と `make build` に成功していること。
+21. タイトルメニューの外部プロバイダ項目を非表示にした場合でも、上下キー移動で非表示項目を選択しないこと。
 
 ## 保守上の前提
 

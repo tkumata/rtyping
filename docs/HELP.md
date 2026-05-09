@@ -4,7 +4,7 @@
 
 ### Title Screen
 
-- **Up / Down**: Select `Start Game`, `Practice Mode`, `Start Game via Google AI Studio`, `Start Game via Groq`, `Stats`, or `Config`
+- **Up / Down**: Select visible title menu entries. `Start Game via Google AI Studio` and `Start Game via GroqCloud` appear only when their provider settings are complete.
 - **Enter**: Confirm selection
 - **h**: Show/Hide this help
 - **Up / Down**: Scroll help text (when visible)
