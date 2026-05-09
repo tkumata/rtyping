@@ -41,11 +41,11 @@ cargo install --path .
 - Menu entries:
   - `Start Game`
   - `Practice Mode`
-  - `Start Game via Google AI Studio`
-  - `Start Game via Groq`
+  - `Start Game via Google AI Studio` (shown only when Google AI Studio `API URL`, `API Key`, and `Model` are all configured)
+  - `Start Game via GroqCloud` (shown only when Groq `API URL`, `API Key`, and `Model` are all configured)
   - `Stats`
   - `Config`
-- `Up / Down`: move between the six menu entries
+- `Up / Down`: move between the visible menu entries
 - `Enter`: confirm selection
 - `h`: open or close help
 - `Esc`: quit

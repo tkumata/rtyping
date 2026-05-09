@@ -37,18 +37,11 @@ pub fn render_menu(frame: &mut Frame, app: &App) {
         .alignment(Alignment::Center);
     frame.render_widget(title, *title_area);
 
-    let menu_lines = vec![
-        menu_line(app, MenuItem::StartGame, "Start Game"),
-        menu_line(app, MenuItem::PracticeMode, "Practice Mode"),
-        menu_line(
-            app,
-            MenuItem::StartGameGoogle,
-            "Start Game via Google AI Studio",
-        ),
-        menu_line(app, MenuItem::StartGameGroq, "Start Game via Groq"),
-        menu_line(app, MenuItem::Stats, "Stats"),
-        menu_line(app, MenuItem::Config, "Config"),
-    ];
+    let menu_lines = app
+        .visible_menu_items()
+        .into_iter()
+        .map(|item| menu_line(app, item, menu_label(item)))
+        .collect::<Vec<_>>();
     let menu = Paragraph::new(menu_lines)
         .block(
             Block::default()
@@ -104,6 +97,17 @@ fn menu_line(app: &App, item: MenuItem, label: &str) -> Line<'static> {
         Span::styled(format!("{pointer} "), style),
         Span::styled(label.to_string(), style),
     ])
+}
+
+fn menu_label(item: MenuItem) -> &'static str {
+    match item {
+        MenuItem::StartGame => "Start Game",
+        MenuItem::PracticeMode => "Practice Mode",
+        MenuItem::StartGameGoogle => "Start Game via Google AI Studio",
+        MenuItem::StartGameGroq => "Start Game via GroqCloud",
+        MenuItem::Stats => "Stats",
+        MenuItem::Config => "Config",
+    }
 }
 
 fn logo_lines() -> Vec<Line<'static>> {

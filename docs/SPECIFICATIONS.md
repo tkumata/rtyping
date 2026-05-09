@@ -40,15 +40,15 @@
 ## Runtime
 
 - `RUN-001`
-  - タイトル画面では `Start Game`、`Practice Mode`、`Start Game via Google AI Studio`、`Start Game via Groq`、`Stats`、`Config` を上下キーで巡回選択できる。
+  - タイトル画面では `Start Game`、`Practice Mode`、`Stats`、`Config` を常に上下キーで巡回選択できる。
 - `RUN-002`
   - `Start Game` 選択時は `Local` 生成で `Loading` に遷移し、生成完了で `Typing` に進む。
 - `RUN-003`
   - `Practice Mode` 選択時は `Local` 生成かつタイムアウト無効で `Loading` に遷移し、生成完了で `Typing` に進む。
 - `RUN-004`
-  - `Start Game via Google AI Studio` 選択時は `Google AI Studio` 生成で `Loading` に遷移し、生成完了で `Typing` に進む。
+  - `Start Game via Google AI Studio` は Google AI Studio の `API URL`、`API Key`、`Model` がすべて空でない場合だけ表示し、選択時は `Google AI Studio` 生成で `Loading` に遷移し、生成完了で `Typing` に進む。
 - `RUN-005`
-  - `Start Game via Groq` 選択時は `Groq` 生成で `Loading` に遷移し、生成完了で `Typing` に進む。
+  - `Start Game via GroqCloud` は Groq の `API URL`、`API Key`、`Model` がすべて空でない場合だけ表示し、選択時は `Groq` 生成で `Loading` に遷移し、生成完了で `Typing` に進む。
 - `RUN-006`
   - `Stats` 選択時は保存済み履歴の統計サマリ画面に遷移する。
 - `RUN-007`
