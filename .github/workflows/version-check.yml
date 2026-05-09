@@ -40,14 +40,18 @@ jobs:
 
           if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
             echo "バージョン変更あり: $PREVIOUS_VERSION -> $CURRENT_VERSION"
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-            echo "previous-version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
+            {
+              echo "changed=true"
+              echo "version=$CURRENT_VERSION"
+              echo "previous-version=$PREVIOUS_VERSION"
+            } >> "$GITHUB_OUTPUT"
           else
             echo "バージョン変更なし"
-            echo "changed=false" >> $GITHUB_OUTPUT
-            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-            echo "previous-version=$PREVIOUS_VERSION" >> $GITHUB_OUTPUT
+            {
+              echo "changed=false"
+              echo "version=$CURRENT_VERSION"
+              echo "previous-version=$PREVIOUS_VERSION"
+            } >> "$GITHUB_OUTPUT"
           fi
 
   test:
@@ -238,7 +242,7 @@ jobs:
             echo "## Assets"
             echo
             find dist -maxdepth 1 -type f | sort | while read -r file; do
-              printf -- '- `%s`\n' "$(basename "$file")"
+              printf -- "- \`%s\`\n" "$(basename "$file")"
             done
           } > RELEASE_NOTES.md
 
