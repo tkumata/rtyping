@@ -128,3 +128,26 @@
 - プロンプトに目標文字数と多様化指示が含まれること。
 - Google AI Studio と Groq の request body に短すぎる出力を誘発する上限を追加しないこと。
 - 最終的な出題文が目標文字数を超えない既存仕様を維持すること。
+
+## GitHub Release ノート改善
+
+## 目的
+
+- `Cargo.toml` の version 更新を起点にした既存の自動リリース運用を維持する。
+- OS 別ビルドジョブから Release 作成処理を分離し、GitHub Release を1回だけ作成する。
+- GitHub の自動生成だけに依存せず、利用者が変更点と成果物を確認しやすいリリースノートを生成する。
+
+## 作業項目
+
+1. `.github/workflows/version-check.yml` の version 判定、検証、ビルド、Release 作成の責務を整理する。
+2. release build matrix は成果物作成と artifact upload に限定する。
+3. 単一の release job で artifact を収集し、Markdown のリリースノートを生成する。
+4. `softprops/action-gh-release` は `body_path` と収集済み成果物を使って1回だけ実行する。
+5. README と関連ドキュメントを同期し、`make check`、`make build` を確認する。
+
+## 確認観点
+
+- version 変更がない場合はリリース関連 job が実行されないこと。
+- version 変更時に `make check` と `make build` が Release 前に通ること。
+- Linux と macOS の成果物が同じ Release に添付されること。
+- リリースノートに version、変更履歴、成果物一覧が含まれること。

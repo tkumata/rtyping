@@ -16,41 +16,46 @@ jobs:
     outputs:
       version-changed: ${{ steps.version-check.outputs.changed }}
       new-version: ${{ steps.version-check.outputs.version }}
+      previous-version: ${{ steps.version-check.outputs.previous-version }}
 
     steps:
       - name: リポジトリを取得
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
+
+      - name: Rust ツールチェーンを設定
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
 
       - name: バージョン変更を確認
         id: version-check
         run: |
-          # 現在のバージョンを取得
-          CURRENT_VERSION=$(grep -E '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          CURRENT_VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "rtyping") | .version')
           echo "現在のバージョン: $CURRENT_VERSION"
 
-          # 直前コミットのバージョンを取得
-          git checkout HEAD~1 -- Cargo.toml 2>/dev/null || echo "初回コミット"
-          PREVIOUS_VERSION=$(grep -E '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/' || echo "0.0.0")
+          PREVIOUS_VERSION=$(git show HEAD~1:Cargo.toml 2>/dev/null | grep -E '^version = ' | head -1 | sed 's/version = "\(.*\)"/\1/' || echo "0.0.0")
           echo "前回のバージョン: $PREVIOUS_VERSION"
 
-          # 現在の Cargo.toml に戻す
-          git checkout HEAD -- Cargo.toml
-
-          # バージョン差分を判定
           if [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
             echo "バージョン変更あり: $PREVIOUS_VERSION -> $CURRENT_VERSION"
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            {
+              echo "changed=true"
+              echo "version=$CURRENT_VERSION"
+              echo "previous-version=$PREVIOUS_VERSION"
+            } >> "$GITHUB_OUTPUT"
           else
             echo "バージョン変更なし"
-            echo "changed=false" >> $GITHUB_OUTPUT
-            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            {
+              echo "changed=false"
+              echo "version=$CURRENT_VERSION"
+              echo "previous-version=$PREVIOUS_VERSION"
+            } >> "$GITHUB_OUTPUT"
           fi
 
   test:
-    name: リリース前テスト
+    name: リリース前検証
     needs: check-version
     if: needs.check-version.outputs.version-changed == 'true'
     runs-on: ubuntu-latest
@@ -96,10 +101,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y pkg-config libasound2-dev libudev-dev
 
-      - name: テストを実行
-        run: cargo test
+      - name: check を実行
+        run: make check
 
-  build-and-release:
+      - name: build を実行
+        run: make build
+
+  build:
+    name: リリースビルド (${{ matrix.target }})
     needs:
       - check-version
       - test
@@ -112,14 +121,12 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact_name: rtyping-x86_64-linux
             build_deps: |
               sudo apt-get update
               sudo apt-get install -y pkg-config libasound2-dev libudev-dev
 
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact_name: rtyping-aarch64-macos
             build_deps: ""
 
     steps:
@@ -169,8 +176,75 @@ jobs:
       - name: 成果物を準備
         run: |
           mkdir -p dist
-          cp target/${{ matrix.target }}/release/rtyping dist/${{ matrix.artifact_name }}
-          chmod +x dist/${{ matrix.artifact_name }}
+          artifact_name="rtyping-v${{ needs.check-version.outputs.new-version }}-${{ matrix.target }}"
+          cp target/${{ matrix.target }}/release/rtyping "dist/${artifact_name}"
+          chmod +x "dist/${artifact_name}"
+
+      - name: 成果物をアップロード
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtyping-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: GitHub Release を作成
+    needs:
+      - check-version
+      - build
+    if: needs.check-version.outputs.version-changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: リポジトリを取得
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 成果物を取得
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: リリースノートを生成
+        run: |
+          version="${{ needs.check-version.outputs.new-version }}"
+          previous_version="${{ needs.check-version.outputs.previous-version }}"
+          current_tag="v${version}"
+          previous_tag="v${previous_version}"
+          log_target="HEAD"
+
+          if git rev-parse -q --verify "refs/tags/${previous_tag}" >/dev/null; then
+            log_target="${previous_tag}..HEAD"
+          fi
+
+          git log --no-merges --pretty=format:'- %s (%h)' "$log_target" > release-commits.md
+
+          {
+            echo "# rtyping ${current_tag}"
+            echo
+            echo "## Summary"
+            echo
+            echo "- Version: \`${version}\`"
+            echo "- Previous version: \`${previous_version}\`"
+            echo "- Source of truth: \`Cargo.toml\`"
+            echo
+            echo "## Changes"
+            echo
+            if [ -s release-commits.md ]; then
+              cat release-commits.md
+              echo
+            else
+              echo "- Version metadata update."
+            fi
+            echo
+            echo "## Assets"
+            echo
+            find dist -maxdepth 1 -type f | sort | while read -r file; do
+              printf -- "- \`%s\`\n" "$(basename "$file")"
+            done
+          } > RELEASE_NOTES.md
 
       - name: リリースを作成
         uses: softprops/action-gh-release@v2
@@ -179,7 +253,7 @@ jobs:
           name: リリース v${{ needs.check-version.outputs.new-version }}
           draft: false
           prerelease: false
-          files: dist/${{ matrix.artifact_name }}
-          generate_release_notes: true
+          body_path: RELEASE_NOTES.md
+          files: dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

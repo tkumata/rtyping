@@ -152,9 +152,19 @@ The generated target text length is controlled by `TextScale` in the Config scre
 ## Development
 
 ```shell
-cargo fmt
-cargo test
+make check
+make build
 ```
+
+## Release Automation
+
+`Cargo.toml` の package version を更新して `main` に push すると、`version-check.yml` がリリース処理を実行します。
+
+- Release tag は `v<version>` 形式です
+- Release 前に `make check` と `make build` を実行します
+- Linux と macOS の release build を GitHub Actions artifact として集約します
+- GitHub Release は単一 job で1回だけ作成します
+- リリースノートには version、変更履歴、配布成果物一覧を含めます
 
 ## Cross Compilation
 

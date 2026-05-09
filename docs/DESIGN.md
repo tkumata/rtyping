@@ -118,6 +118,16 @@
 - エディタ拡張のスキーマが Cargo の lint テーブルに追従していない場合は、`.vscode/settings.json` の TOML 検証設定で対象診断を抑制する。
 - manifest 構文の確認は `cargo metadata --no-deps --format-version 1` を用いる。
 
+## リリース自動化
+
+- `.github/workflows/version-check.yml` は `Cargo.toml` の package version を Release の source of truth とする。
+- `check-version` job は現在 version と直前コミットの version を比較し、変更時だけ後続 job を実行させる。
+- Release 前検証 job は `make check` と `make build` を実行し、lint 抑制や warning 回避ではなく現行の品質ゲートをそのまま使う。
+- OS 別 build job は `cargo build --release --target ...` と成果物 upload だけを担当し、GitHub Release は作成しない。
+- 単一の release job が全 artifact を download し、`RELEASE_NOTES.md` を生成して `softprops/action-gh-release` に渡す。
+- リリースノートは Git の前回 version tag から現在 commit までの commit subject を含め、成果物名を列挙する。
+- Release 作成を matrix job から分離することで、同じ tag / Release に対する並列書き込みを避ける。
+
 ## テスト方針
 
 - `src/usecase/wpm.rs`
