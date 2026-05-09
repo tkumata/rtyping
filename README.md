@@ -95,6 +95,8 @@ Saved files:
 
 The `Target Text` block keeps two blank lines above and two blank lines below the target text, including when the text wraps across multiple lines.
 
+The typing cursor is hidden on the target text. The current target character is yellow and bold, future characters are gray, correct typed characters are green, and mistakes are shown as white text on a red background.
+
 The WPM trend block uses a light yellow border while keeping the graph line colors unchanged.
 
 ## Result and Stats

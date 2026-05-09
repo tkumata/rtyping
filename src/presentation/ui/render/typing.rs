@@ -1,6 +1,6 @@
 use ratatui::{
     Frame,
-    layout::{Alignment, Constraint, Direction, Layout, Position, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Wrap},
@@ -141,10 +141,6 @@ fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
             .wrap(Wrap { trim: false }),
         text_area,
     );
-
-    if let Some(cursor_position) = typing_cursor_position(text_area, app) {
-        frame.set_cursor_position(cursor_position);
-    }
 }
 
 fn target_text_lines(app: &App, content_width: u16) -> Vec<Line<'static>> {
@@ -189,11 +185,14 @@ fn target_char_span(app: &App, index: usize, target_char: char) -> Span<'static>
                 )
             }
         }
-        std::cmp::Ordering::Equal => {
-            Span::styled(target_char.to_string(), Style::default().fg(Color::Yellow))
-        }
+        std::cmp::Ordering::Equal => Span::styled(
+            target_char.to_string(),
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ),
         std::cmp::Ordering::Greater => {
-            Span::styled(target_char.to_string(), Style::default().fg(Color::White))
+            Span::styled(target_char.to_string(), Style::default().fg(Color::Gray))
         }
     }
 }
@@ -226,65 +225,10 @@ fn split_typing_area(area: Rect) -> [Rect; 2] {
     [*graph_area, *text_area]
 }
 
-fn typing_cursor_position(area: Rect, app: &App) -> Option<Position> {
-    let content_x = area.x.checked_add(1)?;
-    let content_y = area.y.checked_add(3)?;
-    let content_width = area.width.checked_sub(2)?;
-    let content_height = area.height.checked_sub(4)?;
-    if content_width == 0 || content_height == 0 {
-        return None;
-    }
-
-    let cursor_index = app
-        .input_chars()
-        .len()
-        .saturating_add(1)
-        .min(app.target_string().chars().count());
-    let (cursor_row, cursor_col) =
-        wrapped_cursor_offset(app.target_string(), cursor_index, content_width)?;
-    let cursor_x = content_x.checked_add(cursor_col)?;
-    let cursor_y = content_y.checked_add(cursor_row)?;
-    let max_x = area.x.checked_add(area.width.checked_sub(2)?)?;
-    let max_y = area.y.checked_add(area.height.checked_sub(2)?)?;
-
-    if cursor_x > max_x || cursor_y > max_y {
-        return None;
-    }
-
-    Some(Position::new(cursor_x, cursor_y))
-}
-
 #[derive(Debug, Clone, Copy)]
 struct WrappedChar {
     character_index: usize,
     width: u16,
-}
-
-fn wrapped_cursor_offset(
-    text: &str,
-    cursor_index: usize,
-    content_width: u16,
-) -> Option<(u16, u16)> {
-    if content_width == 0 {
-        return None;
-    }
-
-    let cursor_character_index = cursor_index.saturating_sub(1);
-    for (row, line) in wrapped_lines(text, content_width).iter().enumerate() {
-        let mut col = 0_u16;
-        for wrapped_char in line {
-            col = col.checked_add(wrapped_char.width)?;
-            if wrapped_char.character_index == cursor_character_index {
-                return Some((u16::try_from(row).ok()?, col));
-            }
-        }
-    }
-
-    if text.is_empty() {
-        return Some((0, 0));
-    }
-
-    None
 }
 
 fn wrapped_lines(text: &str, content_width: u16) -> Vec<Vec<WrappedChar>> {
@@ -415,12 +359,13 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        split_typing_area, target_text_lines, typing_cursor_position, wrapped_cursor_offset,
-    };
+    use super::{split_typing_area, target_char_span, target_text_lines};
     use crate::domain::config::AppConfig;
     use crate::presentation::ui::app::App;
-    use ratatui::layout::{Position, Rect};
+    use ratatui::{
+        layout::Rect,
+        style::{Color, Modifier},
+    };
 
     fn new_app_with_target(target: &str, input_len: usize) -> App {
         let mut app = App::new(AppConfig::default());
@@ -457,14 +402,6 @@ mod tests {
     }
 
     #[test]
-    fn typing_cursor_position_tracks_current_input_offset() {
-        let app = new_app_with_target("abcd", 2);
-        let cursor = typing_cursor_position(Rect::new(0, 0, 20, 10), &app);
-
-        assert_eq!(cursor, Some(Position::new(4, 3)));
-    }
-
-    #[test]
     fn target_text_lines_keep_two_blank_lines_around_single_line_text() {
         let app = new_app_with_target("abcd", 0);
         let lines = target_text_lines(&app, 20);
@@ -489,38 +426,39 @@ mod tests {
     }
 
     #[test]
-    fn typing_cursor_position_wraps_to_next_line_when_needed() {
-        let app = new_app_with_target("abcdef", 5);
-        let cursor = typing_cursor_position(Rect::new(0, 0, 6, 10), &app);
-
-        assert_eq!(cursor, Some(Position::new(3, 4)));
-    }
-
-    #[test]
-    fn typing_cursor_position_matches_word_wrapping() {
-        let app = new_app_with_target("abcd efgh ijkl", 7);
-        let cursor = typing_cursor_position(Rect::new(0, 0, 8, 10), &app);
-
-        assert_eq!(cursor, Some(Position::new(4, 4)));
-    }
-
-    #[test]
-    fn wrapped_cursor_offset_keeps_words_with_their_wrapped_line() {
-        assert_eq!(wrapped_cursor_offset("abcd efgh ijkl", 8, 6), Some((1, 3)));
-    }
-
-    #[test]
-    fn typing_cursor_position_returns_none_when_text_area_is_too_small() {
+    fn current_target_character_is_yellow_and_bold() {
         let app = new_app_with_target("abcd", 2);
+        let span = target_char_span(&app, 2, 'c');
 
-        assert_eq!(typing_cursor_position(Rect::new(0, 0, 2, 10), &app), None);
-        assert_eq!(typing_cursor_position(Rect::new(0, 0, 20, 4), &app), None);
+        assert_eq!(span.style.fg, Some(Color::Yellow));
+        assert!(span.style.add_modifier.contains(Modifier::BOLD));
+        assert!(!span.style.add_modifier.contains(Modifier::UNDERLINED));
     }
 
     #[test]
-    fn typing_cursor_position_returns_none_when_wrap_overflows_visible_height() {
-        let app = new_app_with_target("abcdef", 5);
+    fn future_target_characters_are_gray() {
+        let app = new_app_with_target("abcd", 2);
+        let span = target_char_span(&app, 3, 'd');
 
-        assert_eq!(typing_cursor_position(Rect::new(0, 0, 3, 5), &app), None);
+        assert_eq!(span.style.fg, Some(Color::Gray));
+    }
+
+    #[test]
+    fn correct_input_characters_are_green() {
+        let app = new_app_with_target("abcd", 2);
+        let span = target_char_span(&app, 0, 'a');
+
+        assert_eq!(span.style.fg, Some(Color::Green));
+    }
+
+    #[test]
+    fn incorrect_input_characters_use_white_on_red() {
+        let mut app = App::new(AppConfig::default());
+        app.prepare_new_game("abcd".to_string());
+        app.push_char('x');
+        let span = target_char_span(&app, 0, 'a');
+
+        assert_eq!(span.style.fg, Some(Color::White));
+        assert_eq!(span.style.bg, Some(Color::Red));
     }
 }
