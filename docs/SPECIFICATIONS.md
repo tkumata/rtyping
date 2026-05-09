@@ -203,3 +203,26 @@
   - VS Code の TOML スキーマ検証が Cargo の lint テーブルを誤検出する場合は、manifest の lint 強度を下げずにエディタ検証設定で解消する。
 - `TOOL-003`
   - 診断解消後も `cargo metadata --no-deps --format-version 1` で manifest が読めることを確認する。
+
+## Release Automation
+
+- `REL-001`
+  - `version-check.yml` は `main` への push で `Cargo.toml` が変更された場合に起動する。
+- `REL-002`
+  - 現在 version は `cargo metadata --no-deps --format-version 1` から取得する。
+- `REL-003`
+  - 直前コミットの version と現在 version が同じ場合、検証、ビルド、Release 作成は実行しない。
+- `REL-004`
+  - version 変更時は Release 前に `make check` と `make build` を実行する。
+- `REL-005`
+  - OS 別 release build job は成果物を作成し、GitHub Actions artifact として upload する。
+- `REL-006`
+  - GitHub Release 作成は matrix job ではなく、全成果物を収集する単一 job で実行する。
+- `REL-007`
+  - Release tag は `v<version>` とする。
+- `REL-008`
+  - 配布成果物名は version と target triple を含む。
+- `REL-009`
+  - リリースノートは Markdown ファイルとして生成し、version、変更履歴、成果物一覧を含める。
+- `REL-010`
+  - `softprops/action-gh-release` は生成済みリリースノートを `body_path` として受け取り、収集済み成果物を添付する。
