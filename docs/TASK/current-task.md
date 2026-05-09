@@ -1,13 +1,13 @@
 # Current Task
 
-- Summary: `version-check.yml` の自動リリースで、OS 別 build と Release 作成を分離し、明示的なリリースノートを生成する。
+- Summary: Typing 画面で端末カーソルを非表示にし、現在入力すべき文字を `Yellow + Bold` で強調する。
 - Docs:
-  - Done: `docs/TASK/current-task.md` を `docs/TASK/202605090932.md` に退避する。
-  - Done: PLAN、REQUIREMENTS、SPECIFICATIONS、DESIGN、ADR を Release ノート改善仕様に同期する。
+  - Done: `docs/TASK/current-task.md` を `docs/TASK/202605091746.md` に退避する。
+  - Done: PLAN、REQUIREMENTS、SPECIFICATIONS、DESIGN、ADR を現在文字強調仕様に同期する。
 - Implementation:
-  - Done: `.github/workflows/version-check.yml` を build artifact upload と単一 release job 構成へ変更する。
-  - Done: Release job で `RELEASE_NOTES.md` を生成し、`body_path` で GitHub Release に渡す。
-  - Done: README.md に自動リリース運用を反映する。
+  - Done: `src/presentation/ui/render/typing.rs` で出題文字列上の端末カーソル位置指定を削除する。
+  - Done: 現在文字、未来文字、正答済み文字、誤入力位置のスタイルを仕様どおりに固定する。
+  - Done: README.md に Typing 画面の表示仕様を反映する。
 - Verification:
   - Done: `make check` を実行する。
   - Done: `make build` を実行する。
