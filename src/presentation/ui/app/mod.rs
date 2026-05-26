@@ -4,6 +4,7 @@ mod typing;
 
 use crate::domain::config::AppConfig;
 use crate::domain::history::{HistoryEntry, HistoryMode};
+use crate::domain::rhythm::{RhythmJudgement, RhythmSession, RhythmStats};
 use crate::usecase::accuracy;
 use crate::usecase::generate_sentence::GenerationSource;
 use crate::usecase::history_stats::{self, HistoryStats};
@@ -16,6 +17,7 @@ pub enum AppState {
     Stats,
     Loading,
     Typing,
+    RhythmTyping,
     Result,
 }
 
@@ -23,6 +25,7 @@ pub enum AppState {
 pub enum MenuItem {
     StartGame,
     PracticeMode,
+    StartGameRhythm,
     StartGameGoogle,
     StartGameGroq,
     Stats,
@@ -39,12 +42,13 @@ pub enum ConfigField {
     GroqModel,
     GameTimeout,
     GameTextScale,
+    GameRhythmSpeed,
     GameFreq,
     GameSoundEnabled,
 }
 
 impl ConfigField {
-    pub const ALL: [ConfigField; 10] = [
+    pub const ALL: [ConfigField; 11] = [
         ConfigField::GoogleApiUrl,
         ConfigField::GoogleApiKey,
         ConfigField::GoogleModel,
@@ -53,6 +57,7 @@ impl ConfigField {
         ConfigField::GroqModel,
         ConfigField::GameTimeout,
         ConfigField::GameTextScale,
+        ConfigField::GameRhythmSpeed,
         ConfigField::GameFreq,
         ConfigField::GameSoundEnabled,
     ];
@@ -60,6 +65,12 @@ impl ConfigField {
     pub fn accepts_text(self) -> bool {
         self != ConfigField::GameSoundEnabled
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GameMode {
+    Standard,
+    Rhythm,
 }
 
 #[expect(clippy::struct_excessive_bools)]
@@ -87,6 +98,9 @@ pub struct App {
     status_message: Option<String>,
     generation_source: GenerationSource,
     history_entries: Vec<HistoryEntry>,
+    next_game_mode: GameMode,
+    active_game_mode: GameMode,
+    rhythm_session: Option<RhythmSession>,
 }
 
 impl App {
@@ -115,6 +129,9 @@ impl App {
             status_message: None,
             generation_source: GenerationSource::Local,
             history_entries: Vec::new(),
+            next_game_mode: GameMode::Standard,
+            active_game_mode: GameMode::Standard,
+            rhythm_session: None,
         }
     }
 
@@ -166,6 +183,7 @@ impl App {
     pub fn return_to_menu_with_start_selected(&mut self) {
         self.return_to_menu();
         self.set_practice_mode(false);
+        self.set_next_game_mode(GameMode::Standard);
         self.select_start_game();
     }
 
@@ -230,12 +248,62 @@ impl App {
         self.config.game.freq_value()
     }
 
+    pub fn rhythm_speed(&self) -> u8 {
+        self.config.game.rhythm_speed_value()
+    }
+
     pub fn generation_source(&self) -> GenerationSource {
         self.generation_source
     }
 
     pub fn set_generation_source(&mut self, source: GenerationSource) {
         self.generation_source = source;
+    }
+
+    pub fn next_game_mode(&self) -> GameMode {
+        self.next_game_mode
+    }
+
+    pub fn set_next_game_mode(&mut self, mode: GameMode) {
+        self.next_game_mode = mode;
+    }
+
+    pub fn is_rhythm_result(&self) -> bool {
+        self.state == AppState::Result && self.active_game_mode == GameMode::Rhythm
+    }
+
+    pub fn rhythm_stats(&self) -> Option<RhythmStats> {
+        self.rhythm_session.as_ref().map(RhythmSession::stats)
+    }
+
+    pub fn rhythm_visible_chars(&self, width: u16) -> Vec<(u16, char)> {
+        self.rhythm_session
+            .as_ref()
+            .map_or_else(Vec::new, |session| session.visible_chars(width))
+    }
+
+    pub fn push_rhythm_char(&mut self, ch: char) -> RhythmJudgement {
+        self.rhythm_session
+            .as_mut()
+            .map_or(RhythmJudgement::Miss, |session| session.push_char(ch))
+    }
+
+    pub fn rhythm_last_judgement(&self) -> Option<RhythmJudgement> {
+        self.rhythm_session
+            .as_ref()
+            .and_then(RhythmSession::last_judgement)
+    }
+
+    pub fn update_rhythm_elapsed_seconds(&mut self, elapsed_seconds: f64) {
+        if let Some(session) = &mut self.rhythm_session {
+            session.set_elapsed_seconds(elapsed_seconds);
+        }
+    }
+
+    pub fn is_rhythm_complete(&self) -> bool {
+        self.rhythm_session
+            .as_ref()
+            .is_some_and(RhythmSession::is_complete)
     }
 
     pub fn generation_settings(&self) -> (usize, GenerationSource, AppConfig) {

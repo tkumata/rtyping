@@ -103,6 +103,7 @@ fn menu_label(item: MenuItem) -> &'static str {
     match item {
         MenuItem::StartGame => "Start Game",
         MenuItem::PracticeMode => "Practice Mode",
+        MenuItem::StartGameRhythm => "Start Game with Rhythm",
         MenuItem::StartGameGoogle => "Start Game via Google AI Studio",
         MenuItem::StartGameGroq => "Start Game via GroqCloud",
         MenuItem::Stats => "Stats",

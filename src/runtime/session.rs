@@ -7,7 +7,7 @@ use ratatui::{Terminal, backend::CrosstermBackend};
 use rodio::MixerDeviceSink;
 use std::io;
 use std::sync::{Arc, Mutex, mpsc};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::presentation::ui::app::{App, AppState};
 use crate::presentation::ui::render;
@@ -28,8 +28,11 @@ pub fn run_app(
     let mut next_request_id = 1_u64;
     let mut active_request_id: Option<u64> = None;
     let mut using_typing_cursor_style = false;
+    let mut rhythm_started_at: Option<Instant> = None;
 
     loop {
+        update_rhythm_session(app, &mut rhythm_started_at);
+
         let is_typing = app.state() == AppState::Typing;
         if is_typing && !using_typing_cursor_style {
             execute!(terminal.backend_mut(), SetCursorStyle::SteadyBar)?;
@@ -78,4 +81,18 @@ pub fn run_app(
     }
 
     Ok(())
+}
+
+fn update_rhythm_session(app: &mut App, rhythm_started_at: &mut Option<Instant>) {
+    if app.state() != AppState::RhythmTyping {
+        *rhythm_started_at = None;
+        return;
+    }
+
+    let started_at = rhythm_started_at.get_or_insert_with(Instant::now);
+    app.update_rhythm_elapsed_seconds(started_at.elapsed().as_secs_f64());
+    if app.is_rhythm_complete() {
+        app.finish_typing();
+        *rhythm_started_at = None;
+    }
 }

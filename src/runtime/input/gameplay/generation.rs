@@ -2,7 +2,7 @@ use std::sync::mpsc;
 use std::thread;
 
 use crate::domain::config::{AppConfig, ProviderConfig};
-use crate::presentation::ui::app::{App, AppState};
+use crate::presentation::ui::app::{App, AppState, GameMode};
 use crate::usecase::generate_sentence::{self, GenerationSource};
 
 use crate::runtime::{GenerationJobResult, TimerCommand};
@@ -41,13 +41,19 @@ pub(in crate::runtime::input) fn apply_generation_result(
 
     *active_request_id = None;
     match job.result {
-        Ok(contents) if app.state() == AppState::Loading => {
-            app.prepare_new_game(contents);
-            app.start_typing();
-            timer_command_tx
-                .send(TimerCommand::Start(app.timeout()))
-                .ok();
-        }
+        Ok(contents) if app.state() == AppState::Loading => match app.next_game_mode() {
+            GameMode::Standard => {
+                app.prepare_new_game(contents);
+                app.start_typing();
+                timer_command_tx
+                    .send(TimerCommand::Start(app.timeout()))
+                    .ok();
+            }
+            GameMode::Rhythm => {
+                app.prepare_rhythm_game(&contents);
+                app.start_rhythm_typing();
+            }
+        },
         Err(message) if app.state() == AppState::Loading => {
             app.return_to_menu();
             app.set_status_message(message);
@@ -139,6 +145,30 @@ mod tests {
         assert_eq!(app.target_string(), "typing text");
         assert_eq!(active_request_id, None);
         assert!(matches!(timer_rx.try_recv(), Ok(TimerCommand::Start(60))));
+    }
+
+    #[test]
+    fn matching_generation_result_starts_rhythm_without_timer() {
+        let mut app = test_app();
+        let (timer_tx, timer_rx) = mpsc::channel();
+        let mut active_request_id = Some(8);
+
+        app.set_next_game_mode(GameMode::Rhythm);
+        app.enter_loading();
+        apply_generation_result(
+            &mut app,
+            &timer_tx,
+            &mut active_request_id,
+            GenerationJobResult {
+                request_id: 8,
+                result: Ok("rhythm text".into()),
+            },
+        );
+
+        assert_eq!(app.state(), AppState::RhythmTyping);
+        assert_eq!(app.target_string(), "rhythm text");
+        assert_eq!(active_request_id, None);
+        assert!(timer_rx.try_recv().is_err());
     }
 
     #[test]

@@ -4,7 +4,7 @@
 
 ### Title Screen
 
-- **Up / Down**: Select visible title menu entries. `Start Game via Google AI Studio` and `Start Game via GroqCloud` appear only when their provider settings are complete.
+- **Up / Down**: Select visible title menu entries. `Start Game with Rhythm` is always available. `Start Game via Google AI Studio` and `Start Game via GroqCloud` appear only when their provider settings are complete.
 - **Enter**: Confirm selection
 - **h**: Show/Hide this help
 - **Up / Down**: Scroll help text (when visible)
@@ -18,6 +18,15 @@
 - **Space**: Toggle `SoundEnabled`
 - **Enter**: Save configuration
 - **Esc**: Return to title screen
+
+### Rhythm Mode
+
+- Type non-space characters when they reach the `^` mark
+- The header shows the latest `Hit`, `OK`, or `Miss` judgement
+- The header shows live `Miss` and `Hit+OK` counts
+- The latest judgement also appears near the `^` mark
+- Spaces are timing gaps and are not typed
+- `RhythmSpeed` controls the flow speed from `1` to `5` characters per second
 
 ### Typing Screen
 
