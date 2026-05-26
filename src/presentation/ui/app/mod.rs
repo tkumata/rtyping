@@ -294,6 +294,10 @@ impl App {
             .and_then(RhythmSession::last_judgement)
     }
 
+    pub fn rhythm_combo(&self) -> usize {
+        self.rhythm_session.as_ref().map_or(0, RhythmSession::combo)
+    }
+
     pub fn update_rhythm_elapsed_seconds(&mut self, elapsed_seconds: f64) {
         if let Some(session) = &mut self.rhythm_session {
             session.set_elapsed_seconds(elapsed_seconds);

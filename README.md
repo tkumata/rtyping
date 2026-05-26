@@ -108,7 +108,7 @@ The WPM trend block uses a light yellow border while keeping the graph line colo
 
 Characters move from right to left. The typing position is the `^` mark at the third character from the left edge. Type a non-space character when it reaches that mark. Spaces are timing gaps only and are not typed. Non-space characters are placed with variable gaps, not at a fixed interval.
 
-The rhythm header shows the latest judgement as `Hit`, `OK`, or `Miss`, plus live `Miss` and `Hit+OK` counts. The latest judgement also appears near the `^` mark when timing feedback updates.
+The rhythm header shows the latest judgement as `Hit`, `OK`, or `Miss`, plus live `Miss` and `Hit+OK` counts. The latest judgement also appears near the `^` mark when timing feedback updates. Consecutive `Hit` and `OK` judgements appear near the `^` mark from `2 Combo!!`, and any `Miss` resets the combo.
 
 `RhythmSpeed` controls the flow speed in characters per second. Values outside `1` to `5` fall back into the supported range, and invalid values use `2`.
 
