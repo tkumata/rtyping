@@ -79,6 +79,7 @@ impl App {
             ConfigField::GroqModel => &mut self.config.groq.model,
             ConfigField::GameTimeout => &mut self.config.game.timeout,
             ConfigField::GameTextScale => &mut self.config.game.text_scale,
+            ConfigField::GameRhythmSpeed => &mut self.config.game.rhythm_speed,
             ConfigField::GameFreq => &mut self.config.game.freq,
             ConfigField::GameSoundEnabled => &mut self.config.game.sound_enabled,
         }
@@ -94,6 +95,7 @@ impl App {
             ConfigField::GroqModel => &self.config.groq.model,
             ConfigField::GameTimeout => &self.config.game.timeout,
             ConfigField::GameTextScale => &self.config.game.text_scale,
+            ConfigField::GameRhythmSpeed => &self.config.game.rhythm_speed,
             ConfigField::GameFreq => &self.config.game.freq,
             ConfigField::GameSoundEnabled => &self.config.game.sound_enabled,
         }
@@ -205,7 +207,7 @@ mod tests {
     fn sound_enabled_ignores_text_cursor_editing() {
         let mut app = App::new(app_config());
         app.open_config();
-        for _ in 0..9 {
+        for _ in 0..10 {
             app.move_config_down();
         }
 

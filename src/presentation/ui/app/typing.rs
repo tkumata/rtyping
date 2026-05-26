@@ -1,10 +1,19 @@
-use super::{App, AppState};
+use crate::domain::rhythm::RhythmSession;
+
+use super::{App, AppState, GameMode};
 
 impl App {
     pub fn start_typing(&mut self) {
         self.state = AppState::Typing;
+        self.active_game_mode = GameMode::Standard;
         self.time_started = true;
         self.record_wpm_snapshot();
+    }
+
+    pub fn start_rhythm_typing(&mut self) {
+        self.state = AppState::RhythmTyping;
+        self.active_game_mode = GameMode::Rhythm;
+        self.time_started = true;
     }
 
     pub fn finish_typing(&mut self) {
@@ -23,6 +32,14 @@ impl App {
         self.last_wpm_sample = None;
         self.timer = 0;
         self.time_started = false;
+        self.active_game_mode = GameMode::Standard;
+        self.rhythm_session = None;
+    }
+
+    pub fn prepare_rhythm_game(&mut self, target: &str) {
+        self.prepare_new_game(target.to_string());
+        self.active_game_mode = GameMode::Rhythm;
+        self.rhythm_session = Some(RhythmSession::new(target, self.rhythm_speed()));
     }
 
     pub fn update_timer(&mut self, elapsed: i32) {

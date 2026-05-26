@@ -111,12 +111,17 @@ fn render_game_settings_block(frame: &mut Frame, area: Rect, app: &App) -> Optio
     let game = &app.config().game;
     let focused = app.config_field();
 
-    let fields: [(ConfigField, &str, String); 4] = [
+    let fields: [(ConfigField, &str, String); 5] = [
         (ConfigField::GameTimeout, "Timeout", game.timeout.clone()),
         (
             ConfigField::GameTextScale,
             "TextScale",
             game.text_scale.clone(),
+        ),
+        (
+            ConfigField::GameRhythmSpeed,
+            "RhythmSpeed",
+            game.rhythm_speed.clone(),
         ),
         (ConfigField::GameFreq, "Freq", game.freq.clone()),
         (
@@ -146,7 +151,7 @@ fn render_game_settings_block(frame: &mut Frame, area: Rect, app: &App) -> Optio
             Style::default().fg(Color::White)
         };
         lines.push(Line::from(vec![
-            Span::styled(format!("{label:>9}: "), label_style),
+            Span::styled(format!("{label:>11}: "), label_style),
             Span::styled(value.clone(), value_style),
         ]));
         lines.push(Line::from(""));
@@ -162,7 +167,7 @@ fn render_game_settings_block(frame: &mut Frame, area: Rect, app: &App) -> Optio
         .wrap(Wrap { trim: false });
     frame.render_widget(block, area);
 
-    config_cursor_position(area, focused, &fields, 11, app.config_cursor_index())
+    config_cursor_position(area, focused, &fields, 13, app.config_cursor_index())
 }
 
 fn render_provider_block(
@@ -275,6 +280,11 @@ mod tests {
             (ConfigField::GameTextScale, "TextScale", String::from("60")),
             (ConfigField::GameFreq, "Freq", String::from("80.0")),
             (
+                ConfigField::GameRhythmSpeed,
+                "RhythmSpeed",
+                String::from("2"),
+            ),
+            (
                 ConfigField::GameSoundEnabled,
                 "Sound",
                 String::from("enabled"),
@@ -285,7 +295,7 @@ mod tests {
             Rect::new(0, 0, 40, 12),
             ConfigField::GameSoundEnabled,
             &fields,
-            11,
+            13,
             1,
         );
 

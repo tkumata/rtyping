@@ -15,6 +15,11 @@ use super::history_summary::history_summary_lines;
 use super::wpm_graph;
 
 pub fn render_result(frame: &mut Frame, app: &App) {
+    if app.is_rhythm_result() {
+        render_rhythm_result(frame, app);
+        return;
+    }
+
     let area = centered_rect(70, 60, frame.area());
     let elapsed = app.timer().max(1);
     let score = wpm::calc_wpm(
@@ -67,6 +72,65 @@ pub fn render_result(frame: &mut Frame, app: &App) {
             .block(Block::default().borders(Borders::ALL))
             .alignment(Alignment::Center),
         footer_area,
+    );
+}
+
+fn render_rhythm_result(frame: &mut Frame, app: &App) {
+    let area = centered_rect(70, 45, frame.area());
+    let stats = app.rhythm_stats();
+    let lines = stats.map_or_else(
+        || {
+            vec![
+                Line::from("Rhythm Finished"),
+                Line::from(""),
+                Line::from("Typed: 0"),
+                Line::from("Correct: 0"),
+                Line::from("Hit: 0"),
+                Line::from("OK: 0"),
+                Line::from("Misses: 0"),
+                Line::from("Accuracy: 0.0%"),
+                Line::from("Mode: Rhythm"),
+            ]
+        },
+        |stats| {
+            vec![
+                Line::from("Rhythm Finished"),
+                Line::from(""),
+                Line::from(format!("Typed: {}", stats.typed)),
+                Line::from(format!("Correct: {}", stats.correct)),
+                Line::from(format!("Hit: {}", stats.hit)),
+                Line::from(format!("OK: {}", stats.ok)),
+                Line::from(format!("Misses: {}", stats.miss)),
+                Line::from(format!("Accuracy: {:.1}%", stats.accuracy)),
+                Line::from("Mode: Rhythm"),
+            ]
+        },
+    );
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(10), Constraint::Length(3)])
+        .split(area);
+    let [metrics_area, footer_area] = &*chunks else {
+        return;
+    };
+
+    frame.render_widget(Clear, area);
+    frame.render_widget(
+        Paragraph::new(lines)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Result ")
+                    .border_style(Style::default().fg(Color::Green)),
+            )
+            .alignment(Alignment::Center),
+        *metrics_area,
+    );
+    frame.render_widget(
+        Paragraph::new(vec![Line::from("Press Enter to return to menu")])
+            .block(Block::default().borders(Borders::ALL))
+            .alignment(Alignment::Center),
+        *footer_area,
     );
 }
 

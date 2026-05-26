@@ -31,6 +31,8 @@ struct StoredGameSettings {
     timeout: String,
     #[serde(default = "default_text_scale")]
     text_scale: String,
+    #[serde(default = "default_rhythm_speed")]
+    rhythm_speed: String,
     #[serde(default = "default_freq")]
     freq: String,
     #[serde(default = "default_sound_enabled")]
@@ -42,6 +44,9 @@ fn default_timeout() -> String {
 }
 fn default_text_scale() -> String {
     "60".to_string()
+}
+fn default_rhythm_speed() -> String {
+    "2".to_string()
 }
 fn default_freq() -> String {
     "80.0".to_string()
@@ -55,6 +60,7 @@ impl Default for StoredGameSettings {
         Self {
             timeout: default_timeout(),
             text_scale: default_text_scale(),
+            rhythm_speed: default_rhythm_speed(),
             freq: default_freq(),
             sound_enabled: default_sound_enabled(),
         }
@@ -114,6 +120,7 @@ pub(super) fn load_config_from_paths(
             game: GameSettings {
                 timeout: stored.game.timeout.clone(),
                 text_scale: stored.game.text_scale.clone(),
+                rhythm_speed: stored.game.rhythm_speed.clone(),
                 freq: stored.game.freq.clone(),
                 sound_enabled: stored.game.sound_enabled.clone(),
             },
@@ -138,6 +145,7 @@ pub(super) fn save_config_to_paths(
         game: StoredGameSettings {
             timeout: config.game.timeout.clone(),
             text_scale: config.game.text_scale.clone(),
+            rhythm_speed: config.game.rhythm_speed.clone(),
             freq: config.game.freq.clone(),
             sound_enabled: config.game.sound_enabled.clone(),
         },

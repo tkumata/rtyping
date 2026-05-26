@@ -17,6 +17,7 @@ impl ProviderConfig {
 pub struct GameSettings {
     pub timeout: String,
     pub text_scale: String,
+    pub rhythm_speed: String,
     pub freq: String,
     pub sound_enabled: String,
 }
@@ -26,6 +27,7 @@ impl Default for GameSettings {
         Self {
             timeout: "60".to_string(),
             text_scale: "60".to_string(),
+            rhythm_speed: "2".to_string(),
             freq: "80.0".to_string(),
             sound_enabled: "false".to_string(),
         }
@@ -39,6 +41,10 @@ impl GameSettings {
 
     pub fn text_scale_value(&self) -> usize {
         self.text_scale.trim().parse().unwrap_or(60)
+    }
+
+    pub fn rhythm_speed_value(&self) -> u8 {
+        self.rhythm_speed.trim().parse().unwrap_or(2).clamp(1, 5)
     }
 
     pub fn freq_value(&self) -> f32 {
@@ -69,4 +75,34 @@ pub struct AppConfig {
 pub struct ConfigLoadReport {
     pub config: AppConfig,
     pub warnings: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::GameSettings;
+
+    #[test]
+    fn rhythm_speed_defaults_to_two_for_invalid_values() {
+        let settings = GameSettings {
+            rhythm_speed: "invalid".to_string(),
+            ..GameSettings::default()
+        };
+
+        assert_eq!(settings.rhythm_speed_value(), 2);
+    }
+
+    #[test]
+    fn rhythm_speed_is_clamped_to_supported_range() {
+        let low = GameSettings {
+            rhythm_speed: "0".to_string(),
+            ..GameSettings::default()
+        };
+        let high = GameSettings {
+            rhythm_speed: "9".to_string(),
+            ..GameSettings::default()
+        };
+
+        assert_eq!(low.rhythm_speed_value(), 1);
+        assert_eq!(high.rhythm_speed_value(), 5);
+    }
 }

@@ -4,6 +4,7 @@ mod history_summary;
 mod loading;
 mod menu;
 mod result;
+mod rhythm;
 mod stats;
 mod typing;
 mod wpm_graph;
@@ -23,6 +24,7 @@ pub fn render(frame: &mut Frame, app: &App) {
         AppState::Stats => stats::render_stats(frame, app),
         AppState::Loading => loading::render_loading(frame, app),
         AppState::Typing => typing::render_typing(frame, app),
+        AppState::RhythmTyping => rhythm::render_rhythm(frame, app),
         AppState::Result => result::render_result(frame, app),
     }
 }

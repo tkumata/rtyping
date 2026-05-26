@@ -303,6 +303,9 @@ fn load_keeps_non_secret_fields_when_key_is_invalid() {
 
 #[test]
 fn load_restores_api_key_from_legacy_aad_label() {
+    let _lock = ENV_LOCK
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let sandbox = TestConfigSandbox::new();
     let (google_secret, groq_secret) =
         test_support::write_legacy_aad_config(&sandbox.config_path, &sandbox.key_path);
@@ -317,6 +320,9 @@ fn load_restores_api_key_from_legacy_aad_label() {
 
 #[test]
 fn load_restores_api_key_from_legacy_xor_format() {
+    let _lock = ENV_LOCK
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let sandbox = TestConfigSandbox::new();
     let (google_secret, groq_secret) =
         test_support::write_legacy_xor_config(&sandbox.config_path, &sandbox.key_path);

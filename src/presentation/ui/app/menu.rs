@@ -2,7 +2,11 @@ use super::{App, MenuItem};
 
 impl App {
     pub fn visible_menu_items(&self) -> Vec<MenuItem> {
-        let mut items = vec![MenuItem::StartGame, MenuItem::PracticeMode];
+        let mut items = vec![
+            MenuItem::StartGame,
+            MenuItem::PracticeMode,
+            MenuItem::StartGameRhythm,
+        ];
         if self.config.google.is_ready() {
             items.push(MenuItem::StartGameGoogle);
         }
@@ -70,6 +74,7 @@ mod tests {
             vec![
                 MenuItem::StartGame,
                 MenuItem::PracticeMode,
+                MenuItem::StartGameRhythm,
                 MenuItem::Stats,
                 MenuItem::Config,
             ]
@@ -91,6 +96,7 @@ mod tests {
             vec![
                 MenuItem::StartGame,
                 MenuItem::PracticeMode,
+                MenuItem::StartGameRhythm,
                 MenuItem::StartGameGoogle,
                 MenuItem::StartGameGroq,
                 MenuItem::Stats,
@@ -105,6 +111,9 @@ mod tests {
 
         app.move_menu_down();
         assert_eq!(app.menu_selected(), MenuItem::PracticeMode);
+
+        app.move_menu_down();
+        assert_eq!(app.menu_selected(), MenuItem::StartGameRhythm);
 
         app.move_menu_down();
         assert_eq!(app.menu_selected(), MenuItem::Stats);

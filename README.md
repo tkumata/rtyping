@@ -16,6 +16,7 @@ The game starts from a title menu where you can choose a generation source and p
 - Real-time WPM, timer, typed character count, and miss count
 - Timed history with best WPM, average WPM, average accuracy, recent WPM trend, and frequent missed characters
 - Practice mode (no time limit) via menu or by setting timeout to 0
+- Rhythm mode with right-to-left moving characters and separate rhythm results
 - Optional BGM and typing feedback sound (configured in-app, saved to disk)
 - Local text generation with a 4-gram Markov chain
 - Remote text generation through Google AI Studio or Groq
@@ -41,6 +42,7 @@ cargo install --path .
 - Menu entries:
   - `Start Game`
   - `Practice Mode`
+  - `Start Game with Rhythm`
   - `Start Game via Google AI Studio` (shown only when Google AI Studio `API URL`, `API Key`, and `Model` are all configured)
   - `Start Game via GroqCloud` (shown only when Groq `API URL`, `API Key`, and `Model` are all configured)
   - `Stats`
@@ -66,6 +68,7 @@ Game Settings:
 
 - `Timeout` – timer duration in seconds (`0` = no time limit / practice mode)
 - `TextScale` – target text length scale
+- `RhythmSpeed` – rhythm mode speed in characters per second (`1` to `5`, default `2`)
 - `Freq` – typing sound frequency in Hz
 - `SoundEnabled` – `true` / `false`
 
@@ -99,6 +102,18 @@ The typing cursor is hidden on the target text. The current target character is 
 
 The WPM trend block uses a light yellow border while keeping the graph line colors unchanged.
 
+## Rhythm Mode
+
+`Start Game with Rhythm` starts a Local-generated rhythm session without using Google AI Studio or GroqCloud.
+
+Characters move from right to left. The typing position is the `^` mark at the third character from the left edge. Type a non-space character when it reaches that mark. Spaces are timing gaps only and are not typed. Non-space characters are placed with variable gaps, not at a fixed interval.
+
+The rhythm header shows the latest judgement as `Hit`, `OK`, or `Miss`, plus live `Miss` and `Hit+OK` counts. The latest judgement also appears near the `^` mark when timing feedback updates.
+
+`RhythmSpeed` controls the flow speed in characters per second. Values outside `1` to `5` fall back into the supported range, and invalid values use `2`.
+
+Rhythm results are separate from normal typing results and show typed, correct, hit, ok, miss, and accuracy. Rhythm sessions are not saved to timed history.
+
 ## Result and Stats
 
 The `Result` screen shows the current session summary:
@@ -109,6 +124,8 @@ The `Result` screen shows the current session summary:
 - Elapsed input time
 - Generation source
 - Practice or timed mode
+
+For rhythm sessions, the `Result` screen shows rhythm-specific typed, correct, hit, ok, miss, and accuracy instead of WPM and timed-history metrics.
 
 For timed sessions, the result is saved to `~/.config/rtyping/history.json`.
 

@@ -30,6 +30,9 @@ pub(super) fn handle_key_event(key: KeyEvent, app: &mut App, context: &mut Runti
             context.audio_sink,
             context.timer_command_tx,
         ),
+        AppState::RhythmTyping => {
+            gameplay::handle_rhythm_input(key, app, context.audio_sink, context.timer_command_tx);
+        }
         AppState::Result => gameplay::handle_result_input(key, app, context.timer),
     }
 }
