@@ -47,6 +47,7 @@ pub struct RhythmSession {
     hit: usize,
     ok: usize,
     miss: usize,
+    combo: usize,
     last_judgement: Option<RhythmJudgement>,
     elapsed_seconds: f64,
     speed: u8,
@@ -66,6 +67,7 @@ impl RhythmSession {
             hit: 0,
             ok: 0,
             miss: 0,
+            combo: 0,
             last_judgement: None,
             elapsed_seconds: 0.0,
             speed,
@@ -82,6 +84,7 @@ impl RhythmSession {
 
         let Some((index, judgement)) = self.find_matching_note(ch) else {
             self.miss += 1;
+            self.combo = 0;
             self.last_judgement = Some(RhythmJudgement::Miss);
             return RhythmJudgement::Miss;
         };
@@ -94,9 +97,18 @@ impl RhythmSession {
             };
         }
         match judgement {
-            RhythmJudgement::Hit => self.hit += 1,
-            RhythmJudgement::Ok => self.ok += 1,
-            RhythmJudgement::Miss => self.miss += 1,
+            RhythmJudgement::Hit => {
+                self.hit += 1;
+                self.combo += 1;
+            }
+            RhythmJudgement::Ok => {
+                self.ok += 1;
+                self.combo += 1;
+            }
+            RhythmJudgement::Miss => {
+                self.miss += 1;
+                self.combo = 0;
+            }
         }
         self.last_judgement = Some(judgement);
         judgement
@@ -144,6 +156,10 @@ impl RhythmSession {
         self.last_judgement
     }
 
+    pub fn combo(&self) -> usize {
+        self.combo
+    }
+
     fn correct_count(&self) -> usize {
         self.hit + self.ok
     }
@@ -179,6 +195,7 @@ impl RhythmSession {
             if let Some(note) = self.notes.get_mut(index) {
                 note.state = NoteState::Missed;
                 self.miss += 1;
+                self.combo = 0;
                 self.last_judgement = Some(RhythmJudgement::Miss);
             }
         }
@@ -297,11 +314,50 @@ mod tests {
     }
 
     #[test]
+    fn hit_and_ok_increment_combo() {
+        let mut session = RhythmSession::new("a b", 2);
+        session.set_elapsed_seconds(5.5);
+        assert_eq!(session.push_char('a'), RhythmJudgement::Hit);
+
+        session.set_elapsed_seconds(7.7);
+        assert_eq!(session.push_char('b'), RhythmJudgement::Ok);
+
+        assert_eq!(session.combo(), 2);
+    }
+
+    #[test]
+    fn input_miss_resets_combo() {
+        let mut session = RhythmSession::new("a b", 2);
+        session.set_elapsed_seconds(5.5);
+        assert_eq!(session.push_char('a'), RhythmJudgement::Hit);
+        assert_eq!(session.combo(), 1);
+
+        assert_eq!(session.push_char('x'), RhythmJudgement::Miss);
+
+        assert_eq!(session.combo(), 0);
+    }
+
+    #[test]
     fn passed_note_is_missed() {
         let mut session = RhythmSession::new("a", 2);
         session.set_elapsed_seconds(6.5);
 
         assert!(session.is_complete());
+        assert_eq!(session.stats().miss, 1);
+        assert_eq!(session.combo(), 0);
+        assert_eq!(session.last_judgement(), Some(RhythmJudgement::Miss));
+    }
+
+    #[test]
+    fn passed_note_resets_combo() {
+        let mut session = RhythmSession::new("a b", 2);
+        session.set_elapsed_seconds(5.5);
+        assert_eq!(session.push_char('a'), RhythmJudgement::Hit);
+        assert_eq!(session.combo(), 1);
+
+        session.set_elapsed_seconds(9.0);
+
+        assert_eq!(session.combo(), 0);
         assert_eq!(session.stats().miss, 1);
         assert_eq!(session.last_judgement(), Some(RhythmJudgement::Miss));
     }

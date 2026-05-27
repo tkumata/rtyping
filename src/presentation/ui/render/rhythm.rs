@@ -42,7 +42,8 @@ pub fn render_rhythm(frame: &mut Frame, app: &App) {
     let lane_width = lane_area.width.saturating_sub(2);
     let target_line = rhythm_target_line(app, lane_width);
     let marker_line = rhythm_marker_line(lane_width, app.rhythm_last_judgement());
-    let lane = Paragraph::new(vec![Line::from(""), target_line, marker_line])
+    let combo_line = rhythm_combo_line(lane_width, app.rhythm_combo());
+    let lane = Paragraph::new(vec![Line::from(""), target_line, marker_line, combo_line])
         .block(
             Block::default()
                 .borders(Borders::ALL)
@@ -83,7 +84,7 @@ fn rhythm_marker_line(width: u16, judgement: Option<RhythmJudgement>) -> Line<'s
     {
         *slot = '^';
         if let Some(judgement) = judgement {
-            write_marker_judgement(
+            write_text(
                 &mut chars,
                 marker_column.saturating_add(2),
                 judgement.label(),
@@ -97,8 +98,24 @@ fn rhythm_marker_line(width: u16, judgement: Option<RhythmJudgement>) -> Line<'s
     ))
 }
 
-fn write_marker_judgement(chars: &mut [char], start: usize, label: &str) {
-    for (offset, ch) in label.chars().enumerate() {
+fn rhythm_combo_line(width: u16, combo: usize) -> Line<'static> {
+    let mut chars = vec![' '; usize::from(width)];
+    if combo >= 2
+        && let Ok(marker_column) = usize::try_from(RhythmSession::MARK_COLUMN)
+    {
+        write_text(&mut chars, marker_column, &format!("{combo} Combo!!"));
+    }
+
+    Line::from(Span::styled(
+        chars.into_iter().collect::<String>(),
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    ))
+}
+
+fn write_text(chars: &mut [char], start: usize, text: &str) {
+    for (offset, ch) in text.chars().enumerate() {
         if let Some(slot) = chars.get_mut(start.saturating_add(offset)) {
             *slot = ch;
         }
@@ -116,7 +133,7 @@ fn marker_style(judgement: Option<RhythmJudgement>) -> Style {
 
 #[cfg(test)]
 mod tests {
-    use super::{judgement_label, rhythm_marker_line};
+    use super::{judgement_label, rhythm_combo_line, rhythm_marker_line};
     use crate::domain::rhythm::RhythmJudgement;
 
     #[test]
@@ -129,6 +146,18 @@ mod tests {
     fn marker_line_shows_judgement_near_marker() {
         let line = rhythm_marker_line(12, Some(RhythmJudgement::Hit));
         assert_eq!(line.to_string(), "   ^ Hit    ");
+    }
+
+    #[test]
+    fn combo_line_is_blank_below_two_combo() {
+        let line = rhythm_combo_line(12, 1);
+        assert_eq!(line.to_string(), "            ");
+    }
+
+    #[test]
+    fn combo_line_shows_combo_near_marker() {
+        let line = rhythm_combo_line(16, 10);
+        assert_eq!(line.to_string(), "   10 Combo!!   ");
     }
 
     #[test]

@@ -25,6 +25,7 @@
 - The header shows the latest `Hit`, `OK`, or `Miss` judgement
 - The header shows live `Miss` and `Hit+OK` counts
 - The latest judgement also appears near the `^` mark
+- Current combo appears near the `^` mark from `2 Combo!!`
 - Spaces are timing gaps and are not typed
 - `RhythmSpeed` controls the flow speed from `1` to `5` characters per second
 
