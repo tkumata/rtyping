@@ -35,3 +35,45 @@ pub fn render_loading(frame: &mut Frame, app: &App) {
         area,
     );
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::config::AppConfig;
+    use crate::usecase::generate_sentence::GenerationSource;
+    use ratatui::{Terminal, backend::TestBackend};
+    use std::convert::Infallible;
+
+    fn value_from_infallible<T>(result: Result<T, Infallible>) -> T {
+        match result {
+            Ok(value) => value,
+            Err(err) => match err {},
+        }
+    }
+
+    fn render_to_text(app: &App) -> String {
+        let backend = TestBackend::new(80, 40);
+        let mut terminal = value_from_infallible(Terminal::new(backend));
+        value_from_infallible(terminal.draw(|frame| render_loading(frame, app)));
+
+        terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(ratatui::buffer::Cell::symbol)
+            .collect::<String>()
+    }
+
+    #[test]
+    fn loading_render_includes_provider_and_wait_message() {
+        let mut app = App::new(AppConfig::default());
+        app.set_generation_source(GenerationSource::Groq);
+
+        let text = render_to_text(&app);
+
+        assert!(text.contains("Loading"));
+        assert!(text.contains("Generating text with Groq"));
+        assert!(text.contains("Please wait..."));
+    }
+}

@@ -31,10 +31,12 @@
   - 画面描画の入口を束ねる。
 - `src/presentation/ui/render/menu.rs`
   - Menu 画面を描画する。`Practice Mode` と `Stats` を含むタイトルメニューを描画し、外部プロバイダの開始項目は `App` が返す表示可能リストに従う。
+  - 描画テストでは `ratatui::backend::TestBackend` を使い、選択マーカー、常設メニュー項目、操作ヒントがバッファに含まれることを確認する。
 - `src/presentation/ui/render/config_screen.rs`
   - Config 画面を描画する。Provider セクション（Google / Groq）と Game Settings セクションを表示し、現在の Config 入力カーソル位置に端末カーソルを置く。
 - `src/presentation/ui/render/loading.rs`
   - Loading 画面を描画する。
+  - 描画テストでは生成元名と待機文言がバッファに含まれることを確認する。
 - `src/presentation/ui/render/typing.rs`
   - Typing 画面を描画する。出題文字列領域と WPM 線グラフ領域を分離して配置する。
   - `Target Text` ブロックは、出題本文の前に2行、出題本文の後に2行の空行を持つ行リストとして描画する。
@@ -48,6 +50,7 @@
   - Result 画面を描画し、入力文字数、ミス数、正確率、経過時間、WPM、保存済み履歴の統計、最終 WPM 線グラフを表示する。
 - `src/presentation/ui/render/stats.rs`
   - Stats 画面を描画し、保存済み履歴の自己ベスト、平均、直近10回、頻出ミス文字を表示する。
+  - 描画テストでは履歴なし表示と戻り操作案内がバッファに含まれることを確認する。
 - `src/presentation/ui/render/wpm_graph.rs`
   - Typing / Result 両画面で共通利用する WPM グラフ描画補助を担当する。
   - `Canvas` と折れ線描画を使い、高い線分をオレンジで強調する。
@@ -166,6 +169,12 @@
   - 自己ベスト、平均、直近10回、頻出ミス文字の集計を固定する。
 - `src/config/history_storage.rs`
   - 履歴ファイルの missing / broken / save round trip を確認する。
+- `src/runtime/input/menu.rs`
+  - Help 表示中は通常メニュー確定を実行せず、`Esc` で Help だけを閉じる状態遷移を確認する。
+- `src/runtime/input/stats.rs`
+  - `Enter` / `Esc` が Stats 画面から Menu へ戻る状態遷移を確認する。
+- `src/presentation/ui/render/menu.rs`、`src/presentation/ui/render/loading.rs`、`src/presentation/ui/render/stats.rs`
+  - `TestBackend` の描画バッファから主要文言を確認し、実際の TUI 出力に近い粒度で回帰を検出する。
 
 ## 保守メモ
 

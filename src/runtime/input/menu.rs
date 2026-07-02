@@ -268,4 +268,69 @@ mod tests {
         assert_eq!(app.state(), AppState::Stats);
         assert_eq!(active_request_id, None);
     }
+
+    #[test]
+    fn help_visible_blocks_menu_confirmation_until_escape_closes_help() {
+        let mut app = test_app();
+        let timer = Arc::new(Mutex::new(0));
+        let (generation_tx, _generation_rx) = mpsc::channel();
+        let mut next_request_id = 1;
+        let mut active_request_id = None;
+
+        handle_menu_input(
+            key(KeyCode::Char('h')),
+            &mut app,
+            &timer,
+            &generation_tx,
+            &mut next_request_id,
+            &mut active_request_id,
+        );
+        handle_menu_input(
+            key(KeyCode::Enter),
+            &mut app,
+            &timer,
+            &generation_tx,
+            &mut next_request_id,
+            &mut active_request_id,
+        );
+
+        assert_eq!(app.state(), AppState::Menu);
+        assert!(app.is_help_visible());
+        assert_eq!(active_request_id, None);
+
+        handle_menu_input(
+            key(KeyCode::Esc),
+            &mut app,
+            &timer,
+            &generation_tx,
+            &mut next_request_id,
+            &mut active_request_id,
+        );
+
+        assert_eq!(app.state(), AppState::Menu);
+        assert!(!app.is_help_visible());
+        assert!(!app.is_quit_requested());
+    }
+
+    #[test]
+    fn enter_on_config_menu_opens_config_without_generation() {
+        let mut app = test_app();
+        let timer = Arc::new(Mutex::new(0));
+        let (generation_tx, _generation_rx) = mpsc::channel();
+        let mut next_request_id = 5;
+        let mut active_request_id = None;
+
+        app.move_menu_up();
+        handle_menu_input(
+            key(KeyCode::Enter),
+            &mut app,
+            &timer,
+            &generation_tx,
+            &mut next_request_id,
+            &mut active_request_id,
+        );
+
+        assert_eq!(app.state(), AppState::Config);
+        assert_eq!(active_request_id, None);
+    }
 }
