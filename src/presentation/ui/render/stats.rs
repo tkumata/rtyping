@@ -30,3 +30,44 @@ pub fn render_stats(frame: &mut Frame, app: &App) {
         area,
     );
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::config::AppConfig;
+    use ratatui::{Terminal, backend::TestBackend};
+    use std::convert::Infallible;
+
+    fn value_from_infallible<T>(result: Result<T, Infallible>) -> T {
+        match result {
+            Ok(value) => value,
+            Err(err) => match err {},
+        }
+    }
+
+    fn render_to_text(app: &App) -> String {
+        let backend = TestBackend::new(100, 30);
+        let mut terminal = value_from_infallible(Terminal::new(backend));
+        value_from_infallible(terminal.draw(|frame| render_stats(frame, app)));
+
+        terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(ratatui::buffer::Cell::symbol)
+            .collect::<String>()
+    }
+
+    #[test]
+    fn stats_render_includes_empty_history_and_return_hint() {
+        let app = App::new(AppConfig::default());
+
+        let text = render_to_text(&app);
+
+        assert!(text.contains("Stats"));
+        assert!(text.contains("History Stats"));
+        assert!(text.contains("No timed history yet"));
+        assert!(text.contains("Press Enter or Esc to return to menu"));
+    }
+}

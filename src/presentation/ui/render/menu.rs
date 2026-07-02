@@ -134,3 +134,57 @@ fn logo_lines() -> Vec<Line<'static>> {
     .map(|(line, color)| Line::from(Span::styled(line, Style::default().fg(color))))
     .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::config::AppConfig;
+    use ratatui::{Terminal, backend::TestBackend};
+    use std::convert::Infallible;
+
+    fn value_from_infallible<T>(result: Result<T, Infallible>) -> T {
+        match result {
+            Ok(value) => value,
+            Err(err) => match err {},
+        }
+    }
+
+    fn render_to_text(app: &App) -> String {
+        let backend = TestBackend::new(100, 34);
+        let mut terminal = value_from_infallible(Terminal::new(backend));
+        value_from_infallible(terminal.draw(|frame| render_menu(frame, app)));
+
+        terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(ratatui::buffer::Cell::symbol)
+            .collect::<String>()
+    }
+
+    #[test]
+    fn menu_render_includes_core_entries_and_selected_marker() {
+        let app = App::new(AppConfig::default());
+
+        let text = render_to_text(&app);
+
+        assert!(text.contains("▶︎ Start Game"));
+        assert!(text.contains("Practice Mode"));
+        assert!(text.contains("Start Game with Rhythm"));
+        assert!(text.contains("Stats"));
+        assert!(text.contains("Config"));
+        assert!(text.contains("Up/Down"));
+        assert!(text.contains("Enter"));
+    }
+
+    #[test]
+    fn menu_render_hides_incomplete_provider_entries() {
+        let app = App::new(AppConfig::default());
+
+        let text = render_to_text(&app);
+
+        assert!(!text.contains("Start Game via Google AI Studio"));
+        assert!(!text.contains("Start Game via GroqCloud"));
+    }
+}

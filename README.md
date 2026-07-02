@@ -175,6 +175,8 @@ make check
 make build
 ```
 
+The test suite includes unit tests, runtime input state-transition tests, and `ratatui` buffer rendering tests for core TUI screens. Rendering tests focus on stable screen text and navigation affordances rather than full snapshot output.
+
 ## Release Automation
 
 `Cargo.toml` の package version を更新して `main` に push すると、`version-check.yml` がリリース処理を実行します。

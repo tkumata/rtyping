@@ -133,6 +133,9 @@ fn sample_config() -> AppConfig {
 
 #[test]
 fn save_and_load_config_round_trip() {
+    let _lock = ENV_LOCK
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let sandbox = TestConfigSandbox::new();
     let config = sample_config();
 
