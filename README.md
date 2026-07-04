@@ -4,17 +4,35 @@ R-Typing is a terminal-based typing game built with Rust. It provides a TUI powe
 
 The game starts from a title menu where you can choose a generation source and play mode. All settings are configured through the in-app Config screen and saved to disk.
 
+Title
+
 ![sample1](./docs/screenshot-01.png)
+
+HELP
+
 ![sample2](./docs/screenshot-02.png)
+
+Typing
+
 ![sample3](./docs/screenshot-03.png)
+
+Result
+
 ![sample4](./docs/screenshot-04.png)
+
+Config
+
 ![sample5](./docs/screenshot-05.png)
+
+Stats 🆕
+
+![sample6](./docs/screenshot-06.png)
 
 ## Features
 
 - Terminal UI with title menu, config screen, typing screen, result screen, and stats screen
 - Real-time WPM, timer, typed character count, and miss count
-- Timed history with best WPM, average WPM, average accuracy, recent WPM trend, and frequent missed characters
+- Timed history dashboard with best WPM, average WPM, average accuracy, recent WPM trend, and frequent missed characters
 - Practice mode (no time limit) via menu or by setting timeout to 0
 - Rhythm mode with right-to-left moving characters and separate rhythm results
 - Optional BGM and typing feedback sound (configured in-app, saved to disk)
@@ -129,13 +147,19 @@ For rhythm sessions, the `Result` screen shows rhythm-specific typed, correct, h
 
 For timed sessions, the result is saved to `~/.config/rtyping/history.json`.
 
-The `Result` and `Stats` screens also show saved timed-history stats:
+The `Result` screen also shows saved timed-history stats:
 
 - Best WPM
 - Average WPM
 - Average accuracy
 - Recent 10-run WPM trend
 - Frequent missed characters, counted by the expected character
+
+The `Stats` screen presents the same saved Timed history as a dashboard:
+
+- KPI row for Best WPM, Avg WPM, Avg Accuracy, and Runs
+- Recent 10-run WPM values with a mini graph
+- Frequent missed characters with horizontal bars
 
 Controls on the `Stats` screen:
 
