@@ -4,11 +4,29 @@ R-Typing is a terminal-based typing game built with Rust. It provides a TUI powe
 
 The game starts from a title menu where you can choose a generation source and play mode. All settings are configured through the in-app Config screen and saved to disk.
 
+Title
+
 ![sample1](./docs/screenshot-01.png)
+
+HELP
+
 ![sample2](./docs/screenshot-02.png)
+
+Typing
+
 ![sample3](./docs/screenshot-03.png)
+
+Result
+
 ![sample4](./docs/screenshot-04.png)
+
+Config
+
 ![sample5](./docs/screenshot-05.png)
+
+Stats 🆕
+
+![sample6](./docs/screenshot-06.png)
 
 ## Features
 
