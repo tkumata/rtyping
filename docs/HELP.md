@@ -42,7 +42,7 @@
 
 ### Stats Screen
 
-- Review saved Timed history summary
+- Review saved Timed history as a KPI row, a recent WPM mini graph, and frequent miss bars
 - **Enter / Esc**: Return to title screen
 
 ## Tips

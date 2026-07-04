@@ -114,7 +114,7 @@
 - `RUN-037`
   - Result 画面は保存済み履歴から自己ベスト WPM、平均 WPM、平均正確率、直近10回の WPM 推移、頻出ミス文字を表示する。
 - `RUN-038`
-  - Stats 画面は保存済み履歴から自己ベスト WPM、平均 WPM、平均正確率、直近10回の WPM 推移、頻出ミス文字を表示する。
+  - Stats 画面は保存済み履歴から自己ベスト WPM、平均 WPM、平均正確率、直近10回の WPM 推移、頻出ミス文字を成績ダッシュボードとして表示する。
 - `RUN-039`
   - Stats 画面で `Enter` または `Esc` を押すと `Menu` に戻る。
 - `RUN-040`
@@ -185,6 +185,16 @@
   - Help 表示中の Menu 入力テストは、`Enter` が通常メニュー確定として扱われず、`Esc` が Help 表示だけを閉じることを確認する。
 - `RUN-072`
   - Stats 入力テストは、`Enter` と `Esc` のどちらでも `Menu` へ戻ることを確認する。
+- `RUN-073`
+  - Stats 画面は Best WPM、Avg WPM、Avg Accuracy、Runs を上段の KPI として表示する。
+- `RUN-074`
+  - Stats 画面は直近10回の WPM を保存順の古い順に数値列で表示し、同じ値をミニグラフとして表示する。
+- `RUN-075`
+  - Stats 画面は頻出ミス文字を多い順に横棒グラフで表示する。
+- `RUN-076`
+  - Stats 画面は履歴がない場合、`No timed history yet` と Timed セッション完了を促す空状態メッセージを表示する。
+- `RUN-077`
+  - Stats 画面の表示改善は `HistoryStats` の既存フィールドだけを使い、履歴保存形式と集計定義を変更しない。
 
 ## History
 
@@ -198,6 +208,10 @@
   - よく間違える文字は正解側文字を集計する。
 - `HIS-005`
   - 直近10回の推移は保存順の最新10件を古い順に表示する。
+- `HIS-006`
+  - Stats 画面の直近 WPM ミニグラフは `recent_wpm` の最小値と最大値をもとに相対的な高さを決める。値が1件または全件同値の場合は同じ高さで表示する。
+- `HIS-007`
+  - Stats 画面のミス文字横棒グラフは `frequent_mistakes` 内の最大 count を基準に相対的な長さを決める。
 
 ## Sentence Generation
 
@@ -258,6 +272,8 @@
   - `Menu`、`Loading`、`Stats` の描画結果が `ratatui` のテスト用バッファに主要文言を出力すること
   - Help 表示中の Menu 入力が通常の確定操作を実行しないこと
   - `Stats` 画面の `Enter` / `Esc` が Menu へ戻ること
+  - `Stats` 画面に KPI、Recent 10 WPM、Frequent Misses、戻り操作案内が描画されること
+  - `Stats` 画面の履歴なし表示に空状態メッセージと戻り操作案内が描画されること
 
 ## Tooling
 
