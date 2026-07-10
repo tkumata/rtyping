@@ -199,3 +199,11 @@
 - `GameSettings` のフィールドは `String` 型で保持する。これにより UI の入力処理が統一され、数値バリデーションは保存時または使用時に行う。
 - リズムモードの速度も `GameSettings` の文字列フィールドとして保持し、使用時に 1 から 5 の範囲へ正規化する。
 - Rust モジュールでテストを追加する場合は、通常項目の後に `#[cfg(test)] mod tests` を置く配置を維持する。
+
+## Agent Hook Pipeline
+
+- `verify_pipeline.sh` は Git の `HEAD` に対する Rust 関連 pathspec の差分と未追跡ファイルから fingerprint を作る。
+- state は phase、check fingerprint、validated fingerprint を保存する。対象変更がなければ phase にかかわらず検証を実行しない。
+- 対象 fingerprint が validated fingerprint と異なる時は `check_pending` から開始する。check 成功時にその fingerprint を保存し、次の Stop で一致している場合だけ build を実行する。
+- build 実行後にも fingerprint を再確認し、一致した時だけ validated fingerprint として保存する。
+- PreToolUse の JSON は dispatcher で読み捨てず、guard script が直接標準入力から読む。

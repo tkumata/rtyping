@@ -4,7 +4,7 @@
     "preToolUse": [
       {
         "type": "command",
-        "bash": ".agent-hooks/dispatcher.sh copilot preToolUse",
+        "bash": ".agent-hooks/pre_tool_guard.sh copilot preToolUse",
         "cwd": ".",
         "timeoutSec": 10
       }
@@ -12,8 +12,8 @@
     "agentStop": [
       {
         "type": "command",
-        "bash": ".agent-hooks/dispatcher.sh copilot agentStop",
-        "timeoutSec": 30
+        "bash": ".agent-hooks/verify_pipeline.sh copilot agentStop",
+        "timeoutSec": 60
       }
     ]
   }
