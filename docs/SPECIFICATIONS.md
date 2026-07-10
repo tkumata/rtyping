@@ -283,6 +283,14 @@
   - VS Code の TOML スキーマ検証が Cargo の lint テーブルを誤検出する場合は、manifest の lint 強度を下げずにエディタ検証設定で解消する。
 - `TOOL-003`
   - 診断解消後も `cargo metadata --no-deps --format-version 1` で manifest が読めることを確認する。
+- `TOOL-004`
+  - Stop hook の検証対象は `*.rs`、`Cargo.toml`、`Cargo.lock`、`build.rs`、`rust-toolchain`、`rust-toolchain.toml`、`.cargo/**` とする。
+- `TOOL-005`
+  - 対象ファイルの tracked / untracked の内容から fingerprint を算出し、最後に build まで成功した fingerprint と一致する場合は検証を省略する。
+- `TOOL-006`
+  - check 成功時の fingerprint と Stop 時点の fingerprint が異なる場合、build を実行せず check を再実行する。
+- `TOOL-007`
+  - Codex と Copilot の hook 設定は dispatcher を介さず、PreToolUse は `pre_tool_guard.sh`、Stop は `verify_pipeline.sh` を直接実行する。
 
 ## Release Automation
 

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".agent-hooks/dispatcher.sh codex PreToolUse",
+            "command": ".agent-hooks/pre_tool_guard.sh codex PreToolUse",
             "timeout": 10
           }
         ]
@@ -17,8 +17,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".agent-hooks/dispatcher.sh codex Stop",
-            "timeout": 30
+            "command": ".agent-hooks/verify_pipeline.sh codex Stop",
+            "timeout": 60
           }
         ]
       }

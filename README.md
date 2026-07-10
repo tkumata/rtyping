@@ -229,4 +229,4 @@ cargo build --release --target=x86_64-pc-windows-gnu
 
 ## Harness Engineering
 
-Codex CLI と Copilot CLI 向けにハーネスを導入しました。GPT-5.4-Mini でも一定の品質が保てるようになりました。
+Codex CLI と Copilot CLI 向けにハーネスを導入しています。Stop hook は Rust 関連ファイルの変更時だけ `make check` と `make build` を実行し、同じ変更 fingerprint の再検証を避けます。
