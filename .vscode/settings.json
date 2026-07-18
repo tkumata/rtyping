@@ -1,7 +1,9 @@
 {
   "editor.fontLigatures": false,
   "editor.scrollBeyondLastLine": false,
-  "editor.rulers": [100],
+  "editor.rulers": [
+    100
+  ],
   "editor.wordWrap": "on",
   "editor.formatOnSave": true,
   "[rust]": {
