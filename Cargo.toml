@@ -24,6 +24,10 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.150"
 sha2 = "0.11.0"
 
+[[bin]]
+name = "rtyping"
+path = "src/main.rs"
+
 [lints.clippy]
 pedantic = { level = "deny", priority = -1 }
 unwrap_used = "deny"
@@ -35,7 +39,3 @@ todo = "deny"
 unimplemented = "deny"
 panic_in_result_fn = "deny"
 indexing_slicing = "deny"
-
-[[bin]]
-name = "rtyping"
-path = "src/main.rs"
