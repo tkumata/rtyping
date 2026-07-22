@@ -1,167 +1,149 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-STATE_DIR="${ROOT}/.agent-hooks/state"
-STATE_FILE="${STATE_DIR}/check-state"
+AGENT="${1:-codex}"
+
+STATE_DIR=".agent-hooks/state"
+STATE_FILE="${STATE_DIR}/pipeline_state"
 LOG_DIR="${STATE_DIR}/logs"
-REVIEW_INSTRUCTION="Full harness verification passed. Before stopping, review the current uncommitted changes for correctness, regressions, security, tests, and documentation consistency. Fix every actionable finding within the requested scope. If you change files, finish the fixes and let the Stop hook rerun verification before claiming completion. If there are no findings, report that explicitly and stop."
+REVIEW_INSTRUCTION="Full Rust verification passed. Before stopping, review only the current uncommitted Rust-related changes (*.rs, Cargo.toml, Cargo.lock, build.rs, rust-toolchain, rust-toolchain.toml, and .cargo/**) for correctness, regressions, security, and test coverage. Do not review unrelated changes, including Markdown files. Fix every actionable finding within the requested scope. If you change Rust-related files, finish the fixes and let the Stop hook rerun verification before claiming completion. If there are no findings, report that explicitly and stop."
+RUST_PATHS=(
+  ':(glob)*.rs'
+  ':(glob)**/*.rs'
+  Cargo.toml
+  Cargo.lock
+  build.rs
+  rust-toolchain
+  rust-toolchain.toml
+  ':(glob).cargo/**'
+)
 
-json_copilot_block() {
-  local msg="$1"
-  jq -nc --arg msg "${msg}" '{decision:"block", reason:$msg}'
+mkdir -p "${LOG_DIR}"
+
+PHASE="idle"
+CHECK_FINGERPRINT=""
+VALIDATED_FINGERPRINT=""
+
+load_state() {
+  [ -f "${STATE_FILE}" ] || return 0
+
+  while IFS='=' read -r key value; do
+    case "${key}" in
+      phase) PHASE="${value}" ;;
+      check_fingerprint) CHECK_FINGERPRINT="${value}" ;;
+      validated_fingerprint) VALIDATED_FINGERPRINT="${value}" ;;
+    esac
+  done < "${STATE_FILE}"
 }
 
-json_codex_continue() {
-  local msg="$1"
-  jq -nc --arg msg "${msg}" '{continue:true, stopReason:$msg, systemMessage:$msg}'
+save_state() {
+  {
+    printf 'phase=%s\n' "${PHASE}"
+    printf 'check_fingerprint=%s\n' "${CHECK_FINGERPRINT}"
+    printf 'validated_fingerprint=%s\n' "${VALIDATED_FINGERPRINT}"
+  } > "${STATE_FILE}"
 }
 
-request_continuation() {
-  local msg="$1"
+has_rust_changes() {
+  ! git diff --quiet HEAD -- "${RUST_PATHS[@]}" \
+    || [ -n "$(git ls-files --others --exclude-standard -- "${RUST_PATHS[@]}")" ]
+}
 
-  case "${AGENT_KIND:-generic}" in
+rust_fingerprint() {
+  {
+    git diff --binary HEAD -- "${RUST_PATHS[@]}"
+
+    while IFS= read -r -d '' path; do
+      printf 'untracked:%s\0' "${path}"
+      git hash-object -- "${path}"
+    done < <(git ls-files -z --others --exclude-standard -- "${RUST_PATHS[@]}" | sort -z)
+  } | shasum -a 256 | awk '{print $1}'
+}
+
+run_and_log() {
+  local name="$1"
+  local cmd="$2"
+  local log="${LOG_DIR}/${name}.log"
+
+  {
+    echo "\$ ${cmd}"
+    echo
+    bash -lc "${cmd}"
+  } >"${log}" 2>&1
+}
+
+emit_continue() {
+  local reason="$1"
+
+  case "${AGENT}" in
+    codex)
+      jq -nc --arg reason "${reason}" \
+        '{decision:"block", reason:$reason}'
+      ;;
     copilot)
-      json_copilot_block "${msg}"
+      jq -nc --arg reason "${reason}" \
+        '{continue:false, message:$reason}'
       ;;
     *)
-      json_codex_continue "${msg}"
+      jq -nc --arg reason "${reason}" \
+        '{decision:"block", reason:$reason}'
       ;;
   esac
 }
 
-report_failure() {
-  request_continuation "$1"
-}
+load_state
 
-request_review() {
-  request_continuation "${REVIEW_INSTRUCTION}"
-}
-
-verify_static() {
-  jq empty .codex/hooks.json || return 1
-  jq empty .github/hooks/hooks.json || return 1
-
-  local script
-  for script in .agent-hooks/*.sh; do
-    bash -n "${script}" || return 1
-  done
-
-  jq -e '
-    .hooks.PreToolUse[0].matcher == "Bash" and
-    .hooks.PreToolUse[0].hooks[0].command == "AGENT_KIND=codex ./.agent-hooks/pre_tool_guard.sh" and
-    .hooks.Stop[0].hooks[0].command == "AGENT_KIND=codex ./.agent-hooks/verify_pipeline.sh"
-  ' .codex/hooks.json >/dev/null || return 1
-  jq -e '
-    .version == 1 and
-    .hooks.preToolUse[0].bash == "AGENT_KIND=copilot ./.agent-hooks/pre_tool_guard.sh" and
-    .hooks.agentStop[0].bash == "AGENT_KIND=copilot ./.agent-hooks/verify_pipeline.sh"
-  ' .github/hooks/hooks.json >/dev/null || return 1
-
-  git diff --check || return 1
-}
-
-is_relevant_path() {
-  case "$1" in
-    CMakeLists.txt|pico_sdk_import.cmake|.clang-format|.codex/hooks.json|.github/hooks/hooks.json|cmake/*|src/*|tests/*|assets/*|.agent-hooks/*)
-      return 0
-      ;;
-    *)
-      return 1
-      ;;
-  esac
-}
-
-sha256_file() {
-  openssl dgst -sha256 "$1" | awk '{print $NF}'
-}
-
-sha256_stdin() {
-  openssl dgst -sha256 | awk '{print $NF}'
-}
-
-changed_relevant_paths() {
-  {
-    git diff --name-only --no-renames HEAD
-    git ls-files --others --exclude-standard
-  } | while IFS= read -r path; do
-    if is_relevant_path "${path}"; then
-      printf '%s\n' "${path}"
-    fi
-  done | LC_ALL=C sort -u
-}
-
-check_fingerprint() {
-  local paths
-  paths="$(changed_relevant_paths)"
-
-  if [ -z "${paths}" ]; then
-    printf '%s\n' "no-relevant-changes"
-    return
-  fi
-
-  {
-    while IFS= read -r path; do
-    if [ -f "${path}" ]; then
-      printf '%s  %s\n' "${path}" "$(sha256_file "${path}")"
-    else
-      printf 'deleted  %s\n' "${path}"
-    fi
-    done <<<"${paths}"
-  } | sha256_stdin
-}
-
-read_cached_state() {
-  CACHED_STATUS=""
-  CACHED_FINGERPRINT=""
-
-  if [ -f "${STATE_FILE}" ]; then
-    read -r CACHED_STATUS CACHED_FINGERPRINT < "${STATE_FILE}" || true
-  fi
-}
-
-write_cached_state() {
-  local status="$1"
-  local fingerprint="$2"
-  local temporary
-
-  mkdir -p "${STATE_DIR}"
-  temporary="$(mktemp "${STATE_DIR}/check-state.XXXXXX")"
-  printf '%s %s\n' "${status}" "${fingerprint}" > "${temporary}"
-  mv "${temporary}" "${STATE_FILE}"
-}
-
-run_full_check() {
-  local fingerprint="$1"
-  local log="${LOG_DIR}/check-${fingerprint}.log"
-
-  mkdir -p "${LOG_DIR}"
-  if ./.agent-hooks/check.sh > "${log}" 2>&1; then
-    request_review
-    write_cached_state "success" "${fingerprint}"
-    return 0
-  fi
-
-  write_cached_state "failure" "${fingerprint}"
-  report_failure "Full harness check failed. Read ${log}, fix the root cause, then continue."
-}
-
-cd "${ROOT}"
-
-fingerprint="$(check_fingerprint)"
-if [ "${fingerprint}" = "no-relevant-changes" ]; then
+if ! has_rust_changes; then
+  PHASE="idle"
+  CHECK_FINGERPRINT=""
+  save_state
   exit 0
 fi
 
-read_cached_state
-if [ "${fingerprint}" = "${CACHED_FINGERPRINT}" ]; then
+FINGERPRINT="$(rust_fingerprint)"
+
+if [ "${FINGERPRINT}" = "${VALIDATED_FINGERPRINT}" ]; then
+  PHASE="done"
+  CHECK_FINGERPRINT=""
+  save_state
   exit 0
 fi
 
-if ! verify_static; then
-  write_cached_state "failure" "${fingerprint}"
-  report_failure "Harness static verification failed. Read the hook JSON, shell syntax, and git diff errors, fix the root cause, then continue."
+if [ "${PHASE}" = "build_pending" ] && [ "${FINGERPRINT}" != "${CHECK_FINGERPRINT}" ]; then
+  PHASE="check_pending"
+  CHECK_FINGERPRINT=""
+fi
+
+if [ "${PHASE}" != "build_pending" ]; then
+  if run_and_log "check" "make check"; then
+    PHASE="build_pending"
+    CHECK_FINGERPRINT="${FINGERPRINT}"
+    save_state
+    emit_continue "make check passed. Next run make build if Rust-related changes remain unchanged."
+  else
+    PHASE="check_pending"
+    CHECK_FINGERPRINT=""
+    save_state
+    emit_continue "make check failed. Fix the root cause and review .agent-hooks/state/logs/check.log."
+  fi
   exit 0
 fi
 
-run_full_check "${fingerprint}"
+if run_and_log "build" "make build"; then
+  if [ "$(rust_fingerprint)" = "${CHECK_FINGERPRINT}" ]; then
+    PHASE="done"
+    VALIDATED_FINGERPRINT="${CHECK_FINGERPRINT}"
+    CHECK_FINGERPRINT=""
+    save_state
+    emit_continue "${REVIEW_INSTRUCTION}"
+  else
+    PHASE="check_pending"
+    CHECK_FINGERPRINT=""
+    save_state
+    emit_continue "Rust-related changes changed during build. Run make check again."
+  fi
+else
+  PHASE="build_pending"
+  save_state
+  emit_continue "make build failed. Fix the root cause and review .agent-hooks/state/logs/build.log."
+fi
