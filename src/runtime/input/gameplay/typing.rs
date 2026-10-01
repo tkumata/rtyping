@@ -67,7 +67,7 @@ mod tests {
         app.set_practice_mode(true);
 
         assert!(!app.push_char('x'));
-        assert!(app.input_chars().is_empty());
+        assert_eq!(app.input_chars(), [] as [char; 0]);
         assert_eq!(app.current_input_count(), 0);
         assert_eq!(app.typed_count(), 1);
     }

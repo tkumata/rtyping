@@ -106,8 +106,8 @@ mod tests {
 
         assert_eq!(stats.count, 0);
         assert_eq!(stats.best_wpm, None);
-        assert!(stats.recent_wpm.is_empty());
-        assert!(stats.frequent_mistakes.is_empty());
+        assert_eq!(stats.recent_wpm, [] as [f64; 0]);
+        assert_eq!(stats.frequent_mistakes, [] as [MistakeCount; 0]);
     }
 
     #[test]
