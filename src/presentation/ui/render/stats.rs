@@ -212,7 +212,7 @@ fn format_mistake_bar(mistake: &MistakeCount, max_count: usize) -> String {
         "{} {:>3}  {}",
         mistake.character,
         mistake.count,
-        "█".repeat(width)
+        "■".repeat(width)
     )
 }
 
@@ -261,8 +261,8 @@ mod tests {
     fn stats_render_includes_dashboard_sections() {
         let mut app = App::new(AppConfig::default());
         app.set_history_entries(vec![
-            history_entry(40.0, 90.0, vec!['e']),
-            history_entry(60.0, 95.0, vec!['t', 'e']),
+            history_entry(40.0, 90.0, vec!['e'; 24]),
+            history_entry(60.0, 95.0, vec!['t'; 12]),
             history_entry(72.0, 100.0, vec!['a']),
         ]);
 
@@ -276,7 +276,9 @@ mod tests {
         assert!(text.contains("Recent 10 WPM"));
         assert!(text.contains("40  60  72"));
         assert!(text.contains("Frequent Misses"));
-        assert!(text.contains("e   2"));
+        assert!(text.contains("e  24  ■■■■■■■■■■■■■■■■■■■■■■■■ "));
+        assert!(text.contains("t  12  ■■■■■■■■■■■■ "));
+        assert!(text.contains("a   1  ■ "));
         assert!(text.contains("Enter / Esc: Back"));
     }
 

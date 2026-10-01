@@ -207,3 +207,12 @@
 - 対象 fingerprint が validated fingerprint と異なる時は `check_pending` から開始する。check 成功時にその fingerprint を保存し、次の Stop で一致している場合だけ build を実行する。
 - build 実行後にも fingerprint を再確認し、一致した時だけ validated fingerprint として保存する。
 - PreToolUse の JSON は dispatcher で読み捨てず、guard script が直接標準入力から読む。
+
+## Frequent Misses の文字変更（承認済み・実表示未確認）
+
+- 変更責務は描画層に限定する。`src/presentation/ui/render/stats.rs` の `format_mistake_bar` が返す横棒文字を `█` から `■` へ置換する。
+- 同ファイルの既存描画バッファテストで四角の個数と行の整列を確認する。計算、`HistoryStats`、履歴保存、画面遷移には変更を加えない。
+- Recent 10 WPM の `graph_block`、Typing / Result の WPM グラフ、装飾で使う `█` は対象外。共通の文字変換処理は導入しない。
+- OS 別の文字分岐、フォント検出、追加設定、依存関係は導入せず、全 OS で同じ U+25A0 を出力する。
+- 前提：受け入れ対象の端末・フォントでは `■` の字形に隙間があり、描画側と端末側の幅解釈が一致する。この前提は実端末で検証し、成立しなければ仕様案を見直す。
+- 検証と Open Questions は [文字変更の仕様](SPECIFICATIONS.md#frequent-misses-の文字変更承認済み実表示未確認) に集約する。
