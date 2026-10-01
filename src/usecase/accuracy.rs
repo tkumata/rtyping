@@ -12,7 +12,6 @@ pub fn calc_accuracy(typed_count: usize, incorrects: usize) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    #![expect(clippy::float_cmp)]
     use super::*;
 
     #[test]

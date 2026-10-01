@@ -158,7 +158,7 @@ fn load_missing_config_returns_default_without_warnings() {
     let report = load_config_from_paths(&sandbox.config_path, &sandbox.key_path)
         .expect("load should succeed");
     assert_eq!(report.config, AppConfig::default());
-    assert!(report.warnings.is_empty());
+    assert_eq!(report.warnings, [] as [String; 0]);
 }
 
 #[test]
@@ -276,11 +276,11 @@ fn load_keeps_non_secret_fields_when_key_is_missing() {
 
     assert_eq!(report.config.google.api_url, config.google.api_url);
     assert_eq!(report.config.google.model, config.google.model);
-    assert!(report.config.google.api_key.is_empty());
+    assert_eq!(report.config.google.api_key, "");
     assert_eq!(report.config.groq.api_url, config.groq.api_url);
     assert_eq!(report.config.groq.model, config.groq.model);
-    assert!(report.config.groq.api_key.is_empty());
-    assert!(!report.warnings.is_empty());
+    assert_eq!(report.config.groq.api_key, "");
+    assert_ne!(report.warnings, [] as [String; 0]);
 }
 
 #[test]
@@ -297,11 +297,11 @@ fn load_keeps_non_secret_fields_when_key_is_invalid() {
 
     assert_eq!(report.config.google.api_url, config.google.api_url);
     assert_eq!(report.config.google.model, config.google.model);
-    assert!(report.config.google.api_key.is_empty());
+    assert_eq!(report.config.google.api_key, "");
     assert_eq!(report.config.groq.api_url, config.groq.api_url);
     assert_eq!(report.config.groq.model, config.groq.model);
-    assert!(report.config.groq.api_key.is_empty());
-    assert!(!report.warnings.is_empty());
+    assert_eq!(report.config.groq.api_key, "");
+    assert_ne!(report.warnings, [] as [String; 0]);
 }
 
 #[test]
@@ -316,7 +316,7 @@ fn load_restores_api_key_from_legacy_aad_label() {
     let report = load_config_from_paths(&sandbox.config_path, &sandbox.key_path)
         .expect("load should succeed");
 
-    assert!(report.warnings.is_empty());
+    assert_eq!(report.warnings, [] as [String; 0]);
     assert_eq!(report.config.google.api_key, google_secret);
     assert_eq!(report.config.groq.api_key, groq_secret);
 }

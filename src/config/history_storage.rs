@@ -64,8 +64,8 @@ mod tests {
 
         let report = load_history_from_path(&path).expect("missing history should load");
 
-        assert!(report.entries.is_empty());
-        assert!(report.warnings.is_empty());
+        assert_eq!(report.entries, [] as [HistoryEntry; 0]);
+        assert_eq!(report.warnings, [] as [String; 0]);
     }
 
     #[test]
@@ -77,7 +77,7 @@ mod tests {
         let report = load_history_from_path(&path).expect("history should load");
 
         assert_eq!(report.entries, vec![entry(42.0)]);
-        assert!(report.warnings.is_empty());
+        assert_eq!(report.warnings, [] as [String; 0]);
     }
 
     #[test]
@@ -88,7 +88,7 @@ mod tests {
 
         let report = load_history_from_path(&path).expect("broken history should not fail hard");
 
-        assert!(report.entries.is_empty());
+        assert_eq!(report.entries, [] as [HistoryEntry; 0]);
         assert_eq!(report.warnings.len(), 1);
     }
 

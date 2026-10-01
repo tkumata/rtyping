@@ -6,7 +6,6 @@ pub fn calc_wpm(inputs_length: usize, seconds: i32, misses: i32) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    #![expect(clippy::float_cmp)]
     use super::*;
 
     #[test]

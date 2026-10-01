@@ -121,7 +121,7 @@ mod tests {
         app.set_practice_mode(true);
 
         assert!(!app.push_char('x'));
-        assert!(app.input_chars().is_empty());
+        assert_eq!(app.input_chars(), [] as [char; 0]);
         assert_eq!(app.typed_count(), 1);
         assert_eq!(app.incorrects(), 1);
         assert!(app.pop_char().is_none());
@@ -150,9 +150,9 @@ mod tests {
         app.prepare_new_game("cd".to_string());
 
         assert_eq!(app.typed_count(), 0);
-        assert!(app.input_chars().is_empty());
+        assert_eq!(app.input_chars(), [] as [char; 0]);
         assert_eq!(app.incorrects(), 0);
-        assert!(app.missed_chars().is_empty());
+        assert_eq!(app.missed_chars(), [] as [char; 0]);
     }
 
     #[test]
@@ -201,11 +201,11 @@ mod tests {
         app.update_timer(1);
         app.push_char('a');
 
-        assert!(!app.wpm_history().is_empty());
+        assert_ne!(app.wpm_history(), [] as [u64; 0]);
 
         app.prepare_new_game("cd".to_string());
 
-        assert!(app.wpm_history().is_empty());
+        assert_eq!(app.wpm_history(), [] as [u64; 0]);
     }
 
     #[test]
