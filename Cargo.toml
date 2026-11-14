@@ -1,7 +1,8 @@
 [package]
 name = "rtyping"
-version = "1.0.33"
+version = "1.0.34"
 edition = "2024"
+rust-version = "1.100"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -31,6 +32,9 @@ sha2 = "0.11.1"
 [[bin]]
 name = "rtyping"
 path = "src/main.rs"
+
+[lints.cargo]
+unused_dependencies = "deny"
 
 [lints.clippy]
 pedantic = { level = "deny", priority = -1 }
