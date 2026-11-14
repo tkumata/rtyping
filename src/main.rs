@@ -10,14 +10,15 @@ mod runtime;
 mod usecase;
 
 use crossterm::{
-    cursor::SetCursorStyle,
+    cursor::{SetCursorStyle, Show},
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{Terminal, backend::CrosstermBackend};
 use rodio::DeviceSinkBuilder;
-use std::io::{self, stdout};
+use std::io::{self, Write, stdout};
+use std::mem::DropGuard;
 use std::sync::{Arc, Mutex, mpsc};
 
 use domain::config::AppConfig;
@@ -62,6 +63,11 @@ fn main() -> io::Result<()> {
     }
 
     enable_raw_mode()?;
+    let terminal_restore = DropGuard::new((), |()| {
+        if let Err(err) = restore_terminal(&mut stdout()) {
+            let _ = writeln!(io::stderr(), "Failed to restore terminal: {err}");
+        }
+    });
     let mut stdout = stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
@@ -92,14 +98,8 @@ fn main() -> io::Result<()> {
         &timeout_rx,
     );
 
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        SetCursorStyle::DefaultUserShape,
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
+    restore_terminal(terminal.backend_mut())?;
+    DropGuard::dismiss(terminal_restore);
 
     timer_command_tx.send(runtime::TimerCommand::Shutdown).ok();
     timer_thread.join().ok();
@@ -110,4 +110,45 @@ fn main() -> io::Result<()> {
     }
 
     Ok(())
+}
+
+fn restore_terminal(output: &mut impl Write) -> io::Result<()> {
+    let raw_mode_result = disable_raw_mode();
+    let screen_result = execute!(
+        output,
+        SetCursorStyle::DefaultUserShape,
+        LeaveAlternateScreen,
+        DisableMouseCapture,
+        Show
+    );
+    raw_mode_result.and(screen_result)
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn restore_terminal_resets_screen_mouse_and_cursor() {
+        let mut output = Vec::new();
+
+        assert!(restore_terminal(&mut output).is_ok());
+
+        assert_eq!(
+            output,
+            b"\x1b[0 q\x1b[?1049l\x1b[?1006l\x1b[?1015l\x1b[?1003l\x1b[?1002l\x1b[?1000l\x1b[?25h"
+        );
+    }
+
+    #[test]
+    fn restore_terminal_returns_output_error() {
+        let mut output = io::Cursor::new([]);
+
+        let result = restore_terminal(&mut output);
+
+        assert_eq!(
+            result.err().map(|err| err.kind()),
+            Some(io::ErrorKind::WriteZero)
+        );
+    }
 }

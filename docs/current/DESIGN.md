@@ -101,6 +101,9 @@
 21. `Stats` 選択時は保存済み履歴から集計済み統計をダッシュボード表示し、`Enter` または `Esc` で Menu に戻る。
 22. 終了時は raw mode、画面、スレッド、BGM を順に停止する。
 
+- raw mode の有効化直後に `std::mem::DropGuard` を作成し、端末初期化の途中終了や panic の巻き戻し時にも端末の復元を試みる。
+- 通常終了時は復元結果を返し、成功後に guard を解除する。途中終了時の復元失敗は標準エラーへ出力する。raw mode の解除が失敗しても画面、マウス捕捉、カーソルの復元を試みる。
+
 ## 外部 API 生成プロンプト
 
 - Google AI Studio と Groq は同じ `build_prompt` で生成したプロンプトを使う。
@@ -129,6 +132,8 @@
 
 ## 開発環境設定
 
+- 最低 Rust バージョンは `Cargo.toml` の `rust-version = "1.100"` で示す。開発環境は最新版へ追従し、`rust-toolchain.toml` による固定は行わない。
+- `Cargo.toml` の `[lints.cargo]` で `unused_dependencies = "deny"` を設定する。
 - `Cargo.toml` の `[lints.clippy]` は Cargo 標準の lint 設定として維持する。
 - エディタ拡張のスキーマが Cargo の lint テーブルに追従していない場合は、`.vscode/settings.json` の TOML 検証設定で対象診断を抑制する。
 - manifest 構文の確認は `cargo metadata --no-deps --format-version 1` を用いる。

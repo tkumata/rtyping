@@ -231,6 +231,7 @@
 ## Test Entry Points
 
 - `cargo test`
+  - 端末復元が画面、マウス捕捉、カーソルを戻すコマンドを出力し、書き込み失敗を呼び出し元へ返すこと（Unix）
   - `config`
   - `runtime`
   - `usecase::generate_sentence`
@@ -291,6 +292,10 @@
   - check 成功時の fingerprint と Stop 時点の fingerprint が異なる場合、build を実行せず check を再実行する。
 - `TOOL-007`
   - Codex と Copilot の hook 設定は dispatcher を介さず、PreToolUse は `pre_tool_guard.sh`、Stop は `verify_pipeline.sh` を直接実行する。
+- `TOOL-008`
+  - ソースビルドには Rust 1.100 以上を必要とする。開発環境、CI、Dev Container は最新版へ追従し、ツールチェーンのバージョンは固定しない。
+- `TOOL-009`
+  - Cargo の `unused_dependencies` lint を `deny` に設定する。
 
 ## Release Automation
 

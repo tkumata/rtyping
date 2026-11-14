@@ -49,6 +49,8 @@ cargo run
 
 ## Build
 
+Building from source requires Rust 1.100 or later. Development follows the latest stable Rust; the toolchain is not pinned.
+
 ```shell
 cargo build
 cargo build --release
