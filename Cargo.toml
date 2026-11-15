@@ -1,6 +1,6 @@
 [package]
 name = "rtyping"
-version = "1.0.34"
+version = "1.0.35"
 edition = "2024"
 rust-version = "1.100"
 
@@ -10,7 +10,10 @@ rust-version = "1.100"
 opt-level = 0
 
 [profile.release]
-opt-level = 3
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = "symbols"
 
 [dependencies]
 rand = "0.10.3"
