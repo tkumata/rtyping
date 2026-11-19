@@ -153,6 +153,83 @@ fn save_and_load_config_round_trip() {
 }
 
 #[test]
+fn invalid_game_values_are_rejected_on_save_and_reported_on_load() {
+    let _lock = ENV_LOCK
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let sandbox = TestConfigSandbox::new();
+    let config = sample_config();
+    save_config_to_paths(&config, &sandbox.config_path, &sandbox.key_path).expect("save config");
+    let original = fs::read(&sandbox.config_path).expect("read config");
+    let mut invalid = config.clone();
+    invalid.game.text_scale = usize::MAX.to_string();
+    invalid.game.freq = "NaN".into();
+    let err = save_config_to_paths(&invalid, &sandbox.config_path, &sandbox.key_path)
+        .expect_err("invalid config must not be saved");
+    assert_eq!(err.kind(), std::io::ErrorKind::InvalidInput);
+    assert!(err.to_string().contains("TextScale"));
+    assert!(err.to_string().contains("Freq"));
+    assert_eq!(
+        fs::read(&sandbox.config_path).expect("read config"),
+        original
+    );
+
+    let mut legacy: serde_json::Value = serde_json::from_slice(&original).expect("parse config");
+    let game = legacy
+        .get_mut("game")
+        .and_then(serde_json::Value::as_object_mut)
+        .expect("game section");
+    game.insert("text_scale".into(), invalid.game.text_scale.into());
+    game.insert("freq".into(), invalid.game.freq.into());
+    game.remove("rhythm_speed");
+    fs::write(&sandbox.config_path, legacy.to_string()).expect("write legacy config");
+    let report = load_config_from_paths(&sandbox.config_path, &sandbox.key_path)
+        .expect("load legacy config");
+    assert_eq!(report.config, config);
+    assert_eq!(report.warnings.len(), 2);
+    assert!(
+        report
+            .warnings
+            .iter()
+            .any(|warning| warning.contains("TextScale"))
+    );
+    assert!(
+        report
+            .warnings
+            .iter()
+            .any(|warning| warning.contains("Freq"))
+    );
+}
+
+#[test]
+fn parallel_first_saves_share_a_key() {
+    let _lock = ENV_LOCK
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let sandbox = TestConfigSandbox::new();
+    std::thread::scope(|scope| {
+        for model in ["first", "second"] {
+            let sandbox = &sandbox;
+            scope.spawn(move || {
+                let mut config = sample_config();
+                config.google.model = model.into();
+                save_config_to_paths(&config, &sandbox.config_path, &sandbox.key_path)
+                    .expect("save config");
+            });
+        }
+    });
+    let report =
+        load_config_from_paths(&sandbox.config_path, &sandbox.key_path).expect("load config");
+    assert_eq!(report.warnings, [] as [String; 0]);
+    assert_eq!(report.config.google.api_key, "google-secret");
+    assert_eq!(report.config.groq.api_key, "groq-secret");
+    assert!(matches!(
+        report.config.google.model.as_str(),
+        "first" | "second"
+    ));
+}
+
+#[test]
 fn load_missing_config_returns_default_without_warnings() {
     let sandbox = TestConfigSandbox::new();
     let report = load_config_from_paths(&sandbox.config_path, &sandbox.key_path)

@@ -35,12 +35,14 @@ impl Default for GameSettings {
 }
 
 impl GameSettings {
+    pub const MAX_TEXT_SCALE: usize = 1000;
+
     pub fn timeout_value(&self) -> i32 {
-        self.timeout.trim().parse().unwrap_or(60)
+        self.checked_timeout().unwrap_or(60)
     }
 
     pub fn text_scale_value(&self) -> usize {
-        self.text_scale.trim().parse().unwrap_or(60)
+        self.checked_text_scale().unwrap_or(60)
     }
 
     pub fn rhythm_speed_value(&self) -> u8 {
@@ -48,11 +50,69 @@ impl GameSettings {
     }
 
     pub fn freq_value(&self) -> f32 {
-        self.freq.trim().parse().unwrap_or(80.0)
+        self.checked_frequency().unwrap_or(80.0)
     }
 
     pub fn sound_enabled_value(&self) -> bool {
         self.sound_enabled.trim().eq_ignore_ascii_case("true")
+    }
+
+    pub fn validate(&self) -> Result<(), String> {
+        let mut draft = self.clone();
+        let warnings = draft.repair();
+        if warnings.is_empty() {
+            Ok(())
+        } else {
+            Err(warnings.join(" / "))
+        }
+    }
+
+    pub fn repair(&mut self) -> Vec<String> {
+        let mut warnings = Vec::new();
+        if self.checked_timeout().is_none() {
+            warnings.push("Timeout must be an integer from 0 to 2147483647".into());
+            self.timeout = "60".into();
+        }
+        if self.checked_text_scale().is_none() {
+            warnings.push(format!(
+                "TextScale must be an integer from 0 to {}",
+                Self::MAX_TEXT_SCALE
+            ));
+            self.text_scale = "60".into();
+        }
+        if !matches!(self.rhythm_speed.trim().parse::<u8>(), Ok(1..=5)) {
+            warnings.push("RhythmSpeed must be an integer from 1 to 5".into());
+            self.rhythm_speed = self.rhythm_speed_value().to_string();
+        }
+        if self.checked_frequency().is_none() {
+            warnings.push("Freq must be a positive finite number".into());
+            self.freq = "80.0".into();
+        }
+        if !self.sound_enabled_value() && !self.sound_enabled.trim().eq_ignore_ascii_case("false") {
+            warnings.push("SoundEnabled must be true or false".into());
+            self.sound_enabled = "false".into();
+        }
+        warnings
+    }
+
+    fn checked_timeout(&self) -> Option<i32> {
+        self.timeout.trim().parse().ok().filter(|value| *value >= 0)
+    }
+
+    fn checked_text_scale(&self) -> Option<usize> {
+        self.text_scale
+            .trim()
+            .parse()
+            .ok()
+            .filter(|value| *value <= Self::MAX_TEXT_SCALE)
+    }
+
+    fn checked_frequency(&self) -> Option<f32> {
+        self.freq
+            .trim()
+            .parse()
+            .ok()
+            .filter(|value: &f32| value.is_finite() && *value > 0.0)
     }
 
     pub fn toggle_sound(&mut self) {

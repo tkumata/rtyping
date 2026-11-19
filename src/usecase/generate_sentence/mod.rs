@@ -4,7 +4,7 @@ mod providers;
 
 use std::io;
 
-use crate::domain::config::ProviderConfig;
+use crate::domain::config::{GameSettings, ProviderConfig};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GenerationSource {
@@ -28,7 +28,7 @@ pub fn generate(
     source: GenerationSource,
     provider_config: Option<ProviderConfig>,
 ) -> Result<String, io::Error> {
-    let target_chars = target_character_count(text_scale);
+    let target_chars = target_character_count(text_scale)?;
     let sentence = match source {
         GenerationSource::Local => local::generate_local_sentence(target_chars),
         GenerationSource::Google => {
@@ -40,14 +40,33 @@ pub fn generate(
     Ok(normalize::normalize_sentence(&sentence, target_chars))
 }
 
-pub fn target_character_count(text_scale: usize) -> usize {
-    (text_scale.max(4)) * 5
+fn target_character_count(text_scale: usize) -> io::Result<usize> {
+    if text_scale > GameSettings::MAX_TEXT_SCALE {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "TextScale exceeds the supported range",
+        ));
+    }
+    Ok(text_scale.max(4) * 5)
 }
 
 #[cfg(test)]
 mod tests {
     #![expect(clippy::expect_used)]
     use super::*;
+
+    #[test]
+    fn google_request_error_does_not_display_the_api_key() {
+        let config = ProviderConfig {
+            api_url: "ftp://127.0.0.1/models".into(),
+            api_key: "dummy-private-token".into(),
+            model: "test".into(),
+        };
+        let result = generate(4, GenerationSource::Google, Some(config));
+        assert!(
+            matches!(result, Err(err) if err.to_string().contains("Google request failed") && !err.to_string().contains("dummy-private-token"))
+        );
+    }
 
     #[test]
     fn test_generate_sentence_success() {
@@ -57,12 +76,14 @@ mod tests {
             !sentence.is_empty(),
             "Generated sentence should not be empty"
         );
-        assert!(sentence.chars().count() <= target_character_count(10));
+        assert!(sentence.chars().count() <= target_character_count(10).unwrap_or_default());
     }
 
     #[test]
     fn target_length_scales_with_level() {
-        assert!(target_character_count(20) > target_character_count(10));
+        assert_eq!(target_character_count(20).ok(), Some(100));
+        assert_eq!(target_character_count(10).ok(), Some(50));
+        assert!(target_character_count(usize::MAX).is_err());
     }
 
     #[test]

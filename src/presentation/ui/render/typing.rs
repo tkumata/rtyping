@@ -128,7 +128,10 @@ fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
     wpm_graph::render_wpm_graph(frame, graph_area, app.wpm_history(), " WPM Trend ");
 
     let content_width = text_area.width.saturating_sub(2);
-    let target_text_lines = target_text_lines(app, content_width);
+    let (target_text_lines, current_line) = target_text_lines(app, content_width);
+    let visible_lines = usize::from(text_area.height.saturating_sub(2));
+    let scroll = current_line.saturating_add(1).saturating_sub(visible_lines);
+    let scroll = u16::try_from(scroll).unwrap_or(u16::MAX);
 
     frame.render_widget(
         Paragraph::new(target_text_lines)
@@ -138,36 +141,43 @@ fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
                     .title(" Target Text ")
                     .border_style(Style::default().fg(Color::Cyan)),
             )
-            .wrap(Wrap { trim: false }),
+            .scroll((scroll, 0)),
         text_area,
     );
 }
 
-fn target_text_lines(app: &App, content_width: u16) -> Vec<Line<'static>> {
+fn target_text_lines(app: &App, content_width: u16) -> (Vec<Line<'static>>, usize) {
     let target_chars = app.target_string().chars().collect::<Vec<_>>();
-    let wrapped_lines = wrapped_lines(app.target_string(), content_width);
-    let mut lines = Vec::with_capacity(wrapped_lines.len() + 4);
-    lines.push(Line::from(""));
-    lines.push(Line::from(""));
-
-    for wrapped_line in wrapped_lines {
-        let spans = wrapped_line
-            .into_iter()
-            .filter_map(|wrapped_char| {
-                target_chars
-                    .get(wrapped_char.character_index)
-                    .copied()
-                    .map(|target_char| {
-                        target_char_span(app, wrapped_char.character_index, target_char)
-                    })
-            })
-            .collect::<Vec<_>>();
-        lines.push(Line::from(spans));
+    // Generated text is normalized to ASCII before entering the game.
+    let width = usize::from(content_width.max(1));
+    let mut lines = vec![Line::from(""), Line::from("")];
+    let mut current_line = 0;
+    let mut offset = 0;
+    let mut remaining = target_chars.as_slice();
+    while !remaining.is_empty() {
+        let mut line_len = remaining.len().min(width);
+        if remaining.len() > width
+            && let Some(prefix) = remaining.get(..width)
+            && let Some(space) = prefix.iter().rposition(|ch| *ch == ' ')
+            && space > 0
+        {
+            line_len = space + 1;
+        }
+        let (line, rest) = remaining.split_at(line_len);
+        if (offset..offset + line_len).contains(&app.input_chars().len()) {
+            current_line = lines.len();
+        }
+        lines.push(Line::from(
+            line.iter()
+                .enumerate()
+                .map(|(index, ch)| target_char_span(app, offset + index, *ch))
+                .collect::<Vec<_>>(),
+        ));
+        offset += line_len;
+        remaining = rest;
     }
-
-    lines.push(Line::from(""));
-    lines.push(Line::from(""));
-    lines
+    lines.extend([Line::from(""), Line::from("")]);
+    (lines, current_line)
 }
 
 fn target_char_span(app: &App, index: usize, target_char: char) -> Span<'static> {
@@ -225,98 +235,11 @@ fn split_typing_area(area: Rect) -> [Rect; 2] {
     [*graph_area, *text_area]
 }
 
-#[derive(Debug, Clone, Copy)]
-struct WrappedChar {
-    character_index: usize,
-    width: u16,
-}
-
-fn wrapped_lines(text: &str, content_width: u16) -> Vec<Vec<WrappedChar>> {
-    let mut lines = Vec::new();
-    let mut pending_line = Vec::new();
-    let mut pending_word = Vec::new();
-    let mut pending_whitespace = std::collections::VecDeque::<WrappedChar>::new();
-    let mut line_width = 0_u16;
-    let mut word_width = 0_u16;
-    let mut whitespace_width = 0_u16;
-    let mut non_whitespace_previous = false;
-
-    for (character_index, character) in text.chars().enumerate() {
-        let symbol_width = character_width(character);
-        if symbol_width == 0 || symbol_width > content_width {
-            continue;
-        }
-
-        let is_whitespace = character.is_whitespace();
-        let word_found = non_whitespace_previous && is_whitespace;
-        let untrimmed_overflow =
-            pending_line.is_empty() && word_width + whitespace_width + symbol_width > content_width;
-
-        if word_found || untrimmed_overflow {
-            pending_line.extend(pending_whitespace.drain(..));
-            line_width += whitespace_width;
-            pending_line.append(&mut pending_word);
-            line_width += word_width;
-            whitespace_width = 0;
-            word_width = 0;
-        }
-
-        let line_full = line_width >= content_width;
-        let pending_word_overflow =
-            symbol_width > 0 && line_width + whitespace_width + word_width >= content_width;
-
-        if line_full || pending_word_overflow {
-            let mut remaining_width = content_width.saturating_sub(line_width);
-            lines.push(std::mem::take(&mut pending_line));
-            line_width = 0;
-
-            while let Some(wrapped_char) = pending_whitespace.front() {
-                if wrapped_char.width > remaining_width {
-                    break;
-                }
-
-                whitespace_width -= wrapped_char.width;
-                remaining_width -= wrapped_char.width;
-                pending_whitespace.pop_front();
-            }
-
-            if is_whitespace && pending_whitespace.is_empty() {
-                continue;
-            }
-        }
-
-        let wrapped_char = WrappedChar {
-            character_index,
-            width: symbol_width,
-        };
-        if is_whitespace {
-            whitespace_width += symbol_width;
-            pending_whitespace.push_back(wrapped_char);
-        } else {
-            word_width += symbol_width;
-            pending_word.push(wrapped_char);
-        }
-
-        non_whitespace_previous = !is_whitespace;
-    }
-
-    pending_line.extend(pending_whitespace);
-    pending_line.append(&mut pending_word);
-    if !pending_line.is_empty() {
-        lines.push(pending_line);
-    }
-    if lines.is_empty() {
-        lines.push(Vec::new());
-    }
-
-    lines
-}
-
-fn character_width(character: char) -> u16 {
-    u16::from(!character.is_ascii_control())
-}
-
 fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
+    if let Some(status) = app.status_message() {
+        frame.render_widget(Paragraph::new(status).wrap(Wrap { trim: true }), area);
+        return;
+    }
     let footer_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
@@ -404,7 +327,7 @@ mod tests {
     #[test]
     fn target_text_lines_keep_two_blank_lines_around_single_line_text() {
         let app = new_app_with_target("abcd", 0);
-        let lines = target_text_lines(&app, 20);
+        let (lines, _) = target_text_lines(&app, 20);
         let span_counts = lines
             .iter()
             .map(|line| line.spans.len())
@@ -416,13 +339,43 @@ mod tests {
     #[test]
     fn target_text_lines_place_bottom_padding_after_wrapped_text() {
         let app = new_app_with_target("abcdef", 0);
-        let lines = target_text_lines(&app, 3);
+        let (lines, _) = target_text_lines(&app, 3);
         let span_counts = lines
             .iter()
             .map(|line| line.spans.len())
             .collect::<Vec<_>>();
 
         assert_eq!(span_counts, vec![0, 0, 3, 3, 0, 0]);
+    }
+
+    #[test]
+    fn long_target_keeps_the_current_character_visible() {
+        use ratatui::{Terminal, backend::TestBackend};
+        for width in [32, 80] {
+            let Ok(mut terminal) = Terminal::new(TestBackend::new(width, 24));
+            let target = "abcd ".repeat(200);
+            let app = new_app_with_target(target.trim_end(), 500);
+            let Ok(_) = terminal.draw(|frame| super::render_typing(frame, &app));
+            assert!(
+                terminal
+                    .backend()
+                    .buffer()
+                    .content()
+                    .iter()
+                    .any(|cell| { cell.symbol() == "a" && cell.fg == Color::Yellow })
+            );
+        }
+    }
+
+    #[test]
+    fn wrap_keeps_the_current_space_in_the_buffer() {
+        let app = new_app_with_target("abc def", 3);
+        let (lines, row) = target_text_lines(&app, 3);
+        assert_eq!(row, 3);
+        let active = lines.get(row).and_then(|line| line.spans.first());
+        assert!(
+            active.is_some_and(|span| span.content == " " && span.style.fg == Some(Color::Yellow))
+        );
     }
 
     #[test]

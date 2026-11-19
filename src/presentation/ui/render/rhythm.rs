@@ -3,7 +3,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, Borders, Paragraph, Wrap},
 };
 
 use crate::domain::rhythm::{RhythmJudgement, RhythmSession};
@@ -53,7 +53,8 @@ pub fn render_rhythm(frame: &mut Frame, app: &App) {
         .alignment(Alignment::Left);
     frame.render_widget(lane, *lane_area);
 
-    let footer = Paragraph::new("Esc: return to menu")
+    let footer = Paragraph::new(app.status_message().unwrap_or("Esc: return to menu"))
+        .wrap(Wrap { trim: true })
         .block(Block::default().borders(Borders::ALL))
         .alignment(Alignment::Center);
     frame.render_widget(footer, *footer_area);

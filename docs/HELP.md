@@ -17,7 +17,7 @@
 - **Backspace**: Delete last character
 - **Space**: Toggle `SoundEnabled`
 - **Enter**: Save configuration
-- **Esc**: Return to title screen
+- **Esc**: Discard edits and return to the title screen
 
 ### Rhythm Mode
 
@@ -31,6 +31,7 @@
 
 ### Typing Screen
 
+- In normal play, incorrect keystrokes advance one character. In Practice Mode, only a correct keystroke advances.
 - **Backspace**: Delete last character
 - **Esc**: Return to title screen
 - **Ctrl+c**: Quit

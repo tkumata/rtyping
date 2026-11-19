@@ -5,6 +5,7 @@ mod typing;
 use crate::domain::config::AppConfig;
 use crate::domain::history::{HistoryEntry, HistoryMode};
 use crate::domain::rhythm::{RhythmJudgement, RhythmSession, RhythmStats};
+use crate::domain::typing::TypingSession;
 use crate::usecase::accuracy;
 use crate::usecase::generate_sentence::GenerationSource;
 use crate::usecase::history_stats::{self, HistoryStats};
@@ -73,14 +74,9 @@ pub enum GameMode {
     Rhythm,
 }
 
-#[expect(clippy::struct_excessive_bools)]
 pub struct App {
     state: AppState,
-    target_string: String,
-    inputs: Vec<char>,
-    typed_count: usize,
-    incorrects: usize,
-    missed_chars: Vec<char>,
+    typing: TypingSession,
     wpm_history: Vec<u64>,
     wpm_activity_revision: u64,
     last_wpm_activity_timer: Option<i32>,
@@ -88,13 +84,13 @@ pub struct App {
     timer: i32,
     practice_mode: bool,
     should_quit: bool,
-    time_started: bool,
     show_help: bool,
     help_scroll: u16,
     menu_selected: MenuItem,
     config_field: ConfigField,
     config_cursor_index: usize,
     config: AppConfig,
+    config_draft: Option<AppConfig>,
     status_message: Option<String>,
     generation_source: GenerationSource,
     history_entries: Vec<HistoryEntry>,
@@ -107,11 +103,7 @@ impl App {
     pub fn new(config: AppConfig) -> Self {
         Self {
             state: AppState::Menu,
-            target_string: String::new(),
-            inputs: Vec::new(),
-            typed_count: 0,
-            incorrects: 0,
-            missed_chars: Vec::new(),
+            typing: TypingSession::default(),
             wpm_history: Vec::new(),
             wpm_activity_revision: 0,
             last_wpm_activity_timer: None,
@@ -119,13 +111,13 @@ impl App {
             timer: 0,
             practice_mode: false,
             should_quit: false,
-            time_started: false,
             show_help: false,
             help_scroll: 0,
             menu_selected: MenuItem::StartGame,
             config_field: ConfigField::GoogleApiUrl,
             config_cursor_index: 0,
             config,
+            config_draft: None,
             status_message: None,
             generation_source: GenerationSource::Local,
             history_entries: Vec::new(),
@@ -167,6 +159,7 @@ impl App {
 
     pub fn open_config(&mut self) {
         self.state = AppState::Config;
+        self.config_draft = Some(self.config.clone());
         self.move_config_cursor_to_end();
     }
 
@@ -177,6 +170,7 @@ impl App {
 
     pub fn return_to_menu(&mut self) {
         self.state = AppState::Menu;
+        self.config_draft = None;
         self.hide_help();
     }
 
@@ -196,20 +190,20 @@ impl App {
     }
 
     pub fn target_string(&self) -> &str {
-        &self.target_string
+        self.typing.target()
     }
 
     pub fn input_chars(&self) -> &[char] {
-        &self.inputs
+        self.typing.inputs()
     }
 
     pub fn incorrects(&self) -> usize {
-        self.incorrects
+        self.typing.incorrects()
     }
 
     #[cfg(test)]
     pub fn missed_chars(&self) -> &[char] {
-        &self.missed_chars
+        self.typing.missed_chars()
     }
 
     pub fn wpm_history(&self) -> &[u64] {
@@ -322,10 +316,6 @@ impl App {
         self.history_entries = entries;
     }
 
-    pub fn history_entries(&self) -> &[HistoryEntry] {
-        &self.history_entries
-    }
-
     pub fn history_stats(&self) -> HistoryStats {
         history_stats::summarize(&self.history_entries)
     }
@@ -337,17 +327,13 @@ impl App {
 
         let elapsed = self.timer.max(1);
         Some(HistoryEntry {
-            wpm: wpm::calc_wpm(
-                self.typed_count(),
-                elapsed,
-                i32::try_from(self.incorrects()).unwrap_or(i32::MAX),
-            ),
-            accuracy: accuracy::calc_accuracy(self.typed_count(), self.incorrects()),
+            wpm: self.result_wpm(),
+            accuracy: self.accuracy(),
             miss_count: self.incorrects(),
             elapsed_seconds: elapsed,
             generation_source: self.generation_source.label().into(),
             mode: HistoryMode::Timed,
-            missed_chars: self.missed_chars.clone(),
+            missed_chars: self.typing.missed_chars().to_vec(),
         })
     }
 
@@ -376,25 +362,42 @@ impl App {
         self.config_cursor_index
     }
 
-    pub fn config(&self) -> &AppConfig {
-        &self.config
+    pub fn config_draft(&self) -> &AppConfig {
+        self.config_draft.as_ref().unwrap_or(&self.config)
+    }
+
+    pub fn apply_config_draft(&mut self) {
+        if let Some(draft) = self.config_draft.take() {
+            self.config = draft;
+        }
     }
 
     pub fn status_message(&self) -> Option<&str> {
         self.status_message.as_deref()
     }
 
+    pub fn accuracy(&self) -> f64 {
+        accuracy::calc_accuracy(self.typed_count(), self.incorrects())
+    }
+
+    pub fn result_wpm(&self) -> f64 {
+        self.wpm_at(self.timer.max(1))
+    }
+
     pub fn current_wpm(&self) -> f64 {
         if self.timer <= 0 {
             0.0
         } else {
-            crate::usecase::wpm::calc_wpm(
-                self.typed_count,
-                self.timer,
-                i32::try_from(self.incorrects).unwrap_or(i32::MAX),
-            )
-            .max(0.0)
+            self.wpm_at(self.timer).max(0.0)
         }
+    }
+
+    fn wpm_at(&self, elapsed: i32) -> f64 {
+        wpm::calc_wpm(
+            self.typed_count(),
+            elapsed,
+            i32::try_from(self.incorrects()).unwrap_or(i32::MAX),
+        )
     }
 
     pub fn record_wpm_snapshot(&mut self) {
@@ -403,8 +406,8 @@ impl App {
 
         let sample_key = (
             self.timer,
-            self.typed_count,
-            self.incorrects,
+            self.typed_count(),
+            self.incorrects(),
             self.wpm_activity_revision,
         );
         if self.last_wpm_sample == Some(sample_key) {

@@ -1,4 +1,5 @@
 mod crypto;
+mod file_write;
 mod history_storage;
 mod paths;
 mod storage;
@@ -13,12 +14,12 @@ use crate::domain::history::{HistoryEntry, HistoryLoadReport};
 
 pub fn load_config() -> io::Result<ConfigLoadReport> {
     let paths = paths::config_paths()?;
-    if paths.config_path.exists() {
+    if paths.config_path.try_exists()? {
         return storage::load_config_from_paths(&paths.config_path, &paths.key_path);
     }
 
     if let Some(alternate_paths) = paths::alternate_config_paths()?
-        && alternate_paths.config_path.exists()
+        && alternate_paths.config_path.try_exists()?
     {
         return storage::load_config_from_paths(
             &alternate_paths.config_path,
@@ -39,7 +40,7 @@ pub fn load_history() -> io::Result<HistoryLoadReport> {
     history_storage::load_history_from_path(&history_path)
 }
 
-pub fn save_history(entries: &[HistoryEntry]) -> io::Result<()> {
+pub fn append_history(entry: HistoryEntry) -> io::Result<Vec<HistoryEntry>> {
     let history_path = paths::history_path()?;
-    history_storage::save_history_to_path(entries, &history_path)
+    history_storage::append_history_to_path(entry, &history_path)
 }

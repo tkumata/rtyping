@@ -51,17 +51,17 @@ pub fn render_config(frame: &mut Frame, app: &App) {
             (
                 ConfigField::GoogleApiUrl,
                 "API URL",
-                &app.config().google.api_url,
+                &app.config_draft().google.api_url,
             ),
             (
                 ConfigField::GoogleApiKey,
                 "API Key",
-                &app.config().google.api_key,
+                &app.config_draft().google.api_key,
             ),
             (
                 ConfigField::GoogleModel,
                 "Model",
-                &app.config().google.model,
+                &app.config_draft().google.model,
             ),
         ],
         app.config_field(),
@@ -76,14 +76,18 @@ pub fn render_config(frame: &mut Frame, app: &App) {
             (
                 ConfigField::GroqApiUrl,
                 "API URL",
-                &app.config().groq.api_url,
+                &app.config_draft().groq.api_url,
             ),
             (
                 ConfigField::GroqApiKey,
                 "API Key",
-                &app.config().groq.api_key,
+                &app.config_draft().groq.api_key,
             ),
-            (ConfigField::GroqModel, "Model", &app.config().groq.model),
+            (
+                ConfigField::GroqModel,
+                "Model",
+                &app.config_draft().groq.model,
+            ),
         ],
         app.config_field(),
         app.config_cursor_index(),
@@ -108,7 +112,7 @@ pub fn render_config(frame: &mut Frame, app: &App) {
 }
 
 fn render_game_settings_block(frame: &mut Frame, area: Rect, app: &App) -> Option<Position> {
-    let game = &app.config().game;
+    let game = &app.config_draft().game;
     let focused = app.config_field();
 
     let fields: [(ConfigField, &str, String); 5] = [

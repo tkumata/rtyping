@@ -1,6 +1,6 @@
 [package]
 name = "rtyping"
-version = "1.0.35"
+version = "1.0.36"
 edition = "2024"
 rust-version = "1.100"
 
@@ -16,7 +16,7 @@ codegen-units = 1
 strip = "symbols"
 
 [dependencies]
-rand = "0.10.3"
+rand = "0.10.4"
 rodio = "0.23.0"
 ratatui = "0.30.2"
 crossterm = { version = "0.29", features = ["event-stream"] }

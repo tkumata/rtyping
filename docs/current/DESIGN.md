@@ -7,23 +7,25 @@
 - `src/runtime/mod.rs`
   - ランタイム構成要素を束ねる。
 - `src/runtime/session.rs`
-  - イベントループと画面更新の進行を担当する。
+  - イベントループ、画面更新、ラウンドの開始時刻、終了時の成績保存の呼び出しを担当する。
 - `src/runtime/input/mod.rs`
   - 状態別入力処理を束ねる。
 - `src/runtime/input/menu.rs`
   - Menu 状態の入力処理を担当する。`Practice Mode` 選択時の開始条件切り替えと `Stats` への遷移もここで扱う。
 - `src/runtime/input/config_screen.rs`
   - Config 状態の入力処理を担当する。入力欄の上下移動、左右カーソル移動、カーソル位置への文字挿入、保存、破棄を扱う。
-- `src/runtime/input/gameplay.rs`
-  - Loading、Typing、Result の入力処理と生成ジョブ反映を担当する。Typing では strict 判定、`Esc` のメニュー復帰、練習モード時の遷移制御を扱う。
-- `src/runtime/timer.rs`
-  - タイマースレッドとタイマー補助処理を担当する。`timeout=0` の場合はタイムアウト通知を送らず、経過時間の計測のみを維持する。
+- `src/runtime/input/gameplay/`
+  - Loading、Typing、RhythmTyping、Result の入力処理と生成ジョブの反映を担当する。各ジョブは専用のチャネルを持つ。
+- `src/domain/typing.rs`
+  - 入力位置、通常モードと Practice Mode の入力ルール、総入力数とミスを管理する。
+- `src/presentation/audio.rs`
+  - BGM と正答音を同じ音声デバイスで再生する。初期化に失敗した場合は呼び出し元へ理由を返す。
 - `src/domain/config.rs`
   - 設定モデルを保持し、UI と永続化の共有境界を担う。`GameSettings`（timeout / text_scale / freq / sound_enabled を文字列で管理）を含む。
 - `src/domain/history.rs`
   - 成績履歴の保存単位とモード種別を保持する。
-- `src/presentation/ui/app.rs`
-  - TUI 状態、選択中メニュー、現在入力中文字列、総入力数、ミス文字、WPM 履歴、設定編集対象、Config 入力カーソル位置、履歴統計などの画面状態を保持する。
+- `src/presentation/ui/app/`
+  - TUI の状態、タイピングセッション、WPM 履歴、設定の下書き、入力カーソル、履歴統計を保持する。
   - WPM 履歴には、入力操作の有無を判定するための進行状態も持たせる。
 - `src/presentation/ui/app/menu.rs`
   - 現在の設定からタイトル画面で表示可能なメニュー項目を組み立てる。Google AI Studio と GroqCloud の開始項目は、各プロバイダの `API URL`、`API Key`、`Model` がすべて空でない場合だけ含める。
@@ -44,7 +46,7 @@
   - `Target Text` ブロックは枠線込みで最低8行を確保する。WPM グラフと両立できない高さでは、グラフを非表示にして本文領域を優先する。
   - 出題文字列上には端末カーソルを表示せず、現在入力すべき文字を `Yellow + Bold` で強調する。
   - 未来の未入力文字は `Gray`、正答済み文字は `Green`、誤入力位置は `White` on `Red` background で描画する。
-  - 現在文字の強調は、表示済みの折返し結果と一致するように出題本文の文字 index で決める。
+  - 現在文字の強調は、折り返し後の位置と一致するように出題本文の文字 index で決める。現在文字が表示範囲を越えると本文をスクロールする。
   - 補助関数を先に、`#[cfg(test)] mod tests` をファイル末尾に置くことで、Clippy の構造警告を避ける。
 - `src/presentation/ui/render/result.rs`
   - Result 画面を描画し、入力文字数、ミス数、正確率、経過時間、WPM、保存済み履歴の統計、最終 WPM 線グラフを表示する。
@@ -72,34 +74,36 @@
 - `src/config/storage.rs`
   - 設定の保存形式変換、互換復元、ファイル入出力を担当する。
 - `src/config/history_storage.rs`
-  - `history.json` の読み書きと保存ディレクトリ作成を担当する。
+  - `history.json` の読み込みと追記を担当する。追記時はロック内で最新履歴を読み直し、壊れた原本は退避する。
+- `src/config/file_write.rs`
+  - 設定と履歴のファイルロック、および一時ファイルからの原子的な置き換えを担当する。設定の鍵作成は設定ファイルのロック内で行う。
 - `src/usecase/generate_sentence.rs`
   - ローカル生成と外部 API 生成の統一入口を提供する。
 
 ## 実行フロー
 
 1. `main` が設定を読み込む。
-2. `main` が端末と音声、タイマースレッドを初期化する。`sound_enabled` が `true` の場合のみ BGM を開始する。
+2. `main` が端末を初期化する。`sound_enabled` が `true` の場合のみ BGM を開始する。音声の初期化に失敗しても警告を表示して起動する。
 3. `runtime` がイベントループを実行し、`AppState` ごとの入力処理を分岐する。
 4. タイトルメニューは現在の設定に応じて表示可能な項目だけを描画し、上下キー移動も同じ項目リストを巡回する。
 5. タイトルメニューの開始系項目を選択した場合は、選択項目に対応する生成元と制限時間モードを `App` に反映したうえで別スレッドの文字列生成を開始し、結果をチャネルで受け取る。`Practice Mode` は `Local` 生成と `timeout=0` を組み合わせる。
 6. `Start Game with Rhythm` は `Local` 生成を指定して同じ生成ジョブ経路を使い、生成結果受領後に通常 `Typing` ではなく `RhythmTyping` へ遷移する。
 7. 外部 API 生成の場合、`usecase::generate_sentence` がプロンプト内にリクエストごとの variation seed と日常的な場面カテゴリを含める。
 8. 生成結果は正規化層で ASCII ベースへ整形し、`TextScale` から算出した目標文字数以下に切り詰める。
-9. `Typing` 中はタイマースレッドの経過秒数を参照し、WPM を再計算して履歴へ追加しながら、完了またはタイムアウトで `Result` へ遷移する。
+9. `Typing` 中はイベントループがラウンドの開始時刻から経過秒数を計算し、WPM 履歴を更新する。全文入力または期限到達で `Result` へ遷移する。入力の処理時にすでに期限へ達している場合は、期限到達を優先する。
 10. `Typing` 中の WPM 履歴は、入力操作がない区間でも 2 秒の猶予までは直前の WPM 推移を維持し、猶予経過後に 0 として記録する。
 11. `timeout=0` の場合はタイムアウト遷移を行わず、全文入力完了まで `Typing` を維持する。
-12. `Typing` 中は strict 判定を行い、誤入力では入力位置を進めず、`Backspace` では現在入力中文字列だけを減らす。誤入力時は本来入力すべきだった正解側文字をセッション内のミス文字として記録する。
+12. 通常モードでは誤入力でも入力位置を進める。Practice Mode は正しい入力の場合にだけ位置を進める。`Backspace` は入力済み文字列を1文字戻し、総入力数とミス数は維持する。誤入力時は正解側の文字を記録する。
 13. `Typing` 中に `Esc` を押した場合は `Menu` に戻り、進行中のセッションを破棄する。
 14. `RhythmTyping` 中は経過時間と `RhythmSpeed` から各文字の現在列を計算し、画面左端から3文字目の `^` 位置を基準に描画と入力判定を行う。
 15. `RhythmTyping` 中は空白を入力対象にせず、文字間隔としてのみ保持する。入力判定は内側許容幅を `Hit`、外側許容幅を `OK`、不一致または通過を `Miss` として集計し、直近判定、Miss 数、Hit+OK 数をリアルタイム表示する。
 16. `RhythmTyping` 中は `Hit` と `OK` の連続数をコンボとして `RhythmSession` に保持し、`Miss` で 0 に戻す。表示層は 2 以上のコンボだけを `^` 付近に描画する。
 17. `RhythmTyping` 完了時は履歴保存を行わず、リズムモード専用指標を `Result` へ表示する。
-18. Timed セッション完了時は Result 遷移前に現在結果を `history.json` へ追記し、Practice Mode は保存をスキップする。
+18. 通常モードの完了時は、`timeout=0` の場合も Result 遷移前に `history.json` へ追記する。失敗時は Result に理由を表示する。Practice Mode の成績は保存しない。
 19. `Result` 描画時は総入力数と `incorrects` から正確率を算出し、未入力終了時は `0.0%` を表示する。
 20. `Result` 描画時は `App` が保持している `wpm_history` をそのまま使い、タイピング終了時点のグラフを固定表示する。リズムモードでは WPM グラフを表示しない。
 21. `Stats` 選択時は保存済み履歴から集計済み統計をダッシュボード表示し、`Enter` または `Esc` で Menu に戻る。
-22. 終了時は raw mode、画面、スレッド、BGM を順に停止する。
+22. 終了時は端末を復元し、音声デバイスと BGM を解放する。
 
 - raw mode の有効化直後に `std::mem::DropGuard` を作成し、端末初期化の途中終了や panic の巻き戻し時にも端末の復元を試みる。
 - 通常終了時は復元結果を返し、成功後に guard を解除する。途中終了時の復元失敗は標準エラーへ出力する。raw mode の解除が失敗しても画面、マウス捕捉、カーソルの復元を試みる。
@@ -117,6 +121,7 @@
 - 文字列フィールドでは、`Left` / `Right` がフィールド内の入力位置を移動する。
 - 文字入力は現在入力位置へ挿入し、`Backspace` は現在入力位置の直前の文字を削除する。
 - フィールド移動時は、移動先フィールドの末尾へ入力カーソルを置く。
+- 編集値は下書きに保存する。保存が成功した場合に実行中の設定を更新し、`Esc` の場合は下書きを破棄する。
 - API key 欄は実値を保持したまま、描画時だけ実文字数と同じ長さの `*` に置き換える。
 - `SoundEnabled` は Space トグル専用の非文字列フィールドとして扱い、文字列編集操作では変更しない。
 
@@ -142,6 +147,7 @@
 
 - `.github/workflows/version-check.yml` は `Cargo.toml` の package version を Release の source of truth とする。
 - `check-version` job は現在 version と直前コミットの version を比較し、変更時だけ後続 job を実行させる。
+- PR では Linux と macOS で `make check` を実行する。
 - Release 前検証 job は `make check` と `make build` を実行し、lint 抑制や warning 回避ではなく現行の品質ゲートをそのまま使う。
 - OS 別 build job は `cargo build --release --target ...` と成果物 upload だけを担当し、GitHub Release は作成しない。
 - 単一の release job が全 artifact を download し、`RELEASE_NOTES.md` を生成して `softprops/action-gh-release` に渡す。
@@ -169,7 +175,7 @@
 - `src/runtime/input/config_screen.rs`
   - Config 入力受理ルールを固定する。
 - `src/runtime/input/gameplay.rs`
-  - プロバイダ設定選択、生成結果反映、ゲーム進行中の状態遷移を固定する。`Practice Mode`、`timeout=0`、strict 判定、`Esc` 復帰の挙動もここで固定する。
+  - プロバイダ設定選択、生成結果反映、ゲーム進行中の状態遷移を固定する。`Practice Mode`、`timeout=0`、モードごとの入力判定、`Esc` 復帰の挙動もここで固定する。
 - `src/runtime/session.rs`
   - イベントループと状態更新の接続点を固定する。タイマー更新に伴う WPM 履歴反映もここで確認する。
 - リズムモード

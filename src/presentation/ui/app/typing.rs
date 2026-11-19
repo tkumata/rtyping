@@ -1,4 +1,4 @@
-use crate::domain::rhythm::RhythmSession;
+use crate::domain::{rhythm::RhythmSession, typing::TypingSession};
 
 use super::{App, AppState, GameMode};
 
@@ -6,14 +6,12 @@ impl App {
     pub fn start_typing(&mut self) {
         self.state = AppState::Typing;
         self.active_game_mode = GameMode::Standard;
-        self.time_started = true;
         self.record_wpm_snapshot();
     }
 
     pub fn start_rhythm_typing(&mut self) {
         self.state = AppState::RhythmTyping;
         self.active_game_mode = GameMode::Rhythm;
-        self.time_started = true;
     }
 
     pub fn finish_typing(&mut self) {
@@ -21,17 +19,12 @@ impl App {
     }
 
     pub fn prepare_new_game(&mut self, target: String) {
-        self.target_string = target;
-        self.inputs.clear();
-        self.typed_count = 0;
-        self.incorrects = 0;
-        self.missed_chars.clear();
+        self.typing = TypingSession::new(target);
         self.wpm_history.clear();
         self.wpm_activity_revision = 0;
         self.last_wpm_activity_timer = None;
         self.last_wpm_sample = None;
         self.timer = 0;
-        self.time_started = false;
         self.active_game_mode = GameMode::Standard;
         self.rhythm_session = None;
     }
@@ -48,29 +41,15 @@ impl App {
     }
 
     pub fn push_char(&mut self, c: char) -> bool {
-        let position = self.inputs.len();
-        let expected_char = self.target_string.chars().nth(position);
-        let is_correct = expected_char == Some(c);
-        self.typed_count += 1;
+        let is_correct = self.typing.push_char(c, self.practice_mode);
         self.wpm_activity_revision += 1;
         self.last_wpm_activity_timer = Some(self.timer);
-
-        if is_correct || !self.practice_mode {
-            self.inputs.push(c);
-        }
-
-        if !is_correct {
-            self.incorrects += 1;
-            if let Some(expected_char) = expected_char {
-                self.missed_chars.push(expected_char);
-            }
-        }
         self.record_wpm_snapshot();
         is_correct
     }
 
     pub fn pop_char(&mut self) -> Option<char> {
-        let removed = self.inputs.pop();
+        let removed = self.typing.pop_char();
         self.wpm_activity_revision += 1;
         self.last_wpm_activity_timer = Some(self.timer);
         self.record_wpm_snapshot();
@@ -78,16 +57,16 @@ impl App {
     }
 
     pub fn is_complete(&self) -> bool {
-        self.inputs.len() >= self.target_string.len()
+        self.typing.is_complete()
     }
 
     pub fn typed_count(&self) -> usize {
-        self.typed_count
+        self.typing.typed_count()
     }
 
     #[cfg(test)]
     pub fn current_input_count(&self) -> usize {
-        self.inputs.len()
+        self.typing.inputs().len()
     }
 }
 

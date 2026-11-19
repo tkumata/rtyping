@@ -13,8 +13,9 @@ pub(super) fn handle_config_input(key: KeyEvent, app: &mut App) {
         KeyCode::Char(' ') if app.config_field() == ConfigField::GameSoundEnabled => {
             app.toggle_sound_enabled();
         }
-        KeyCode::Enter => match config::save_config(app.config()) {
+        KeyCode::Enter => match config::save_config(app.config_draft()) {
             Ok(()) => {
+                app.apply_config_draft();
                 app.return_to_menu_with_start_selected();
                 app.set_status_message("Configuration saved");
             }
@@ -41,6 +42,16 @@ fn accepts_config_char(modifiers: KeyModifiers) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn escape_discards_the_draft() {
+        let mut app = App::new(crate::domain::config::AppConfig::default());
+        app.open_config();
+        app.edit_config_char('x');
+        handle_config_input(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE), &mut app);
+        app.open_config();
+        assert_eq!(app.config_draft().google.api_url, "");
+    }
 
     #[test]
     fn config_char_input_accepts_plain_and_shift_only() {

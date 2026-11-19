@@ -5,9 +5,8 @@ use std::path::{Path, PathBuf};
 
 use crate::domain::config::{AppConfig, ConfigLoadReport, GameSettings, ProviderConfig};
 
-use super::crypto::{
-    decrypt_with_candidates, encrypt_value, ensure_key, read_key, set_private_permissions,
-};
+use super::crypto::{decrypt_with_candidates, encrypt_value, ensure_key, read_key};
+use super::file_write::{atomic_write, lock, write_target};
 use super::paths::alternate_config_paths;
 
 #[derive(Copy, Clone)]
@@ -79,14 +78,16 @@ pub(super) fn load_config_from_paths(
     config_path: &Path,
     key_path: &Path,
 ) -> io::Result<ConfigLoadReport> {
-    if !config_path.exists() {
-        return Ok(ConfigLoadReport {
-            config: AppConfig::default(),
-            warnings: Vec::new(),
-        });
-    }
-
-    let contents = fs::read_to_string(config_path)?;
+    let contents = match fs::read_to_string(config_path) {
+        Ok(contents) => contents,
+        Err(err) if err.kind() == io::ErrorKind::NotFound => {
+            return Ok(ConfigLoadReport {
+                config: AppConfig::default(),
+                warnings: Vec::new(),
+            });
+        }
+        Err(err) => return Err(err),
+    };
     let stored: StoredAppConfig = serde_json::from_str(&contents)
         .map_err(|err| io::Error::other(format!("failed to parse config.json: {err}")))?;
     let mut warnings = Vec::new();
@@ -113,18 +114,16 @@ pub(super) fn load_config_from_paths(
         &mut warnings,
     );
 
+    let mut game = GameSettings {
+        timeout: stored.game.timeout,
+        text_scale: stored.game.text_scale,
+        rhythm_speed: stored.game.rhythm_speed,
+        freq: stored.game.freq,
+        sound_enabled: stored.game.sound_enabled,
+    };
+    warnings.extend(game.repair());
     Ok(ConfigLoadReport {
-        config: AppConfig {
-            google,
-            groq,
-            game: GameSettings {
-                timeout: stored.game.timeout.clone(),
-                text_scale: stored.game.text_scale.clone(),
-                rhythm_speed: stored.game.rhythm_speed.clone(),
-                freq: stored.game.freq.clone(),
-                sound_enabled: stored.game.sound_enabled.clone(),
-            },
-        },
+        config: AppConfig { google, groq, game },
         warnings,
     })
 }
@@ -134,10 +133,17 @@ pub(super) fn save_config_to_paths(
     config_path: &Path,
     key_path: &Path,
 ) -> io::Result<()> {
+    config
+        .game
+        .validate()
+        .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
+    let target = write_target(config_path)?;
+    let config_path = target.as_path();
     if let Some(parent) = config_path.parent() {
         fs::create_dir_all(parent)?;
     }
 
+    let _lock = lock(config_path)?;
     let key = ensure_key(key_path)?;
     let stored = StoredAppConfig {
         google: store_provider_config(&config.google, &key, "google")?,
@@ -153,9 +159,7 @@ pub(super) fn save_config_to_paths(
     let body = serde_json::to_string_pretty(&stored)
         .map_err(|err| io::Error::other(format!("failed to serialize config: {err}")))?;
 
-    fs::write(config_path, body)?;
-    set_private_permissions(config_path)?;
-    Ok(())
+    atomic_write(config_path, body.as_bytes())
 }
 
 fn has_encrypted_values(config: &StoredAppConfig) -> bool {
@@ -170,16 +174,13 @@ fn read_candidate_keys(
     let mut keys = Vec::new();
 
     for candidate in candidate_key_paths(key_path)? {
-        if !candidate.exists() {
-            continue;
-        }
-
         match read_key(&candidate) {
             Ok(key) => {
                 if !keys.iter().any(|known| known == &key) {
                     keys.push(key);
                 }
             }
+            Err(err) if err.kind() == io::ErrorKind::NotFound => {}
             Err(err) => {
                 warnings.push(format!(
                     "failed to read key file {}: {err}",

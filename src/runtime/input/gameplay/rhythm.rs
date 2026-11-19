@@ -1,36 +1,24 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use rodio::{MixerDeviceSink, Source, source::SineWave};
-use std::sync::mpsc;
-use std::time::Duration;
-
 use crate::domain::rhythm::RhythmJudgement;
+use crate::presentation::audio::Audio;
 use crate::presentation::ui::app::App;
-use crate::runtime::TimerCommand;
-use crate::runtime::timer::{cancel_typing_session, stop_timer};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+
+use super::play_typing_sound;
 
 pub(in crate::runtime::input) fn handle_rhythm_input(
     key: KeyEvent,
     app: &mut App,
-    audio_sink: &MixerDeviceSink,
-    timer_command_tx: &mpsc::Sender<TimerCommand>,
+    audio: &mut Audio,
 ) {
     match key.code {
-        KeyCode::Esc => cancel_typing_session(app, timer_command_tx),
-        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            stop_timer(timer_command_tx);
-            app.quit();
-        }
-        KeyCode::Char(c) => {
-            let judgement = app.push_rhythm_char(c);
-            if matches!(judgement, RhythmJudgement::Hit | RhythmJudgement::Ok)
-                && app.typing_sound_enabled()
-            {
-                let source =
-                    SineWave::new(app.frequency()).take_duration(Duration::from_millis(100));
-                audio_sink.mixer().add(source);
-            }
-            if app.is_rhythm_complete() {
-                app.finish_typing();
+        KeyCode::Esc => app.return_to_menu(),
+        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => app.quit(),
+        KeyCode::Char(ch) => {
+            if matches!(
+                app.push_rhythm_char(ch),
+                RhythmJudgement::Hit | RhythmJudgement::Ok
+            ) {
+                play_typing_sound(app, audio);
             }
         }
         _ => {}
