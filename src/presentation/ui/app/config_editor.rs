@@ -43,7 +43,9 @@ impl App {
     pub fn edit_config_char(&mut self, ch: char) {
         if self.config_field.accepts_text() {
             let cursor_index = self.clamped_config_cursor_index();
-            let field = self.selected_config_field_mut();
+            let Some(field) = self.selected_config_field_mut() else {
+                return;
+            };
             let byte_index = char_to_byte_index(field, cursor_index);
             field.insert(byte_index, ch);
             self.config_cursor_index = cursor_index.saturating_add(1);
@@ -57,7 +59,9 @@ impl App {
                 return;
             }
 
-            let field = self.selected_config_field_mut();
+            let Some(field) = self.selected_config_field_mut() else {
+                return;
+            };
             let start = char_to_byte_index(field, cursor_index - 1);
             let end = char_to_byte_index(field, cursor_index);
             field.replace_range(start..end, "");
@@ -66,38 +70,42 @@ impl App {
     }
 
     pub fn toggle_sound_enabled(&mut self) {
-        self.config.game.toggle_sound();
-    }
-
-    fn selected_config_field_mut(&mut self) -> &mut String {
-        match self.config_field {
-            ConfigField::GoogleApiUrl => &mut self.config.google.api_url,
-            ConfigField::GoogleApiKey => &mut self.config.google.api_key,
-            ConfigField::GoogleModel => &mut self.config.google.model,
-            ConfigField::GroqApiUrl => &mut self.config.groq.api_url,
-            ConfigField::GroqApiKey => &mut self.config.groq.api_key,
-            ConfigField::GroqModel => &mut self.config.groq.model,
-            ConfigField::GameTimeout => &mut self.config.game.timeout,
-            ConfigField::GameTextScale => &mut self.config.game.text_scale,
-            ConfigField::GameRhythmSpeed => &mut self.config.game.rhythm_speed,
-            ConfigField::GameFreq => &mut self.config.game.freq,
-            ConfigField::GameSoundEnabled => &mut self.config.game.sound_enabled,
+        if let Some(draft) = &mut self.config_draft {
+            draft.game.toggle_sound();
         }
     }
 
+    fn selected_config_field_mut(&mut self) -> Option<&mut String> {
+        let draft = self.config_draft.as_mut()?;
+        Some(match self.config_field {
+            ConfigField::GoogleApiUrl => &mut draft.google.api_url,
+            ConfigField::GoogleApiKey => &mut draft.google.api_key,
+            ConfigField::GoogleModel => &mut draft.google.model,
+            ConfigField::GroqApiUrl => &mut draft.groq.api_url,
+            ConfigField::GroqApiKey => &mut draft.groq.api_key,
+            ConfigField::GroqModel => &mut draft.groq.model,
+            ConfigField::GameTimeout => &mut draft.game.timeout,
+            ConfigField::GameTextScale => &mut draft.game.text_scale,
+            ConfigField::GameRhythmSpeed => &mut draft.game.rhythm_speed,
+            ConfigField::GameFreq => &mut draft.game.freq,
+            ConfigField::GameSoundEnabled => &mut draft.game.sound_enabled,
+        })
+    }
+
     fn selected_config_field(&self) -> &str {
+        let draft = self.config_draft();
         match self.config_field {
-            ConfigField::GoogleApiUrl => &self.config.google.api_url,
-            ConfigField::GoogleApiKey => &self.config.google.api_key,
-            ConfigField::GoogleModel => &self.config.google.model,
-            ConfigField::GroqApiUrl => &self.config.groq.api_url,
-            ConfigField::GroqApiKey => &self.config.groq.api_key,
-            ConfigField::GroqModel => &self.config.groq.model,
-            ConfigField::GameTimeout => &self.config.game.timeout,
-            ConfigField::GameTextScale => &self.config.game.text_scale,
-            ConfigField::GameRhythmSpeed => &self.config.game.rhythm_speed,
-            ConfigField::GameFreq => &self.config.game.freq,
-            ConfigField::GameSoundEnabled => &self.config.game.sound_enabled,
+            ConfigField::GoogleApiUrl => &draft.google.api_url,
+            ConfigField::GoogleApiKey => &draft.google.api_key,
+            ConfigField::GoogleModel => &draft.google.model,
+            ConfigField::GroqApiUrl => &draft.groq.api_url,
+            ConfigField::GroqApiKey => &draft.groq.api_key,
+            ConfigField::GroqModel => &draft.groq.model,
+            ConfigField::GameTimeout => &draft.game.timeout,
+            ConfigField::GameTextScale => &draft.game.text_scale,
+            ConfigField::GameRhythmSpeed => &draft.game.rhythm_speed,
+            ConfigField::GameFreq => &draft.game.freq,
+            ConfigField::GameSoundEnabled => &draft.game.sound_enabled,
         }
     }
 
@@ -162,7 +170,7 @@ mod tests {
         app.move_config_cursor_left();
         app.edit_config_char('X');
 
-        assert_eq!(app.config().google.api_url, "abXc");
+        assert_eq!(app.config_draft().google.api_url, "abXc");
         assert_eq!(app.config_cursor_index(), 3);
     }
 
@@ -173,7 +181,7 @@ mod tests {
         app.move_config_cursor_left();
         app.pop_config_char();
 
-        assert_eq!(app.config().google.api_url, "ac");
+        assert_eq!(app.config_draft().google.api_url, "ac");
         assert_eq!(app.config_cursor_index(), 1);
     }
 
@@ -216,7 +224,7 @@ mod tests {
         app.pop_config_char();
 
         assert_eq!(app.config_field(), ConfigField::GameSoundEnabled);
-        assert_eq!(app.config().game.sound_enabled, "false");
+        assert_eq!(app.config_draft().game.sound_enabled, "false");
         assert_eq!(app.config_cursor_index(), 0);
     }
 }

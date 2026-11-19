@@ -52,12 +52,15 @@ pub(super) fn generate_google_sentence(
         .post(format!("{url}?key={}", config.api_key.trim()))
         .json(&body)
         .send()
-        .map_err(|err| io::Error::other(format!("Google request failed: {err}")))?;
+        .map_err(|err| io::Error::other(format!("Google request failed: {}", err.without_url())))?;
 
     let status = response.status();
-    let response_text = response
-        .text()
-        .map_err(|err| io::Error::other(format!("Failed to read Google response body: {err}")))?;
+    let response_text = response.text().map_err(|err| {
+        io::Error::other(format!(
+            "Failed to read Google response body: {}",
+            err.without_url()
+        ))
+    })?;
     let payload = parse_json_response("Google AI Studio", status, &response_text)?;
     payload
         .get("candidates")
@@ -94,12 +97,15 @@ pub(super) fn generate_groq_sentence(
         .bearer_auth(config.api_key.trim())
         .json(&body)
         .send()
-        .map_err(|err| io::Error::other(format!("Groq request failed: {err}")))?;
+        .map_err(|err| io::Error::other(format!("Groq request failed: {}", err.without_url())))?;
 
     let status = response.status();
-    let response_text = response
-        .text()
-        .map_err(|err| io::Error::other(format!("Failed to read Groq response body: {err}")))?;
+    let response_text = response.text().map_err(|err| {
+        io::Error::other(format!(
+            "Failed to read Groq response body: {}",
+            err.without_url()
+        ))
+    })?;
     let payload = parse_json_response("Groq", status, &response_text)?;
     payload
         .get("choices")
@@ -141,11 +147,9 @@ fn parse_json_response(
     response_text: &str,
 ) -> Result<Value, io::Error> {
     if !status.is_success() {
-        let summary = response_text.replace('\n', " ");
         return Err(io::Error::other(format!(
-            "{provider_name} returned HTTP {}: {}",
-            status.as_u16(),
-            summary
+            "{provider_name} returned HTTP {}",
+            status.as_u16()
         )));
     }
 

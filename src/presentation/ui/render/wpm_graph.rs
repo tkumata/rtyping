@@ -39,32 +39,21 @@ fn paint_graph(ctx: &mut ratatui::widgets::canvas::Context<'_>, history: &[u64])
         return;
     }
 
-    let runs = split_runs(history);
-    for run in runs {
-        paint_run(ctx, &run);
-    }
-}
+    let max_value = history.iter().copied().max().unwrap_or(0);
+    let points: Vec<_> = history
+        .iter()
+        .enumerate()
+        .map(|(index, value)| (to_f64_usize(index), to_f64_u64(*value)))
+        .collect();
 
-fn paint_run(ctx: &mut ratatui::widgets::canvas::Context<'_>, run: &GraphRun<'_>) {
-    if let Some(&value) = run.values.first() {
-        if run.values.len() == 1 {
-            let point = [(to_f64_usize(run.start_index), to_f64_u64(value))];
-            let color = point_color(0, value, run.max_value);
-            ctx.draw(&Points::new(&point, color));
-            return;
-        }
-    } else {
-        return;
-    }
-
-    for (index, window) in run.points.windows(2).enumerate() {
+    for (index, window) in points.windows(2).enumerate() {
         let [start, end] = window else {
             continue;
         };
         let [start, end] = [*start, *end];
         let color = if index == 0 {
             Color::LightGreen
-        } else if should_highlight_pair(start.1, end.1, run.max_value) {
+        } else if should_highlight_pair(start.1, end.1, max_value) {
             Color::Rgb(255, 165, 0)
         } else {
             Color::LightGreen
@@ -72,15 +61,13 @@ fn paint_run(ctx: &mut ratatui::widgets::canvas::Context<'_>, run: &GraphRun<'_>
         ctx.draw(&CanvasLine::new(start.0, start.1, end.0, end.1, color));
     }
 
-    let point_coords: Vec<(f64, f64)> = run.points.clone();
-    ctx.draw(&Points::new(&point_coords, Color::LightGreen));
-    let highlight_points: Vec<(f64, f64)> = run
-        .points
+    ctx.draw(&Points::new(&points, Color::LightGreen));
+    let highlight_points: Vec<(f64, f64)> = points
         .iter()
         .enumerate()
-        .zip(run.values.iter().copied())
+        .zip(history.iter().copied())
         .filter_map(
-            |((index, &(x, y)), value)| match point_color(index, value, run.max_value) {
+            |((index, &(x, y)), value)| match point_color(index, value, max_value) {
                 Color::Rgb(255, 165, 0) => Some((x, y)),
                 _ => None,
             },
@@ -89,34 +76,6 @@ fn paint_run(ctx: &mut ratatui::widgets::canvas::Context<'_>, run: &GraphRun<'_>
     if !highlight_points.is_empty() {
         ctx.draw(&Points::new(&highlight_points, Color::Rgb(255, 165, 0)));
     }
-}
-
-#[derive(Debug)]
-struct GraphRun<'a> {
-    start_index: usize,
-    values: &'a [u64],
-    points: Vec<(f64, f64)>,
-    max_value: u64,
-}
-
-fn split_runs(history: &[u64]) -> Vec<GraphRun<'_>> {
-    if history.is_empty() {
-        return Vec::new();
-    }
-
-    let max_value = history.iter().copied().max().unwrap_or(0);
-    let points = history
-        .iter()
-        .enumerate()
-        .map(|(index, value)| (to_f64_usize(index), to_f64_u64(*value)))
-        .collect();
-
-    vec![GraphRun {
-        start_index: 0,
-        values: history,
-        points,
-        max_value,
-    }]
 }
 
 fn graph_x_bounds(history: &[u64]) -> [f64; 2] {
@@ -164,7 +123,7 @@ fn to_f64_u64(value: u64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use super::{graph_x_bounds, graph_y_bounds, point_color, should_highlight_pair, split_runs};
+    use super::{graph_x_bounds, graph_y_bounds, point_color, should_highlight_pair};
     use ratatui::style::Color;
 
     fn assert_bounds(actual: [f64; 2], expected: [f64; 2]) {
@@ -183,20 +142,6 @@ mod tests {
         assert_bounds(graph_y_bounds(&[]), [0.0, 1.0]);
         assert_bounds(graph_y_bounds(&[0, 0]), [0.0, 1.0]);
         assert_bounds(graph_y_bounds(&[0, 12]), [0.0, 12.0]);
-    }
-
-    #[test]
-    fn split_runs_keeps_zero_samples_in_the_same_run() {
-        let runs = split_runs(&[12, 0, 4, 11]);
-        assert_eq!(runs.len(), 1);
-        assert_eq!(
-            runs.iter().map(|run| run.start_index).collect::<Vec<_>>(),
-            vec![0]
-        );
-        assert_eq!(
-            runs.iter().map(|run| run.values).collect::<Vec<_>>(),
-            vec![&[12, 0, 4, 11][..]]
-        );
     }
 
     #[test]

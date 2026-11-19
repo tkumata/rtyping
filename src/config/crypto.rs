@@ -6,11 +6,12 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
+use super::file_write::{atomic_write, write_target};
 
 pub(super) fn ensure_key(key_path: &Path) -> io::Result<Vec<u8>> {
-    if key_path.exists() {
+    let target = write_target(key_path)?;
+    let key_path = target.as_path();
+    if key_path.try_exists()? {
         return read_key(key_path);
     }
 
@@ -21,8 +22,7 @@ pub(super) fn ensure_key(key_path: &Path) -> io::Result<Vec<u8>> {
     let mut key = [0u8; 32];
     rand::rng().fill_bytes(&mut key);
     let encoded = STANDARD.encode(key);
-    fs::write(key_path, encoded)?;
-    set_private_permissions(key_path)?;
+    atomic_write(key_path, encoded.as_bytes())?;
     Ok(key.to_vec())
 }
 
@@ -37,21 +37,6 @@ pub(super) fn read_key(key_path: &Path) -> io::Result<Vec<u8>> {
     }
 
     Ok(key)
-}
-
-pub(super) fn set_private_permissions(path: &Path) -> io::Result<()> {
-    #[cfg(unix)]
-    {
-        let permissions = fs::Permissions::from_mode(0o600);
-        fs::set_permissions(path, permissions)?;
-    }
-
-    #[cfg(not(unix))]
-    {
-        let _ = path;
-    }
-
-    Ok(())
 }
 
 pub(super) fn decrypt_with_candidates(

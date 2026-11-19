@@ -16,13 +16,11 @@ use crossterm::{
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{Terminal, backend::CrosstermBackend};
-use rodio::DeviceSinkBuilder;
 use std::io::{self, Write, stdout};
 use std::mem::DropGuard;
-use std::sync::{Arc, Mutex, mpsc};
 
 use domain::config::AppConfig;
-use presentation::bgm_handler::BgmHandler;
+use presentation::audio::Audio;
 use presentation::ui::app::App;
 
 fn main() -> io::Result<()> {
@@ -52,15 +50,15 @@ fn main() -> io::Result<()> {
         Err(err) => (Vec::new(), Some(format!("Failed to load history: {err}"))),
     };
 
-    let mut audio_sink = DeviceSinkBuilder::open_default_sink()
-        .map_err(|err| io::Error::other(format!("failed to open audio device: {err}")))?;
-    audio_sink.log_on_drop(false);
-    let (snd_sender, snd_receiver) = mpsc::channel();
-
-    if loaded_config.game.sound_enabled_value() {
-        let bgm_handler = BgmHandler::new(snd_receiver);
-        bgm_handler.start();
-    }
+    let mut audio = Audio::default();
+    let audio_message = if loaded_config.game.sound_enabled_value() {
+        audio
+            .start_bgm()
+            .err()
+            .map(|err| format!("Failed to start BGM: {err}"))
+    } else {
+        None
+    };
 
     enable_raw_mode()?;
     let terminal_restore = DropGuard::new((), |()| {
@@ -75,7 +73,7 @@ fn main() -> io::Result<()> {
 
     let mut app = App::new(loaded_config);
     app.set_history_entries(history_entries);
-    let startup_messages = [config_message, history_message]
+    let startup_messages = [config_message, history_message, audio_message]
         .into_iter()
         .flatten()
         .collect::<Vec<_>>();
@@ -83,33 +81,10 @@ fn main() -> io::Result<()> {
         app.set_status_message(startup_messages.join(" / "));
     }
 
-    let timer = Arc::new(Mutex::new(0i32));
-    let (timer_command_tx, timer_command_rx) = mpsc::channel::<runtime::TimerCommand>();
-    let (timeout_tx, timeout_rx) = mpsc::channel::<()>();
-    let timer_thread =
-        runtime::spawn_timer_thread(Arc::clone(&timer), 0, timer_command_rx, timeout_tx);
-
-    let res = runtime::run_app(
-        &mut terminal,
-        &mut app,
-        &timer,
-        &audio_sink,
-        &timer_command_tx,
-        &timeout_rx,
-    );
-
+    let result = runtime::run_app(&mut terminal, &mut app, &mut audio);
     restore_terminal(terminal.backend_mut())?;
     DropGuard::dismiss(terminal_restore);
-
-    timer_command_tx.send(runtime::TimerCommand::Shutdown).ok();
-    timer_thread.join().ok();
-    snd_sender.send(()).ok();
-
-    if let Err(err) = res {
-        println!("Error: {err:?}");
-    }
-
-    Ok(())
+    result
 }
 
 fn restore_terminal(output: &mut impl Write) -> io::Result<()> {

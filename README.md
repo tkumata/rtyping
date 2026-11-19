@@ -33,7 +33,7 @@ Stats 🆕
 - Terminal UI with title menu, config screen, typing screen, result screen, and stats screen
 - Real-time WPM, timer, typed character count, and miss count
 - Timed history dashboard with best WPM, average WPM, average accuracy, recent WPM trend, and frequent missed characters
-- Practice mode (no time limit) via menu or by setting timeout to 0
+- Practice Mode and normal play with an optional time limit
 - Rhythm mode with right-to-left moving characters and separate rhythm results
 - Optional BGM and typing feedback sound (configured in-app, saved to disk)
 - Local text generation with a 4-gram Markov chain
@@ -86,8 +86,8 @@ Each provider has these fields:
 
 Game Settings:
 
-- `Timeout` – timer duration in seconds (`0` = no time limit / practice mode)
-- `TextScale` – target text length scale
+- `Timeout` – timer duration in seconds (`0` = no time limit for normal play)
+- `TextScale` – target text length scale (`0` to `1000`)
 - `RhythmSpeed` – rhythm mode speed in characters per second (`1` to `5`, default `2`)
 - `Freq` – typing sound frequency in Hz
 - `SoundEnabled` – `true` / `false`
@@ -100,7 +100,7 @@ Controls:
 - `Backspace`: delete the character before the cursor
 - `Space`: toggle `SoundEnabled`
 - `Enter`: save configuration
-- `Esc`: return to the title screen
+- `Esc`: discard edits and return to the title screen
 
 API key fields stay masked while editing, with one mask character per stored character.
 
@@ -112,9 +112,11 @@ Saved files:
 
 `config.json` stores encrypted API key data. The encryption key is stored separately in `config.key`.
 
-`history.json` stores completed timed-session results. Practice Mode results are not saved to history.
+`history.json` stores completed normal-mode results, including when the time limit is set to zero. Practice Mode results are not saved to history.
 
 ## Typing Screen
+
+Incorrect keystrokes advance one character in normal play. In Practice Mode, only a correct keystroke advances.
 
 The `Target Text` block keeps two blank lines above and two blank lines below the target text, including when the text wraps across multiple lines.
 

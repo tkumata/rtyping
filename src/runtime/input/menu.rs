@@ -1,22 +1,13 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use std::sync::{Arc, Mutex, mpsc};
 
 use crate::presentation::ui::app::{App, GameMode, MenuItem};
 use crate::presentation::ui::render;
 use crate::usecase::generate_sentence::GenerationSource;
 
 use super::gameplay::spawn_generation_job;
-use crate::runtime::GenerationJobResult;
-use crate::runtime::timer::reset_timer;
+use crate::runtime::GenerationJob;
 
-pub(super) fn handle_menu_input(
-    key: KeyEvent,
-    app: &mut App,
-    timer: &Arc<Mutex<i32>>,
-    generation_tx: &mpsc::Sender<GenerationJobResult>,
-    next_request_id: &mut u64,
-    active_request_id: &mut Option<u64>,
-) {
+pub(super) fn handle_menu_input(key: KeyEvent, app: &mut App, job: &mut Option<GenerationJob>) {
     if app.status_message().is_some() && !app.is_help_visible() {
         if should_clear_status_message(&key) {
             app.clear_status_message();
@@ -51,36 +42,31 @@ pub(super) fn handle_menu_input(
                 app.set_generation_source(GenerationSource::Local);
                 app.set_next_game_mode(GameMode::Standard);
                 app.set_practice_mode(false);
-                reset_timer(timer);
-                spawn_generation_job(app, generation_tx, next_request_id, active_request_id);
+                spawn_generation_job(app, job);
             }
             MenuItem::PracticeMode => {
                 app.set_generation_source(GenerationSource::Local);
                 app.set_next_game_mode(GameMode::Standard);
                 app.set_practice_mode(true);
-                reset_timer(timer);
-                spawn_generation_job(app, generation_tx, next_request_id, active_request_id);
+                spawn_generation_job(app, job);
             }
             MenuItem::StartGameRhythm => {
                 app.set_generation_source(GenerationSource::Local);
                 app.set_next_game_mode(GameMode::Rhythm);
                 app.set_practice_mode(false);
-                reset_timer(timer);
-                spawn_generation_job(app, generation_tx, next_request_id, active_request_id);
+                spawn_generation_job(app, job);
             }
             MenuItem::StartGameGoogle => {
                 app.set_generation_source(GenerationSource::Google);
                 app.set_next_game_mode(GameMode::Standard);
                 app.set_practice_mode(false);
-                reset_timer(timer);
-                spawn_generation_job(app, generation_tx, next_request_id, active_request_id);
+                spawn_generation_job(app, job);
             }
             MenuItem::StartGameGroq => {
                 app.set_generation_source(GenerationSource::Groq);
                 app.set_next_game_mode(GameMode::Standard);
                 app.set_practice_mode(false);
-                reset_timer(timer);
-                spawn_generation_job(app, generation_tx, next_request_id, active_request_id);
+                spawn_generation_job(app, job);
             }
             MenuItem::Stats => {
                 app.open_stats();
@@ -148,164 +134,90 @@ mod tests {
     #[test]
     fn enter_on_google_menu_sets_google_source_and_loading() {
         let mut app = test_app_with_provider_config();
-        let timer = Arc::new(Mutex::new(0));
-        let (generation_tx, _generation_rx) = mpsc::channel();
-        let mut next_request_id = 1;
-        let mut active_request_id = None;
+        let mut job = None;
 
         app.move_menu_down();
         app.move_menu_down();
         app.move_menu_down();
-        handle_menu_input(
-            key(KeyCode::Enter),
-            &mut app,
-            &timer,
-            &generation_tx,
-            &mut next_request_id,
-            &mut active_request_id,
-        );
+        handle_menu_input(key(KeyCode::Enter), &mut app, &mut job);
 
         assert_eq!(app.generation_source(), GenerationSource::Google);
         assert_eq!(app.state(), AppState::Loading);
-        assert_eq!(active_request_id, Some(1));
+        assert!(job.is_some());
     }
 
     #[test]
     fn enter_on_practice_mode_sets_local_source_and_practice_mode() {
         let mut app = test_app_with_provider_config();
-        let timer = Arc::new(Mutex::new(0));
-        let (generation_tx, _generation_rx) = mpsc::channel();
-        let mut next_request_id = 10;
-        let mut active_request_id = None;
+        let mut job = None;
 
         app.move_menu_down();
-        handle_menu_input(
-            key(KeyCode::Enter),
-            &mut app,
-            &timer,
-            &generation_tx,
-            &mut next_request_id,
-            &mut active_request_id,
-        );
+        handle_menu_input(key(KeyCode::Enter), &mut app, &mut job);
 
         assert_eq!(app.generation_source(), GenerationSource::Local);
         assert!(app.is_practice_mode());
         assert_eq!(app.state(), AppState::Loading);
-        assert_eq!(active_request_id, Some(10));
+        assert!(job.is_some());
     }
 
     #[test]
     fn enter_on_rhythm_menu_sets_local_source_and_loading() {
         let mut app = test_app();
-        let timer = Arc::new(Mutex::new(0));
-        let (generation_tx, _generation_rx) = mpsc::channel();
-        let mut next_request_id = 20;
-        let mut active_request_id = None;
+        let mut job = None;
 
         app.move_menu_down();
         app.move_menu_down();
-        handle_menu_input(
-            key(KeyCode::Enter),
-            &mut app,
-            &timer,
-            &generation_tx,
-            &mut next_request_id,
-            &mut active_request_id,
-        );
+        handle_menu_input(key(KeyCode::Enter), &mut app, &mut job);
 
         assert_eq!(app.generation_source(), GenerationSource::Local);
         assert_eq!(app.next_game_mode(), GameMode::Rhythm);
         assert_eq!(app.state(), AppState::Loading);
-        assert_eq!(active_request_id, Some(20));
+        assert!(job.is_some());
     }
 
     #[test]
     fn enter_on_groq_menu_sets_groq_source_and_loading() {
         let mut app = test_app_with_provider_config();
-        let timer = Arc::new(Mutex::new(0));
-        let (generation_tx, _generation_rx) = mpsc::channel();
-        let mut next_request_id = 3;
-        let mut active_request_id = None;
+        let mut job = None;
 
         app.move_menu_down();
         app.move_menu_down();
         app.move_menu_down();
         app.move_menu_down();
-        handle_menu_input(
-            key(KeyCode::Enter),
-            &mut app,
-            &timer,
-            &generation_tx,
-            &mut next_request_id,
-            &mut active_request_id,
-        );
+        handle_menu_input(key(KeyCode::Enter), &mut app, &mut job);
 
         assert_eq!(app.generation_source(), GenerationSource::Groq);
         assert_eq!(app.state(), AppState::Loading);
-        assert_eq!(active_request_id, Some(3));
+        assert!(job.is_some());
     }
 
     #[test]
     fn enter_on_stats_menu_opens_stats_without_generation() {
         let mut app = test_app();
-        let timer = Arc::new(Mutex::new(0));
-        let (generation_tx, _generation_rx) = mpsc::channel();
-        let mut next_request_id = 5;
-        let mut active_request_id = None;
+        let mut job = None;
 
         app.move_menu_down();
         app.move_menu_down();
         app.move_menu_down();
-        handle_menu_input(
-            key(KeyCode::Enter),
-            &mut app,
-            &timer,
-            &generation_tx,
-            &mut next_request_id,
-            &mut active_request_id,
-        );
+        handle_menu_input(key(KeyCode::Enter), &mut app, &mut job);
 
         assert_eq!(app.state(), AppState::Stats);
-        assert_eq!(active_request_id, None);
+        assert!(job.is_none());
     }
 
     #[test]
     fn help_visible_blocks_menu_confirmation_until_escape_closes_help() {
         let mut app = test_app();
-        let timer = Arc::new(Mutex::new(0));
-        let (generation_tx, _generation_rx) = mpsc::channel();
-        let mut next_request_id = 1;
-        let mut active_request_id = None;
+        let mut job = None;
 
-        handle_menu_input(
-            key(KeyCode::Char('h')),
-            &mut app,
-            &timer,
-            &generation_tx,
-            &mut next_request_id,
-            &mut active_request_id,
-        );
-        handle_menu_input(
-            key(KeyCode::Enter),
-            &mut app,
-            &timer,
-            &generation_tx,
-            &mut next_request_id,
-            &mut active_request_id,
-        );
+        handle_menu_input(key(KeyCode::Char('h')), &mut app, &mut job);
+        handle_menu_input(key(KeyCode::Enter), &mut app, &mut job);
 
         assert_eq!(app.state(), AppState::Menu);
         assert!(app.is_help_visible());
-        assert_eq!(active_request_id, None);
+        assert!(job.is_none());
 
-        handle_menu_input(
-            key(KeyCode::Esc),
-            &mut app,
-            &timer,
-            &generation_tx,
-            &mut next_request_id,
-            &mut active_request_id,
-        );
+        handle_menu_input(key(KeyCode::Esc), &mut app, &mut job);
 
         assert_eq!(app.state(), AppState::Menu);
         assert!(!app.is_help_visible());
@@ -315,22 +227,12 @@ mod tests {
     #[test]
     fn enter_on_config_menu_opens_config_without_generation() {
         let mut app = test_app();
-        let timer = Arc::new(Mutex::new(0));
-        let (generation_tx, _generation_rx) = mpsc::channel();
-        let mut next_request_id = 5;
-        let mut active_request_id = None;
+        let mut job = None;
 
         app.move_menu_up();
-        handle_menu_input(
-            key(KeyCode::Enter),
-            &mut app,
-            &timer,
-            &generation_tx,
-            &mut next_request_id,
-            &mut active_request_id,
-        );
+        handle_menu_input(key(KeyCode::Enter), &mut app, &mut job);
 
         assert_eq!(app.state(), AppState::Config);
-        assert_eq!(active_request_id, None);
+        assert!(job.is_none());
     }
 }

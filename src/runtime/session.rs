@@ -4,34 +4,32 @@ use crossterm::{
     execute,
 };
 use ratatui::{Terminal, backend::CrosstermBackend};
-use rodio::MixerDeviceSink;
 use std::io;
-use std::sync::{Arc, Mutex, mpsc};
 use std::time::{Duration, Instant};
 
+use crate::config;
+use crate::presentation::audio::Audio;
 use crate::presentation::ui::app::{App, AppState};
 use crate::presentation::ui::render;
 
-use super::input::{drain_generation_results, handle_key_event};
-use super::timer::{current_timer, persist_timed_history};
-use super::{GenerationJobResult, RuntimeContext, TimerCommand};
+use super::input::{handle_key_event, receive_generation_result};
 
 pub fn run_app(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
     app: &mut App,
-    timer: &Arc<Mutex<i32>>,
-    audio_sink: &MixerDeviceSink,
-    timer_command_tx: &mpsc::Sender<TimerCommand>,
-    timeout_rx: &mpsc::Receiver<()>,
+    audio: &mut Audio,
 ) -> io::Result<()> {
-    let (generation_tx, generation_rx) = mpsc::channel::<GenerationJobResult>();
-    let mut next_request_id = 1_u64;
-    let mut active_request_id: Option<u64> = None;
+    let mut job = None;
     let mut using_typing_cursor_style = false;
-    let mut rhythm_started_at: Option<Instant> = None;
+    let mut started_at = None;
 
-    loop {
-        update_rhythm_session(app, &mut rhythm_started_at);
+    while !app.is_quit_requested() {
+        receive_generation_result(app, &mut job);
+        if started_at.is_none() && matches!(app.state(), AppState::Typing | AppState::RhythmTyping)
+        {
+            audio.start_round();
+        }
+        tick_game(app, &mut started_at, Instant::now());
 
         let is_typing = app.state() == AppState::Typing;
         if is_typing && !using_typing_cursor_style {
@@ -41,58 +39,129 @@ pub fn run_app(
             execute!(terminal.backend_mut(), SetCursorStyle::DefaultUserShape)?;
             using_typing_cursor_style = false;
         }
-
         terminal.draw(|frame| render::render(frame, app))?;
-
-        if app.is_quit_requested() {
-            break;
-        }
-
-        drain_generation_results(
-            &generation_rx,
-            app,
-            timer_command_tx,
-            &mut active_request_id,
-        );
-
-        if app.state() == AppState::Typing && app.timeout() > 0 && timeout_rx.try_recv().is_ok() {
-            app.update_timer(current_timer(timer));
-            persist_timed_history(app);
-            app.finish_typing();
-        }
 
         if event::poll(Duration::from_millis(100))?
             && let Event::Key(key) = event::read()?
         {
-            let mut context = RuntimeContext {
-                timer,
-                generation_tx: &generation_tx,
-                next_request_id: &mut next_request_id,
-                active_request_id: &mut active_request_id,
-                audio_sink,
-                timer_command_tx,
-            };
-            handle_key_event(key, app, &mut context);
-        }
-
-        if app.state() == AppState::Typing {
-            app.update_timer(current_timer(timer));
+            if tick_game(app, &mut started_at, Instant::now()) {
+                continue;
+            }
+            handle_key_event(key, app, &mut job, audio);
+            if (app.state() == AppState::Typing && app.is_complete())
+                || (app.state() == AppState::RhythmTyping && app.is_rhythm_complete())
+            {
+                finish_game(app);
+            }
+            if !matches!(app.state(), AppState::Typing | AppState::RhythmTyping) {
+                started_at = None;
+            }
         }
     }
-
     Ok(())
 }
 
-fn update_rhythm_session(app: &mut App, rhythm_started_at: &mut Option<Instant>) {
-    if app.state() != AppState::RhythmTyping {
-        *rhythm_started_at = None;
-        return;
+fn tick_game(app: &mut App, started_at: &mut Option<Instant>, now: Instant) -> bool {
+    if update_game_time(app, started_at, now) {
+        finish_game(app);
+        *started_at = None;
+        return true;
+    }
+    false
+}
+
+fn update_game_time(app: &mut App, started_at: &mut Option<Instant>, now: Instant) -> bool {
+    match app.state() {
+        AppState::Typing => {
+            let elapsed = now.duration_since(*started_at.get_or_insert(now));
+            let seconds = i32::try_from(elapsed.as_secs()).unwrap_or(i32::MAX);
+            let timeout = app.timeout();
+            if timeout > 0 && seconds >= timeout {
+                app.update_timer(timeout);
+                true
+            } else {
+                app.update_timer(seconds);
+                false
+            }
+        }
+        AppState::RhythmTyping => {
+            let elapsed = now.duration_since(*started_at.get_or_insert(now));
+            app.update_rhythm_elapsed_seconds(elapsed.as_secs_f64());
+            app.is_rhythm_complete()
+        }
+        _ => {
+            *started_at = None;
+            false
+        }
+    }
+}
+
+fn finish_game(app: &mut App) {
+    if app.state() == AppState::Typing
+        && let Some(entry) = app.build_history_entry()
+    {
+        match config::append_history(entry) {
+            Ok(entries) => app.set_history_entries(entries),
+            Err(err) => app.set_status_message(format!("Failed to save history: {err}")),
+        }
+    }
+    app.finish_typing();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::config::{AppConfig, GameSettings};
+
+    #[test]
+    fn each_round_gets_a_new_deadline() {
+        let mut app = App::new(AppConfig {
+            game: GameSettings {
+                timeout: "1".into(),
+                ..GameSettings::default()
+            },
+            ..AppConfig::default()
+        });
+        let mut started_at = None;
+        let start = Instant::now();
+        app.prepare_new_game("ab".into());
+        app.start_typing();
+        assert!(!update_game_time(&mut app, &mut started_at, start));
+        assert!(!update_game_time(
+            &mut app,
+            &mut started_at,
+            start + Duration::from_millis(999)
+        ));
+        assert!(update_game_time(
+            &mut app,
+            &mut started_at,
+            start + Duration::from_secs(1)
+        ));
+        assert_eq!(app.timer(), 1);
+
+        app.return_to_menu();
+        let restart = start + Duration::from_secs(3);
+        assert!(!update_game_time(&mut app, &mut started_at, restart));
+        app.prepare_new_game("ab".into());
+        app.start_typing();
+        assert!(!update_game_time(&mut app, &mut started_at, restart));
+        assert_eq!(app.timer(), 0);
     }
 
-    let started_at = rhythm_started_at.get_or_insert_with(Instant::now);
-    app.update_rhythm_elapsed_seconds(started_at.elapsed().as_secs_f64());
-    if app.is_rhythm_complete() {
-        app.finish_typing();
-        *rhythm_started_at = None;
+    #[test]
+    fn practice_clock_advances_without_a_deadline() {
+        let mut app = App::new(AppConfig::default());
+        let mut started_at = None;
+        let start = Instant::now();
+        app.set_practice_mode(true);
+        app.start_typing();
+        assert!(!update_game_time(&mut app, &mut started_at, start));
+        assert!(!update_game_time(
+            &mut app,
+            &mut started_at,
+            start + Duration::from_secs(90)
+        ));
+        assert_eq!(app.timer(), 90);
+        assert_eq!(app.state(), AppState::Typing);
     }
 }

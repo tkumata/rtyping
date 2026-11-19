@@ -36,6 +36,9 @@
   - `Config` 画面の API key 欄は平文を表示せず、実文字数と同じ長さの `*` で表示する。
 - `CFG-017`
   - `SoundEnabled` は文字列入力欄ではないため、`Left` / `Right`、文字入力、`Backspace` で値を変更しない。
+- `CFG-018`
+  - `Timeout` は 0 から 2,147,483,647 までの整数、`TextScale` は 0 から 1,000 までの整数、`RhythmSpeed` は 1 から 5 までの整数、`Freq` は正の有限数とする。不正な値は保存時に項目名を表示して拒否する。
+  - 起動時の不正値は警告し、該当項目だけを既定値に戻す。数値として読める範囲外の `RhythmSpeed` は 1 から 5 に丸める。
 
 ## Runtime
 
@@ -56,15 +59,15 @@
 - `RUN-008`
   - `Loading` 中に `Esc` を押すと生成要求を破棄して `Menu` に戻る。
 - `RUN-009`
-  - `Config` 画面で `Enter` は保存、`Esc` は破棄、`Backspace` はカーソル直前の文字削除として扱う。
+  - `Config` 画面の変更は保存に成功したときに適用する。`Esc` は編集を破棄し、`Backspace` はカーソル直前の文字を削除する。
 - `RUN-010`
   - `Typing` 中に全文入力またはタイムアウトで `Result` に遷移する。
 - `RUN-011`
-  - Config で `timeout=0` に設定して開始した `Typing` は、全文入力時のみ `Result` に遷移し、タイムアウトでは終了しない。
+  - Config で `timeout=0` に設定した通常モードは、全文入力時に `Result` に遷移し、成績を保存する。時間制限は適用しない。
 - `RUN-012`
   - `Practice Mode` で開始した `Typing` は、全文入力時のみ `Result` に遷移する。
 - `RUN-013`
-  - `Typing` は strict 判定を行い、入力文字がターゲット文字と一致した場合のみ入力位置を進める。
+  - 通常モードでは誤入力でも入力位置を1文字進める。`Practice Mode` では入力文字がターゲット文字と一致した場合にだけ入力位置を進める。どちらのモードでも誤入力はミス数に含める。
 - `RUN-014`
   - `Typing` 中に `Esc` を押すと `Menu` に戻る。
 - `RUN-015`
@@ -109,6 +112,7 @@
   - `Typing` 中の WPM 履歴は、入力操作が発生していない区間でも最後の入力から 2 秒の猶予までは直前の WPM 推移を維持し、猶予経過後に 0 として記録する。
 - `RUN-035`
   - Timed セッション完了時は WPM、Accuracy、Miss count、入力時間、生成元、モード、正解側ミス文字を `history.json` へ追記する。
+  - 別の起動が保存した結果も保持する。壊れた履歴は追記前に同じディレクトリへ `history.json.corrupt-*` として退避する。保存に失敗した場合は Result に理由を表示する。
 - `RUN-036`
   - Practice Mode 完了時は `history.json` へ追記しない。
 - `RUN-037`
@@ -238,9 +242,9 @@
   - `usecase::wpm`
   - `domain::entity`
   - accuracy 計算追加後の指標ロジック
-  - `timeout=0` の練習モード判定
+  - `timeout=0` の通常モードと Practice Mode の区別
   - タイトル画面の `Practice Mode` 選択時の開始条件
-  - strict 入力判定と `Esc` のメニュー復帰
+  - 通常モードと Practice Mode の入力判定、および `Esc` のメニュー復帰
   - WPM 履歴の初期化と更新
   - 履歴保存と統計集計
   - Stats メニュー遷移

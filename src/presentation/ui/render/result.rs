@@ -3,12 +3,10 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     text::Line,
-    widgets::{Block, Borders, Clear, Paragraph},
+    widgets::{Block, Borders, Clear, Paragraph, Wrap},
 };
 
 use crate::presentation::ui::app::App;
-use crate::usecase::accuracy;
-use crate::usecase::wpm;
 
 use super::common::centered_rect;
 use super::history_summary::history_summary_lines;
@@ -22,13 +20,10 @@ pub fn render_result(frame: &mut Frame, app: &App) {
 
     let area = centered_rect(70, 60, frame.area());
     let elapsed = app.timer().max(1);
-    let score = wpm::calc_wpm(
-        app.typed_count(),
-        elapsed,
-        i32::try_from(app.incorrects()).unwrap_or(i32::MAX),
-    );
-    let accuracy = accuracy::calc_accuracy(app.typed_count(), app.incorrects());
-    let [metrics_area, stats_area, graph_area, footer_area] = split_result_area(area);
+    let score = app.result_wpm();
+    let accuracy = app.accuracy();
+    let [metrics_area, stats_area, graph_area, footer_area] =
+        split_result_area(area, app.status_message().is_some());
     let lines = vec![
         Line::from("Typing Finished"),
         Line::from(""),
@@ -67,12 +62,7 @@ pub fn render_result(frame: &mut Frame, app: &App) {
 
     wpm_graph::render_wpm_graph(frame, graph_area, app.wpm_history(), " Final WPM Trend ");
 
-    frame.render_widget(
-        Paragraph::new(vec![Line::from("Press Enter to return to menu")])
-            .block(Block::default().borders(Borders::ALL))
-            .alignment(Alignment::Center),
-        footer_area,
-    );
+    render_footer(frame, footer_area, app);
 }
 
 fn render_rhythm_result(frame: &mut Frame, app: &App) {
@@ -126,47 +116,40 @@ fn render_rhythm_result(frame: &mut Frame, app: &App) {
             .alignment(Alignment::Center),
         *metrics_area,
     );
-    frame.render_widget(
-        Paragraph::new(vec![Line::from("Press Enter to return to menu")])
-            .block(Block::default().borders(Borders::ALL))
-            .alignment(Alignment::Center),
-        *footer_area,
-    );
+    render_footer(frame, *footer_area, app);
 }
 
-fn split_result_area(area: Rect) -> [Rect; 4] {
+fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
+    let hint = Line::from("Press Enter to return to menu");
+    let footer = if let Some(message) = app.status_message() {
+        Paragraph::new(vec![Line::from(message), hint]).wrap(Wrap { trim: true })
+    } else {
+        Paragraph::new(hint).block(Block::default().borders(Borders::ALL))
+    };
+    frame.render_widget(footer.alignment(Alignment::Center), area);
+}
+
+fn split_result_area(area: Rect, show_status: bool) -> [Rect; 4] {
     let stats_height = if area.height >= 24 { 10 } else { 0 };
     let graph_height = if area.height >= 18 { 6 } else { 0 };
-    let footer_height = if area.height >= 12 { 3 } else { 0 };
-    let constraints = if stats_height > 0 && graph_height > 0 && footer_height > 0 {
-        [
-            Constraint::Min(10),
-            Constraint::Length(stats_height),
-            Constraint::Length(graph_height),
-            Constraint::Length(footer_height),
-        ]
-    } else if graph_height > 0 && footer_height > 0 {
-        [
-            Constraint::Min(10),
-            Constraint::Length(0),
-            Constraint::Length(graph_height),
-            Constraint::Length(footer_height),
-        ]
-    } else if footer_height > 0 {
-        [
-            Constraint::Min(10),
-            Constraint::Length(0),
-            Constraint::Length(0),
-            Constraint::Length(footer_height),
-        ]
+    let footer_height = if show_status || area.height >= 12 {
+        area.height.min(3)
     } else {
-        [
-            Constraint::Min(10),
-            Constraint::Length(0),
-            Constraint::Length(0),
-            Constraint::Length(0),
-        ]
+        0
     };
+    let metrics_height = if show_status {
+        area.height
+            .saturating_sub(stats_height + graph_height + footer_height)
+            .min(10)
+    } else {
+        10
+    };
+    let constraints = [
+        Constraint::Min(metrics_height),
+        Constraint::Length(stats_height),
+        Constraint::Length(graph_height),
+        Constraint::Length(footer_height),
+    ];
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -184,9 +167,29 @@ mod tests {
     use ratatui::layout::Rect;
 
     #[test]
+    fn save_error_is_visible_on_a_short_result_screen() {
+        use crate::domain::config::AppConfig;
+        use crate::presentation::ui::app::App;
+        use ratatui::{Terminal, backend::TestBackend};
+
+        let Ok(mut terminal) = Terminal::new(TestBackend::new(80, 16));
+        let mut app = App::new(AppConfig::default());
+        app.set_status_message("Failed to save history: disk error");
+        let Ok(_) = terminal.draw(|frame| super::render_result(frame, &app));
+        let output: String = terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(ratatui::buffer::Cell::symbol)
+            .collect();
+        assert!(output.contains("Failed to save history: disk error"));
+    }
+
+    #[test]
     fn split_result_area_reserves_graph_and_footer_when_height_allows() {
         let [metrics_area, stats_area, graph_area, footer_area] =
-            split_result_area(Rect::new(0, 0, 60, 20));
+            split_result_area(Rect::new(0, 0, 60, 20), false);
 
         assert!(metrics_area.height >= 10);
         assert_eq!(stats_area.height, 0);
@@ -199,7 +202,7 @@ mod tests {
     #[test]
     fn split_result_area_reserves_stats_when_height_allows() {
         let [metrics_area, stats_area, graph_area, footer_area] =
-            split_result_area(Rect::new(0, 0, 60, 30));
+            split_result_area(Rect::new(0, 0, 60, 30), false);
 
         assert!(metrics_area.height >= 10);
         assert_eq!(stats_area.height, 10);
@@ -212,7 +215,7 @@ mod tests {
     #[test]
     fn split_result_area_hides_graph_when_height_is_small() {
         let [metrics_area, stats_area, graph_area, footer_area] =
-            split_result_area(Rect::new(0, 0, 60, 10));
+            split_result_area(Rect::new(0, 0, 60, 10), false);
 
         assert_eq!(metrics_area.height, 10);
         assert_eq!(stats_area.height, 0);

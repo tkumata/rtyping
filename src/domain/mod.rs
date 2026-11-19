@@ -2,3 +2,4 @@ pub mod config;
 pub mod entity;
 pub mod history;
 pub mod rhythm;
+pub mod typing;
