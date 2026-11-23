@@ -3,7 +3,10 @@ use crossterm::{
     event::{self, Event},
     execute,
 };
-use ratatui::{Terminal, backend::CrosstermBackend};
+use ratatui::{
+    Terminal,
+    backend::{Backend, CrosstermBackend},
+};
 use std::io;
 use std::time::{Duration, Instant};
 
@@ -22,6 +25,7 @@ pub fn run_app(
     let mut job = None;
     let mut using_typing_cursor_style = false;
     let mut started_at = None;
+    let mut previous_screen = app.state();
 
     while !app.is_quit_requested() {
         receive_generation_result(app, &mut job);
@@ -39,7 +43,7 @@ pub fn run_app(
             execute!(terminal.backend_mut(), SetCursorStyle::DefaultUserShape)?;
             using_typing_cursor_style = false;
         }
-        terminal.draw(|frame| render::render(frame, app))?;
+        draw_screen(terminal, app, &mut previous_screen)?;
 
         if event::poll(Duration::from_millis(100))?
             && let Event::Key(key) = event::read()?
@@ -58,6 +62,22 @@ pub fn run_app(
             }
         }
     }
+    Ok(())
+}
+
+fn draw_screen<B: Backend>(
+    terminal: &mut Terminal<B>,
+    app: &App,
+    previous_screen: &mut AppState,
+) -> Result<(), B::Error> {
+    let screen = app.state();
+    if screen != *previous_screen {
+        // Clear both the fullscreen display and the previous frame used for diffing.
+        terminal.backend_mut().clear()?;
+        terminal.swap_buffers();
+    }
+    terminal.draw(|frame| render::render(frame, app))?;
+    *previous_screen = screen;
     Ok(())
 }
 
@@ -112,6 +132,37 @@ fn finish_game(app: &mut App) {
 mod tests {
     use super::*;
     use crate::domain::config::{AppConfig, GameSettings};
+    use ratatui::{backend::TestBackend, buffer::Cell, style::Color};
+
+    #[test]
+    fn screen_transition_erases_background_left_in_terminal() {
+        let mut terminal = Terminal::new(TestBackend::new(100, 34)).expect("create test terminal");
+        let mut app = App::new(AppConfig::default());
+        let mut previous_screen = app.state();
+        draw_screen(&mut terminal, &app, &mut previous_screen).expect("draw title screen");
+        app.open_stats();
+        draw_screen(&mut terminal, &app, &mut previous_screen).expect("draw stats screen");
+
+        let mut stale_cell = Cell::EMPTY;
+        stale_cell.bg = Color::Red;
+        terminal
+            .backend_mut()
+            .draw(std::iter::once((0, 0, &stale_cell)))
+            .expect("simulate stale background in terminal");
+
+        draw_screen(&mut terminal, &app, &mut previous_screen).expect("redraw stats screen");
+        assert_eq!(
+            terminal.backend().buffer().cell((0, 0)).map(|cell| cell.bg),
+            Some(Color::Red)
+        );
+
+        app.return_to_menu();
+        draw_screen(&mut terminal, &app, &mut previous_screen).expect("return to title screen");
+        assert_eq!(
+            terminal.backend().buffer().cell((0, 0)).map(|cell| cell.bg),
+            Some(Color::Reset)
+        );
+    }
 
     #[test]
     fn each_round_gets_a_new_deadline() {
