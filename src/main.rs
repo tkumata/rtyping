@@ -13,7 +13,11 @@ use crossterm::{
     cursor::{SetCursorStyle, Show},
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+    style::ResetColor,
+    terminal::{
+        Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode,
+        enable_raw_mode,
+    },
 };
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io::{self, Write, stdout};
@@ -67,7 +71,14 @@ fn main() -> io::Result<()> {
         }
     });
     let mut stdout = stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    // The terminal can erase the alternate screen using the previous app's background.
+    execute!(
+        stdout,
+        EnterAlternateScreen,
+        ResetColor,
+        Clear(ClearType::All),
+        EnableMouseCapture
+    )?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
