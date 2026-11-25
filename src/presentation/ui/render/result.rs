@@ -60,7 +60,15 @@ pub fn render_result(frame: &mut Frame, app: &App) {
         stats_area,
     );
 
-    wpm_graph::render_wpm_graph(frame, graph_area, app.wpm_history(), " Final WPM Trend ");
+    wpm_graph::render_wpm_graph(
+        frame,
+        graph_area,
+        app.wpm_history(),
+        Block::default()
+            .borders(Borders::ALL)
+            .title(" Final WPM Trend ")
+            .border_style(Style::default().fg(Color::LightYellow)),
+    );
 
     render_footer(frame, footer_area, app);
 }

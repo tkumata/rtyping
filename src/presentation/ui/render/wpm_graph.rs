@@ -1,17 +1,15 @@
 use ratatui::{
     Frame,
     layout::Rect,
-    style::{Color, Style},
+    style::Color,
     symbols::Marker,
     widgets::{
-        Block, Borders,
+        Block,
         canvas::{Canvas, Line as CanvasLine, Points},
     },
 };
 
-const WPM_GRAPH_BORDER_COLOR: Color = Color::LightYellow;
-
-pub fn render_wpm_graph(frame: &mut Frame, area: Rect, history: &[u64], title: &str) {
+pub fn render_wpm_graph(frame: &mut Frame, area: Rect, history: &[u64], block: Block<'_>) {
     if area.height < 3 || area.width < 8 {
         return;
     }
@@ -19,12 +17,7 @@ pub fn render_wpm_graph(frame: &mut Frame, area: Rect, history: &[u64], title: &
     frame.render_widget(
         Canvas::default()
             .marker(Marker::Braille)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(title)
-                    .border_style(Style::default().fg(WPM_GRAPH_BORDER_COLOR)),
-            )
+            .block(block)
             .background_color(Color::Reset)
             .x_bounds(graph_x_bounds(history))
             .y_bounds(graph_y_bounds(history))

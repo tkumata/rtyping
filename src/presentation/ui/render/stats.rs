@@ -1,9 +1,9 @@
 use ratatui::{
     Frame,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Flex, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph},
+    widgets::Paragraph,
 };
 
 use crate::presentation::ui::app::App;
@@ -11,49 +11,50 @@ use crate::usecase::history_stats::{HistoryStats, MistakeCount};
 
 use super::common::centered_rect;
 
+const BAR_GLYPH: char = '■';
+
 pub fn render_stats(frame: &mut Frame, app: &App) {
-    let area = centered_rect(78, 70, frame.area());
+    let area = centered_rect(78, 100, frame.area());
     let stats = app.history_stats();
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(" Stats ")
-        .border_style(Style::default().fg(Color::Cyan));
-    let inner = block.inner(area);
-
-    frame.render_widget(Clear, area);
-    frame.render_widget(block, area);
-
     if stats.count == 0 {
-        render_empty_stats(frame, inner);
+        render_empty_stats(frame, centered_rect(100, 70, area));
         return;
     }
 
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(5),
-            Constraint::Length(5),
-            Constraint::Min(6),
-            Constraint::Length(1),
-        ])
-        .split(inner);
-    let [kpi_area, trend_area, misses_area, footer_area] = &*chunks else {
-        return;
-    };
+    let kpi = kpi_lines(&stats);
+    let misses = miss_lines(&stats);
+    let kpi_height = u16::try_from(kpi.len()).unwrap_or(u16::MAX);
+    let misses_height = u16::try_from(misses.len()).unwrap_or(u16::MAX);
+    let trend_height = u16::try_from(stats.recent_wpm.len() + 1).unwrap_or(u16::MAX);
+    let fixed_height = kpi_height + misses_height + 1;
+    let trend_height = trend_height.min(area.height.saturating_sub(fixed_height));
+    let [area] = Layout::vertical([Constraint::Length(fixed_height + trend_height)])
+        .flex(Flex::Center)
+        .areas(area);
+    let [kpi_area, trend_area, misses_area, footer_area] = Layout::vertical([
+        Constraint::Max(kpi_height),
+        Constraint::Length(trend_height),
+        Constraint::Max(misses_height),
+        Constraint::Length(1),
+    ])
+    .areas(area);
 
-    frame.render_widget(Paragraph::new(kpi_lines(&stats)), *kpi_area);
-    frame.render_widget(Paragraph::new(recent_wpm_lines(&stats)), *trend_area);
-    frame.render_widget(Paragraph::new(miss_lines(&stats)), *misses_area);
+    frame.render_widget(Paragraph::new(kpi), kpi_area);
+    frame.render_widget(
+        Paragraph::new(recent_wpm_lines(&stats, trend_area)),
+        trend_area,
+    );
+    frame.render_widget(Paragraph::new(misses), misses_area);
     frame.render_widget(
         Paragraph::new("Enter / Esc: Back").alignment(Alignment::Center),
-        *footer_area,
+        footer_area,
     );
 }
 
 fn render_empty_stats(frame: &mut Frame, area: Rect) {
     frame.render_widget(
         Paragraph::new(vec![
-            Line::from(""),
+            section_title("Stats"),
             Line::from(Span::styled(
                 "No timed history yet",
                 Style::default()
@@ -72,6 +73,7 @@ fn render_empty_stats(frame: &mut Frame, area: Rect) {
 
 fn kpi_lines(stats: &HistoryStats) -> Vec<Line<'static>> {
     vec![
+        section_title("Stats"),
         section_title("Performance"),
         Line::from(""),
         Line::from(vec![
@@ -86,19 +88,51 @@ fn kpi_lines(stats: &HistoryStats) -> Vec<Line<'static>> {
             value_span(format!("{:<16}", format_accuracy(stats.average_accuracy))),
             value_span(stats.count.to_string()),
         ]),
+        Line::default(),
     ]
 }
 
-fn recent_wpm_lines(stats: &HistoryStats) -> Vec<Line<'static>> {
-    vec![
-        section_title("Recent 10 WPM"),
-        Line::from(format_recent_values(stats)),
-        Line::from(recent_graph(&stats.recent_wpm)),
-    ]
+fn recent_wpm_lines(stats: &HistoryStats, area: Rect) -> Vec<Line<'static>> {
+    let mut lines = vec![section_title("Recent 10 WPM")];
+    let visible_count = usize::from(area.height.saturating_sub(1));
+    let visible_values = stats
+        .recent_wpm
+        .iter()
+        .skip(stats.recent_wpm.len().saturating_sub(visible_count));
+    let labels: Vec<_> = visible_values
+        .clone()
+        .map(|&wpm| recent_wpm_label(wpm))
+        .collect();
+    let label_width = labels.iter().map(String::len).max().unwrap_or(0);
+    let bar_width = area
+        .width
+        .saturating_sub(u16::try_from(label_width + 2).unwrap_or(u16::MAX));
+
+    lines.extend(visible_values.zip(labels).map(|(wpm, label)| {
+        let squares = (wpm / 10.0).round();
+        let bar: String = (1..=bar_width)
+            .take_while(|index| f64::from(*index) <= squares)
+            .map(|_| BAR_GLYPH)
+            .collect();
+        Line::from(format!("{label:>label_width$}  {bar}"))
+    }));
+    lines
+}
+
+fn recent_wpm_label(wpm: f64) -> String {
+    let whole_wpm = wpm.round_ties_even();
+    if (whole_wpm / 10.0).round() > (wpm / 10.0).round() {
+        // Keep the fraction when rounding would put the label on the next bar threshold.
+        wpm.to_string()
+    } else if whole_wpm.abs() >= 1_000_000.0 {
+        format!("{whole_wpm:e}")
+    } else {
+        format!("{whole_wpm:.0}")
+    }
 }
 
 fn miss_lines(stats: &HistoryStats) -> Vec<Line<'static>> {
-    let mut lines = vec![section_title("Frequent Misses")];
+    let mut lines = vec![Line::default(), section_title("Frequent Misses")];
     if stats.frequent_mistakes.is_empty() {
         lines.push(Line::from("-"));
         return lines;
@@ -150,60 +184,6 @@ fn format_accuracy(value: Option<f64>) -> String {
     value.map_or_else(|| "-".into(), |value| format!("{value:.1}%"))
 }
 
-fn format_recent_values(stats: &HistoryStats) -> String {
-    if stats.recent_wpm.is_empty() {
-        return "-".into();
-    }
-
-    stats
-        .recent_wpm
-        .iter()
-        .map(|wpm| format!("{wpm:.0}"))
-        .collect::<Vec<_>>()
-        .join("  ")
-}
-
-fn recent_graph(values: &[f64]) -> String {
-    if values.is_empty() {
-        return "-".into();
-    }
-
-    let min = values.iter().copied().fold(f64::INFINITY, f64::min);
-    let max = values.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    if (max - min).abs() < f64::EPSILON {
-        return vec!["▄"; values.len()].join("  ");
-    }
-
-    values
-        .iter()
-        .map(|value| {
-            let ratio = ((*value - min) / (max - min)).clamp(0.0, 1.0);
-            graph_block(ratio)
-        })
-        .collect::<Vec<_>>()
-        .join("  ")
-}
-
-fn graph_block(ratio: f64) -> &'static str {
-    if ratio < 0.125 {
-        "▁"
-    } else if ratio < 0.250 {
-        "▂"
-    } else if ratio < 0.375 {
-        "▃"
-    } else if ratio < 0.500 {
-        "▄"
-    } else if ratio < 0.625 {
-        "▅"
-    } else if ratio < 0.750 {
-        "▆"
-    } else if ratio < 0.875 {
-        "▇"
-    } else {
-        "█"
-    }
-}
-
 fn format_mistake_bar(mistake: &MistakeCount, max_count: usize) -> String {
     const BAR_WIDTH: usize = 24;
 
@@ -212,7 +192,7 @@ fn format_mistake_bar(mistake: &MistakeCount, max_count: usize) -> String {
         "{} {:>3}  {}",
         mistake.character,
         mistake.count,
-        "■".repeat(width)
+        BAR_GLYPH.to_string().repeat(width)
     )
 }
 
@@ -240,9 +220,14 @@ mod tests {
             .backend()
             .buffer()
             .content()
-            .iter()
-            .map(ratatui::buffer::Cell::symbol)
-            .collect::<String>()
+            .chunks(100)
+            .map(|row| {
+                row.iter()
+                    .map(ratatui::buffer::Cell::symbol)
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
     #[test]
@@ -261,6 +246,14 @@ mod tests {
     fn stats_render_includes_dashboard_sections() {
         let mut app = App::new(AppConfig::default());
         app.set_history_entries(vec![
+            history_entry(999.0, 100.0, vec![]),
+            history_entry(4.0, 100.0, vec![]),
+            history_entry(5.0, 100.0, vec![]),
+            history_entry(10.0, 100.0, vec![]),
+            history_entry(14.99, 100.0, vec![]),
+            history_entry(15.0, 100.0, vec![]),
+            history_entry(21.0, 100.0, vec![]),
+            history_entry(25.0, 100.0, vec![]),
             history_entry(40.0, 90.0, vec!['e'; 24]),
             history_entry(60.0, 95.0, vec!['t'; 12]),
             history_entry(72.0, 100.0, vec!['a']),
@@ -273,18 +266,37 @@ mod tests {
         assert!(text.contains("Avg WPM"));
         assert!(text.contains("Avg Accuracy"));
         assert!(text.contains("Runs"));
-        assert!(text.contains("Recent 10 WPM"));
-        assert!(text.contains("40  60  72"));
+        assert!(!text.contains('┌'));
+        let mut trend = text
+            .lines()
+            .skip_while(|row| !row.contains("Recent 10 WPM"));
+        let heading = trend.next().unwrap_or_default();
+        assert_eq!(heading.trim(), "Recent 10 WPM");
+        let margin = heading.len() - heading.trim_start().len();
+        let rows: Vec<_> = trend
+            .take(10)
+            .map(|row| row.split_at(margin).1.trim_end())
+            .collect();
+        assert_eq!(
+            rows,
+            [
+                "    4",
+                "    5  ■",
+                "   10  ■",
+                "14.99  ■",
+                "   15  ■■",
+                "   21  ■■",
+                "   25  ■■■",
+                "   40  ■■■■",
+                "   60  ■■■■■■",
+                "   72  ■■■■■■■",
+            ]
+        );
         assert!(text.contains("Frequent Misses"));
         assert!(text.contains("e  24  ■■■■■■■■■■■■■■■■■■■■■■■■ "));
         assert!(text.contains("t  12  ■■■■■■■■■■■■ "));
         assert!(text.contains("a   1  ■ "));
         assert!(text.contains("Enter / Esc: Back"));
-    }
-
-    #[test]
-    fn recent_graph_uses_same_height_for_flat_values() {
-        assert_eq!(recent_graph(&[50.0, 50.0, 50.0]), "▄  ▄  ▄");
     }
 
     fn history_entry(wpm: f64, accuracy: f64, missed_chars: Vec<char>) -> HistoryEntry {
