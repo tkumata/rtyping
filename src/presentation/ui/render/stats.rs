@@ -132,7 +132,7 @@ fn recent_wpm_label(wpm: f64) -> String {
 }
 
 fn miss_lines(stats: &HistoryStats) -> Vec<Line<'static>> {
-    let mut lines = vec![section_title("Frequent Misses")];
+    let mut lines = vec![Line::default(), section_title("Frequent Misses")];
     if stats.frequent_mistakes.is_empty() {
         lines.push(Line::from("-"));
         return lines;
