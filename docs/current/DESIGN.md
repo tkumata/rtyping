@@ -36,12 +36,13 @@
   - 描画テストでは `ratatui::backend::TestBackend` を使い、選択マーカー、常設メニュー項目、操作ヒントがバッファに含まれることを確認する。
 - `src/presentation/ui/render/config_screen.rs`
   - Config 画面を描画する。Provider セクション（Google / Groq）と Game Settings セクションを表示し、現在の Config 入力カーソル位置に端末カーソルを置く。
+  - 青い枠線は設定の3ブロックに使う。値は1行で描画し、幅が足りない場合は選択中の値を横にずらしてカーソルをブロック内に表示する。
 - `src/presentation/ui/render/loading.rs`
   - Loading 画面を描画する。
   - 描画テストでは生成元名と待機文言がバッファに含まれることを確認する。
 - `src/presentation/ui/render/typing.rs`
   - Typing 画面を描画する。出題文字列領域と WPM 線グラフ領域を分離して配置する。
-  - `Target Text` ブロックは、出題本文の前に2行、出題本文の後に2行の空行を持つ行リストとして描画する。
+  - `Target Text` ブロックは端末の既定の前景色で枠線を描画する。出題本文の前に2行、出題本文の後に2行の空行を置く。
   - 出題本文が折り返される場合は、折り返し後の本文行全体を本文として扱い、その後に2行の空行を置く。
   - `Target Text` ブロックは枠線込みで最低8行を確保する。WPM グラフと両立できない高さでは、グラフを非表示にして本文領域を優先する。
   - 出題文字列上には端末カーソルを表示せず、現在入力すべき文字を `Yellow + Bold` で強調する。
@@ -53,14 +54,15 @@
 - `src/presentation/ui/render/stats.rs`
   - Stats 画面を描画し、保存済み履歴の自己ベスト、平均、直近10回、頻出ミス文字を成績ダッシュボードとして表示する。
   - 上段では Best WPM、Avg WPM、Avg Accuracy、Runs を KPI として並べる。
-  - 中段では直近10回 WPM を数値列とミニグラフで表示する。
+  - 画面の外枠は描画しない。中段では `recent_wpm` の各値と `■` の横棒を同じ行に表示する。
+  - 高さが足りない場合は統計サマリ、頻出ミス、戻る操作の領域を優先し、直近 WPM は表示できる件数に絞る。
   - 下段では頻出ミス文字を横棒グラフで表示する。
   - 履歴がない場合は Timed セッション完了を促す空状態メッセージと戻り操作案内だけを表示する。
   - 描画テストでは KPI、直近 WPM、頻出ミス文字、履歴なし表示、戻り操作案内がバッファに含まれることを確認する。
 - `src/presentation/ui/render/wpm_graph.rs`
   - Typing / Result 両画面で共通利用する WPM グラフ描画補助を担当する。
   - `Canvas` と折れ線描画を使い、高い線分をオレンジで強調する。
-  - WPM グラフの `Block` 枠線色を共有定義として持ち、Typing / Result の WPM Trend 枠線だけを薄い黄色で描画する。
+  - グラフの `Block` は呼び出し元で指定する。Typing は枠線なしで表示し、Result は薄い黄色の枠線を指定する。
 - `src/usecase/wpm.rs`
   - WPM 計算ロジックを提供する。
 - `src/usecase/history_stats.rs`
@@ -223,7 +225,7 @@
 
 - 変更責務は描画層に限定する。`src/presentation/ui/render/stats.rs` の `format_mistake_bar` が返す横棒文字を `█` から `■` へ置換する。
 - 同ファイルの既存描画バッファテストで四角の個数と行の整列を確認する。計算、`HistoryStats`、履歴保存、画面遷移には変更を加えない。
-- Recent 10 WPM の `graph_block`、Typing / Result の WPM グラフ、装飾で使う `█` は対象外。共通の文字変換処理は導入しない。
+- Stats の `Recent 10 WPM` と `Frequent Misses` は `■` の文字定義を共有する。Typing / Result の線グラフと装飾は別の描画処理を使う。
 - OS 別の文字分岐、フォント検出、追加設定、依存関係は導入せず、全 OS で同じ U+25A0 を出力する。
 - 前提：受け入れ対象の端末・フォントでは `■` の字形に隙間があり、描画側と端末側の幅解釈が一致する。この前提は実端末で検証し、成立しなければ仕様案を見直す。
 - 検証と Open Questions は [文字変更の仕様](SPECIFICATIONS.md#frequent-misses-の文字変更承認済み実表示未確認) に集約する。

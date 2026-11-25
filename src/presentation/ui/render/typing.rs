@@ -125,7 +125,12 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
 
 fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
     let [graph_area, text_area] = split_typing_area(area);
-    wpm_graph::render_wpm_graph(frame, graph_area, app.wpm_history(), " WPM Trend ");
+    wpm_graph::render_wpm_graph(
+        frame,
+        graph_area,
+        app.wpm_history(),
+        Block::default().title(" WPM Trend "),
+    );
 
     let content_width = text_area.width.saturating_sub(2);
     let (target_text_lines, current_line) = target_text_lines(app, content_width);
@@ -139,7 +144,7 @@ fn render_typing_area(frame: &mut Frame, area: Rect, app: &App) {
                 Block::default()
                     .borders(Borders::ALL)
                     .title(" Target Text ")
-                    .border_style(Style::default().fg(Color::Cyan)),
+                    .border_style(Style::default().fg(Color::Reset)),
             )
             .scroll((scroll, 0)),
         text_area,
